@@ -4,6 +4,10 @@ edition.workspace = true
 version.workspace = true
 rust-version.workspace = true
 
+[[bin]]
+name = "cli-app"
+path = "src/main.rs"
+
 [dependencies]
 
 [lints]
