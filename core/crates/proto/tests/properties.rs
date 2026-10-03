@@ -1,4 +1,4 @@
-//! Ozellik (property) testleri: kodlama/cozme ve parcalama degismezleri.
+//! Property tests: encoding/decoding and fragmentation invariants.
 
 use proptest::collection::vec;
 use proptest::prelude::*;
@@ -6,7 +6,7 @@ use proto::limits::*;
 use proto::{Envelope, EnvelopeBody, Fragment, Frame, Kind, NodeId, reassemble, split};
 
 fn arb_sig() -> impl Strategy<Value = [u8; 64]> {
-    // proptest, 32'den buyuk diziler icin Arbitrary saglamaz.
+    // proptest provides no `Arbitrary` for arrays larger than 32.
     vec(any::<u8>(), 64).prop_map(|v| {
         let mut a = [0u8; 64];
         a.copy_from_slice(&v);
@@ -58,7 +58,7 @@ fn arb_frame() -> impl Strategy<Value = Frame> {
     })
 }
 
-/// Deterministik Fisher-Yates (test icin harici rastgelelik gerekmesin).
+/// Deterministic Fisher-Yates, so the test needs no external randomness.
 fn shuffle<T>(v: &mut [T], mut seed: u64) {
     for i in (1..v.len()).rev() {
         seed = seed

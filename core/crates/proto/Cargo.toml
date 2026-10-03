@@ -1,6 +1,6 @@
 [package]
 name = "proto"
-description = "Kriz Agi wire formati: zarf, mesaj kimligi, hop cercevesi, parcalama. Sans-IO, I/O ve kripto imzasi icermez."
+description = "Crisis Network wire format: envelope, message id, hop frame and fragmentation. Sans-IO; performs no I/O and no signing."
 edition.workspace = true
 version.workspace = true
 rust-version.workspace = true

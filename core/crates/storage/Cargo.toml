@@ -1,11 +1,26 @@
 [package]
 name = "storage"
+description = "Crisis Network on-device message store (SQLite): append-only log, tombstones, quotas, peers."
 edition.workspace = true
 version.workspace = true
 rust-version.workspace = true
 
+[features]
+# Plain bundled SQLite (default). No at-rest encryption.
+default = ["bundled"]
+bundled = ["rusqlite/bundled"]
+# SQLCipher with a vendored OpenSSL. Build with `--no-default-features --features sqlcipher`.
+sqlcipher = ["rusqlite/bundled-sqlcipher-vendored-openssl"]
+
 [dependencies]
-sqlx.workspace = true
+proto.workspace = true
+rusqlite.workspace = true
+thiserror.workspace = true
+zeroize.workspace = true
+
+[dev-dependencies]
+proptest.workspace = true
+tempfile.workspace = true
 
 [lints]
 workspace = true

@@ -1,30 +1,30 @@
-//! Hop cercevesi: zarfin ag uzerinde tasinan hali.
+//! The hop frame: an envelope as it travels over the network.
 //!
 //! ```text
-//! hops_left  u8   0..=MAX_HOPS   (IMZA DISINDA: her sicramada azalir)
-//! envelope   ...  bkz. envelope.rs
+//! hops_left  u8   0..=MAX_HOPS   (OUTSIDE THE SIGNATURE: decreases on every hop)
+//! envelope   ...  see envelope.rs
 //! ```
 //!
-//! `hops_left` bilerek imzanin disindadir; aksi halde her sicramada imza
-//! bozulurdu. Sonucu: aradaki bir dugum `hops_left`'i artirabilir. Bu bir
-//! hizmet-aksatma (flood) riskidir, butunluk riski degil; bkz. `THREAT_MODEL.md`.
+//! `hops_left` is deliberately outside the signature; otherwise every hop would
+//! invalidate it. Consequence: a relaying node can *increase* `hops_left`. That is
+//! a denial-of-service (flooding) risk, not an integrity risk; see the threat model.
 
 use crate::codec::Reader;
 use crate::envelope::Envelope;
 use crate::error::{ProtoError, Result};
 use crate::limits::MAX_HOPS;
 
-/// Tasima cercevesi.
+/// The transport frame.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Frame {
-    /// Kalan sicrama hakki.
+    /// Remaining hop budget.
     pub hops_left: u8,
-    /// Tasinan zarf.
+    /// The carried envelope.
     pub envelope: Envelope,
 }
 
 impl Frame {
-    /// Kanonik baytlara cevirir.
+    /// Encodes the frame canonically.
     pub fn encode(&self) -> Result<Vec<u8>> {
         if self.hops_left > MAX_HOPS {
             return Err(ProtoError::InvalidHops(self.hops_left));
@@ -36,7 +36,7 @@ impl Frame {
         Ok(out)
     }
 
-    /// Siki ayristirma.
+    /// Strict parsing.
     pub fn decode(bytes: &[u8]) -> Result<Self> {
         let mut r = Reader::new(bytes);
         let hops_left = r.u8()?;
@@ -51,8 +51,8 @@ impl Frame {
         })
     }
 
-    /// Bir sonraki dugume iletilecek kopya: `hops_left` bir azalir.
-    /// `hops_left == 0` ise `None` (artik iletilmez).
+    /// The copy to hand to the next node: `hops_left` decreases by one.
+    /// Returns `None` when `hops_left == 0` (the frame is no longer forwarded).
     pub fn forwarded(&self) -> Option<Self> {
         let hops_left = self.hops_left.checked_sub(1)?;
         Some(Self {

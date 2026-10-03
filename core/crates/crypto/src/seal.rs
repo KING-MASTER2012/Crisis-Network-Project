@@ -1,20 +1,20 @@
-//! Sealed box: tek aliciya, gonderen anahtari saklanmadan sifreleme.
+//! Sealed box: encryption to a single recipient without storing the sender's key.
 //!
 //! ```text
-//! eph_secret  = rastgele 32 bayt (mesaj basina tekil)
-//! eph_pub     = X25519(eph_secret, taban noktasi)
-//! shared      = X25519(eph_secret, alici.exchange_key)       (sifirsa reddedilir)
-//! okm[44]     = HKDF-SHA256(salt = eph_pub || alici.exchange_key,
-//!                           ikm  = shared, info = "kriz/v1/seal")
+//! eph_secret  = 32 random bytes (unique per message)
+//! eph_pub     = X25519(eph_secret, base point)
+//! shared      = X25519(eph_secret, recipient.exchange_key)      (rejected if all zeros)
+//! okm[44]     = HKDF-SHA256(salt = eph_pub || recipient.exchange_key,
+//!                           ikm  = shared, info = "crisis/v1/seal")
 //! key = okm[0..32], nonce = okm[32..44]
-//! aad = gonderen.node_id || alici.node_id
-//! cikti       = eph_pub || ChaCha20-Poly1305(key, nonce, aad, acik_metin)
+//! aad = sender.node_id || recipient.node_id
+//! output      = eph_pub || ChaCha20-Poly1305(key, nonce, aad, plaintext)
 //! ```
 //!
-//! Ek yuk [`proto::limits::SEAL_OVERHEAD`] = 48 bayttir. Gonderenin kimligi
-//! sifreli kutunun icinde **kriptografik olarak** degil, zarfin Ed25519 imzasiyla
-//! dogrulanir; `aad` yalnizca kutunun baska bir (gonderen, alici) cifti icin
-//! yeniden paketlenmesini engeller.
+//! The overhead is [`proto::limits::SEAL_OVERHEAD`] = 48 bytes. The sender's
+//! identity is authenticated not *inside* the box but by the envelope's Ed25519
+//! signature; `aad` merely prevents the box from being repackaged for a different
+//! (sender, recipient) pair.
 
 use chacha20poly1305::aead::{Aead, KeyInit, Payload};
 use chacha20poly1305::{ChaCha20Poly1305, Key, Nonce};
@@ -34,15 +34,15 @@ fn aad(sender: &NodeId, recipient: &NodeId) -> [u8; 64] {
     a
 }
 
-/// Isletim sistemi rastgeleligiyle sifreler.
+/// Encrypts using the operating system's randomness.
 pub fn seal(sender: &NodeId, recipient: &ContactCard, plaintext: &[u8]) -> Result<Vec<u8>> {
     let mut eph = Zeroizing::new([0u8; 32]);
     getrandom::fill(&mut eph[..]).map_err(|_| CryptoError::Rng)?;
     seal_with_ephemeral(sender, recipient, plaintext, &eph)
 }
 
-/// Gecici anahtari disaridan alir. **Yalnizca test vektorleri ve simulator icin**;
-/// ayni `eph_secret`'i iki farkli mesajda kullanmak guvenligi bozar.
+/// Takes the ephemeral key from the caller. **For test vectors and the simulator
+/// only**; reusing one `eph_secret` for two different messages breaks security.
 pub fn seal_with_ephemeral(
     sender: &NodeId,
     recipient: &ContactCard,
@@ -80,8 +80,8 @@ pub fn seal_with_ephemeral(
     Ok(out)
 }
 
-/// Sealed kutuyu acar. `sender`, zarfin (imzasi dogrulanmis) gonderenidir.
-/// Her hata tek bir ayrintisiz [`CryptoError::Decrypt`]'e indirgenir.
+/// Opens a sealed box. `sender` is the (signature-verified) sender of the
+/// envelope. Every failure is collapsed into one detail-free [`CryptoError::Decrypt`].
 pub fn open(recipient: &Identity, sender: &NodeId, sealed: &[u8]) -> Result<Zeroizing<Vec<u8>>> {
     if sealed.len() < SEAL_OVERHEAD {
         return Err(CryptoError::Decrypt);

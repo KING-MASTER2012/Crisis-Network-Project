@@ -5,7 +5,7 @@ version.workspace = true
 rust-version.workspace = true
 
 [[bin]]
-name = "cli-app"
+name = "crisis"
 path = "src/main.rs"
 
 [dependencies]

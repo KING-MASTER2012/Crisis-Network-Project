@@ -1,17 +1,21 @@
 //! # proto
 //!
-//! Kriz Agi'nin **wire formati**. Bu crate sans-IO'dur: ag, disk, saat ve
-//! rastgelelik kullanmaz; imza uretmez/dogrulamaz (bu `crypto`'nun isi).
-//! Girdisi bayt, ciktisi tiplenmis veri (ve tersi).
+//! The Crisis Network **wire format**. This crate is sans-IO: it touches no
+//! network, disk, clock or randomness, and it neither creates nor verifies
+//! signatures (that is the `crypto` crate's job). Input is bytes, output is typed
+//! data (and the reverse).
 //!
-//! Katmanlar (icten disa):
+//! Layers, innermost first:
 //!
-//! 1. [`envelope::Envelope`]: imzali, kalici mesaj. [`id::MessageId`] bunun hash'idir.
-//! 2. [`frame::Frame`]: `hops_left` (imza disinda, her sicramada degisir) + zarf.
-//! 3. [`fragment::Fragment`]: BLE MTU'suna sigsin diye bolunmus cerceve parcasi.
+//! 1. [`envelope::Envelope`]: the signed, persistent message. [`id::MessageId`]
+//!    is its hash.
+//! 2. [`frame::Frame`]: `hops_left` (outside the signature, changes on every hop)
+//!    plus the envelope.
+//! 3. [`fragment::Fragment`]: a frame cut into pieces that fit a BLE MTU.
 //!
-//! Spesifikasyon: `docs/protocol/PROTOCOL.md`. Bu crate o dokumanin referans
-//! uygulamasidir; ikisi celisirse dokuman gecerlidir ve kod hatali sayilir.
+//! Specification: the "Protocol v1" chapter of the book (`docs/src/protocol/v1.md`).
+//! This crate is its reference implementation; if the two disagree, the
+//! specification wins and the code is considered buggy.
 #![forbid(unsafe_code)]
 
 mod codec;

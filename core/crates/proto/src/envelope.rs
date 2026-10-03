@@ -1,20 +1,20 @@
-//! Imzali zarf: aga cikan kalici mesaj.
+//! The signed envelope: the persistent message that travels through the network.
 //!
-//! Kodlanmis bicim (tum tamsayilar big-endian):
+//! Encoded layout (all integers big-endian):
 //!
 //! ```text
 //! version        u8      = 1
 //! kind           u8      1=Broadcast 2=Direct 3=Ack
-//! flags          u8      v1'de 0 olmali
-//! sender         [32]    gonderenin Ed25519 acik anahtari
-//! recipient      [32]    yalnizca Direct ve Ack'te
-//! created_at_ms  u64     Unix epoch'tan beri ms (gonderenin saati, GUVENILMEZ)
+//! flags          u8      must be 0 in v1
+//! sender         [32]    the sender's Ed25519 public key
+//! recipient      [32]    only for Direct and Ack
+//! created_at_ms  u64     milliseconds since the Unix epoch (sender clock, UNTRUSTED)
 //! lifetime_secs  u32     1..=MAX_LIFETIME_SECS
 //! ext_len        u8      0..=MAX_EXT_LEN
 //! ext            [ext_len]
 //! payload_len    u16     0..=MAX_PAYLOAD_LEN
 //! payload        [payload_len]
-//! signature      [64]    Ed25519 (DOMAIN_ENVELOPE_SIG || yukaridaki alanlar)
+//! signature      [64]    Ed25519 over (DOMAIN_ENVELOPE_SIG || all fields above)
 //! ```
 
 use sha2::{Digest, Sha256};
@@ -28,20 +28,20 @@ use crate::limits::{
     NODE_ID_LEN, PROTOCOL_VERSION, SEAL_OVERHEAD, SIGNATURE_LEN,
 };
 
-/// Mesaj turu.
+/// Message kind.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 #[repr(u8)]
 pub enum Kind {
-    /// Herkese acik, imzali ama sifresiz duyuru.
+    /// A public announcement: signed but not encrypted.
     Broadcast = 1,
-    /// Tek aliciya sifreli mesaj (sealed box).
+    /// A message encrypted for a single recipient (sealed box).
     Direct = 2,
-    /// Bir mesajin ulastiginin onayi; payload = onaylanan [`MessageId`].
+    /// Confirmation that a message arrived; the payload is the acknowledged [`MessageId`].
     Ack = 3,
 }
 
 impl Kind {
-    /// Tel degerinden tur'e.
+    /// Converts a wire value into a kind.
     pub fn from_u8(v: u8) -> Result<Self> {
         match v {
             1 => Ok(Kind::Broadcast),
@@ -51,39 +51,43 @@ impl Kind {
         }
     }
 
-    /// Bu turde `recipient` alani var mi?
+    /// Whether this kind carries a `recipient` field.
     pub fn has_recipient(self) -> bool {
         !matches!(self, Kind::Broadcast)
     }
 }
 
-/// Zarfin imzalanan kismi.
+/// The signed part of an envelope.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct EnvelopeBody {
-    /// Mesaj turu.
+    /// Message kind.
     pub kind: Kind,
-    /// Gonderen.
+    /// The sender.
     pub sender: NodeId,
-    /// Alici (Direct/Ack'te zorunlu, Broadcast'ta yasak).
+    /// The recipient (required for Direct/Ack, forbidden for Broadcast).
     pub recipient: Option<NodeId>,
-    /// Gonderenin olusturma zamani (ms, Unix epoch). Guvenilmez saat: yalnizca
-    /// bilgi ve omur hesabi icindir.
+    /// Creation time in milliseconds since the Unix epoch. This is the sender's
+    /// (untrusted) clock: informational only.
     pub created_at_ms: u64,
-    /// Mesajin omru (saniye); bitince dugumler mesaji silebilir.
+    /// How long the message should live, in seconds; nodes may drop it afterwards.
     pub lifetime_secs: u32,
-    /// Gelecek surumler icin imzali, opak alan. v1 anlamlandirmaz ama korur.
+    /// Opaque, signed field reserved for future versions. v1 attaches no meaning
+    /// to it but preserves it.
     pub ext: Vec<u8>,
-    /// Govde. Direct'te sealed-box ciktisi, Ack'te onaylanan mesaj kimligi.
+    /// The body. For Direct this is the sealed-box output, for Ack the
+    /// acknowledged message id.
     pub payload: Vec<u8>,
 }
 
 impl EnvelopeBody {
-    /// Alanlarin tur ve sinir kurallarina uydugunu denetler.
+    /// Checks that the fields obey the per-kind and size rules.
     pub fn validate(&self) -> Result<()> {
         match (self.kind.has_recipient(), self.recipient.is_some()) {
-            (true, false) => return Err(ProtoError::InvalidField("recipient zorunlu")),
+            (true, false) => return Err(ProtoError::InvalidField("recipient is required")),
             (false, true) => {
-                return Err(ProtoError::InvalidField("broadcast'ta recipient olamaz"));
+                return Err(ProtoError::InvalidField(
+                    "recipient is not allowed on a broadcast",
+                ));
             }
             _ => {}
         }
@@ -106,16 +110,16 @@ impl EnvelopeBody {
         }
         match self.kind {
             Kind::Direct if self.payload.len() < SEAL_OVERHEAD => Err(ProtoError::InvalidField(
-                "direct payload sealed-box ek yukunden kisa",
+                "direct payload is shorter than the sealed-box overhead",
             )),
             Kind::Ack if self.payload.len() != ACK_PAYLOAD_LEN => {
-                Err(ProtoError::InvalidField("ack payload 32 bayt olmali"))
+                Err(ProtoError::InvalidField("ack payload must be 32 bytes"))
             }
             _ => Ok(()),
         }
     }
 
-    /// Govdeyi kanonik baytlara cevirir (imza ve kimlik bunun uzerinden hesaplanir).
+    /// Encodes the body canonically. Signatures and ids are computed over these bytes.
     pub fn encode(&self) -> Result<Vec<u8>> {
         self.validate()?;
         let mut out = Vec::with_capacity(MAX_ENVELOPE_LEN);
@@ -128,14 +132,14 @@ impl EnvelopeBody {
         }
         out.extend_from_slice(&self.created_at_ms.to_be_bytes());
         out.extend_from_slice(&self.lifetime_secs.to_be_bytes());
-        out.push(self.ext.len() as u8); // validate(): <= MAX_EXT_LEN
+        out.push(self.ext.len() as u8); // validate() guarantees <= MAX_EXT_LEN
         out.extend_from_slice(&self.ext);
         out.extend_from_slice(&(self.payload.len() as u16).to_be_bytes()); // <= 1024
         out.extend_from_slice(&self.payload);
         Ok(out)
     }
 
-    /// Imzanin girdisi: `DOMAIN_ENVELOPE_SIG || encode()`.
+    /// The signature input: `DOMAIN_ENVELOPE_SIG || encode()`.
     pub fn signing_input(&self) -> Result<Vec<u8>> {
         let body = self.encode()?;
         let mut v = Vec::with_capacity(DOMAIN_ENVELOPE_SIG.len() + body.len());
@@ -144,7 +148,7 @@ impl EnvelopeBody {
         Ok(v)
     }
 
-    /// Mesaj kimligi: `SHA-256(DOMAIN_MSG_ID || encode())`.
+    /// The message id: `SHA-256(DOMAIN_MSG_ID || encode())`.
     pub fn message_id(&self) -> Result<MessageId> {
         let body = self.encode()?;
         let mut h = Sha256::new();
@@ -154,7 +158,9 @@ impl EnvelopeBody {
         Ok(MessageId::new(digest))
     }
 
-    /// Mesajin dusecegi an (ms). Tasmada `u64::MAX`'te doyar.
+    /// The moment (in ms) the message expires according to the *sender's* clock.
+    /// Saturates at `u64::MAX`. Receivers normally compute expiry from their own
+    /// receive time instead.
     pub fn expires_at_ms(&self) -> u64 {
         self.created_at_ms
             .saturating_add(u64::from(self.lifetime_secs) * 1000)
@@ -210,29 +216,28 @@ impl EnvelopeBody {
     }
 }
 
-/// Imzali zarf.
+/// A signed envelope.
 ///
-/// Imzanin gecerliligi **burada denetlenmez**; `kriz_crypto::verify_envelope`
-/// kullanilmalidir. Bir dugum imzasi dogrulanmamis zarfi saklamamali ve
-/// iletmemelidir.
+/// The signature is **not** checked here; use `crypto::verify_envelope`. A node
+/// must neither store nor forward an envelope whose signature has not been verified.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Envelope {
-    /// Imzalanan govde.
+    /// The signed body.
     pub body: EnvelopeBody,
-    /// Ed25519 imzasi.
+    /// The Ed25519 signature.
     pub signature: [u8; SIGNATURE_LEN],
 }
 
 impl Envelope {
-    /// Kanonik baytlara cevirir.
+    /// Encodes the envelope canonically.
     pub fn encode(&self) -> Result<Vec<u8>> {
         let mut out = self.body.encode()?;
         out.extend_from_slice(&self.signature);
         Ok(out)
     }
 
-    /// Siki ayristirma: eksik, fazla, bilinmeyen surum/tur, sifir olmayan flags,
-    /// sinir asimi ve tur-alan uyumsuzlugu `Err` dondurur.
+    /// Strict parsing: truncated or trailing bytes, unknown version/kind, non-zero
+    /// flags, size violations and kind/field mismatches all yield `Err`.
     pub fn decode(bytes: &[u8]) -> Result<Self> {
         let mut r = Reader::new(bytes);
         let env = Self::read_from(&mut r)?;
@@ -246,7 +251,7 @@ impl Envelope {
         Ok(Self { body, signature })
     }
 
-    /// Mesaj kimligi (bkz. [`EnvelopeBody::message_id`]).
+    /// The message id (see [`EnvelopeBody::message_id`]).
     pub fn message_id(&self) -> Result<MessageId> {
         self.body.message_id()
     }
@@ -335,7 +340,7 @@ mod tests {
         let mut e = broadcast();
         e.body.kind = Kind::Ack;
         e.body.recipient = Some(NodeId::new([2; 32]));
-        assert!(e.encode().is_err()); // ack payload != 32 bayt
+        assert!(e.encode().is_err()); // ack payload is not 32 bytes
     }
 
     #[test]

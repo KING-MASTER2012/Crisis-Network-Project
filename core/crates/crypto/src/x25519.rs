@@ -1,17 +1,17 @@
-//! Dahili: X25519 icin ince sarmalayici. Tum `x25519-dalek` kullanimi burada
-//! toplanmistir; kutuphane API'si degisirse yalnizca bu dosya guncellenir.
+//! Internal: a thin wrapper around X25519. All `x25519-dalek` usage is gathered
+//! here, so if the library API changes only this file needs updating.
 
 use x25519_dalek::{X25519_BASEPOINT_BYTES, x25519};
 use zeroize::Zeroizing;
 
 use crate::error::{CryptoError, Result};
 
-/// `secret * G` (acik anahtar).
+/// `secret * G` (the public key).
 pub(crate) fn public_from_secret(secret: &[u8; 32]) -> [u8; 32] {
     x25519(*secret, X25519_BASEPOINT_BYTES)
 }
 
-/// Diffie-Hellman. Sonuc tamamen sifirsa (dusuk dereceli nokta) reddeder.
+/// Diffie-Hellman. Rejects an all-zero result (low-order point).
 pub(crate) fn diffie_hellman(secret: &[u8; 32], public: &[u8; 32]) -> Result<Zeroizing<[u8; 32]>> {
     let out = Zeroizing::new(x25519(*secret, *public));
     if out.iter().fold(0u8, |acc, b| acc | b) == 0 {
@@ -32,7 +32,7 @@ mod tests {
         out
     }
 
-    // RFC 7748 bolum 6.1
+    // RFC 7748, section 6.1
     const A_SK: &str = "77076d0a7318a57d3c16c17251b26645df4c2f87ebc0992ab177fba51db92c2a";
     const A_PK: &str = "8520f0098930a754748b7ddcb43ef75a0dbf3a0d26381af4eba4a98eaa9b4e6a";
     const B_SK: &str = "5dab087e624a8a4b79e17f8b83800ee66f3bb1292618b6fd1c2f8b27ff88e0eb";
@@ -55,7 +55,7 @@ mod tests {
 
     #[test]
     fn low_order_point_is_rejected() {
-        // u = 0 noktasi: sonuc sifir.
+        // The u = 0 point yields an all-zero result.
         assert_eq!(
             diffie_hellman(&h32(A_SK), &[0u8; 32]).unwrap_err(),
             CryptoError::LowOrderPoint

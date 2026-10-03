@@ -1,6 +1,6 @@
 [package]
 name = "crypto"
-description = "The Kriz Agi identity, signature, and sealed-box encryption layer."
+description = "Crisis Network identity, signatures and sealed-box encryption."
 edition.workspace = true
 version.workspace = true
 rust-version.workspace = true

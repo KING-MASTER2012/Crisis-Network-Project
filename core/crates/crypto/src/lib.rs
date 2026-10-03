@@ -1,18 +1,18 @@
 //! # crypto
 //!
-//! Kimlik, imza ve sifreleme. Primitifler sabit ve denenmis kutuphanelerden gelir
-//! (Ed25519, X25519, HKDF-SHA256, ChaCha20-Poly1305); bu crate yalnizca bunlari
-//! protokol icin birlestirir. Kendi primitifimizi icat etmiyoruz.
+//! Identity, signatures and encryption. The primitives come from fixed, proven
+//! libraries (Ed25519, X25519, HKDF-SHA256, ChaCha20-Poly1305); this crate only
+//! combines them for the protocol. We do not invent our own primitives.
 //!
-//! * [`Identity`]: bir dugumun gizli kimligi (32 baytlik tohumdan turetilir).
-//! * [`ContactCard`]: paylasilabilir, kendinden imzali kimlik karti (QR icin).
-//! * [`seal`]: tek aliciya sealed-box sifreleme.
-//! * [`verify_envelope`]: zarf imzasini siki dogrular.
-//! * [`KeyStore`]: tohumun platform kasasinda (Keystore/Keychain) tutulmasi
-//!   icin arayuz. Cekirdek tohumu kendisi diske yazmaz.
+//! * [`Identity`]: a node's secret identity (derived from a 32-byte seed).
+//! * [`ContactCard`]: a shareable, self-signed identity card (meant for QR codes).
+//! * [`seal`]: sealed-box encryption to a single recipient.
+//! * [`verify_envelope`]: strict envelope signature verification.
+//! * [`KeyStore`]: the interface through which the platform keeps the seed in its
+//!   secure store (Keystore/Keychain). The core never writes the seed to disk itself.
 //!
-//! Tasarim gerekceleri: `docs/adr/0002-kimlik-ve-kripto.md`. Bilinen sinirlar
-//! (ileri gizlilik yok, vb.): `docs/THREAT_MODEL.md`.
+//! Design rationale: the "Identity and cryptography" ADR in the book. Known
+//! limitations (no forward secrecy, ...): the "Threat model" chapter.
 #![forbid(unsafe_code)]
 
 mod error;

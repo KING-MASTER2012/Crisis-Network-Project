@@ -1,4 +1,4 @@
-//! Dugum ve mesaj kimlikleri.
+//! Node and message identifiers.
 
 use core::fmt;
 
@@ -11,18 +11,18 @@ fn write_hex(bytes: &[u8], f: &mut fmt::Formatter<'_>) -> fmt::Result {
     Ok(())
 }
 
-/// Bir dugumun kimligi = Ed25519 acik (imza) anahtari.
+/// A node's identity: its Ed25519 public (signing) key.
 #[derive(Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct NodeId([u8; NODE_ID_LEN]);
 
 impl NodeId {
-    /// Ham baytlardan olusturur (gecerli bir Ed25519 noktasi oldugu burada denetlenmez;
-    /// bunu imza dogrulamasi yapar).
+    /// Wraps raw bytes. Whether they form a valid Ed25519 point is not checked
+    /// here; signature verification does that.
     pub const fn new(bytes: [u8; NODE_ID_LEN]) -> Self {
         Self(bytes)
     }
 
-    /// Ham baytlar.
+    /// The raw bytes.
     pub const fn as_bytes(&self) -> &[u8; NODE_ID_LEN] {
         &self.0
     }
@@ -48,25 +48,25 @@ impl fmt::Debug for NodeId {
     }
 }
 
-/// Mesaj kimligi: `SHA-256(DOMAIN_MSG_ID || imzali_govde)`.
+/// Message identifier: `SHA-256(DOMAIN_MSG_ID || signed_body)`.
 ///
-/// Ayni mesaj ag uzerinde kac yoldan gelirse gelsin ayni kimlige sahiptir;
-/// tekilleştirme (dedup) bu degere dayanir.
+/// The same message has the same identifier no matter how many paths it arrives
+/// by; deduplication relies on this value.
 #[derive(Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct MessageId([u8; MESSAGE_ID_LEN]);
 
 impl MessageId {
-    /// Ham baytlardan olusturur.
+    /// Wraps raw bytes.
     pub const fn new(bytes: [u8; MESSAGE_ID_LEN]) -> Self {
         Self(bytes)
     }
 
-    /// Ham baytlar.
+    /// The raw bytes.
     pub const fn as_bytes(&self) -> &[u8; MESSAGE_ID_LEN] {
         &self.0
     }
 
-    /// Parcalama icin kullanilan 8 baytlik kisa etiket (kimligin ilk 8 bayti).
+    /// Short 8-byte tag used for fragmentation (the first 8 bytes of the id).
     pub fn transfer_tag(&self) -> [u8; 8] {
         let mut t = [0u8; 8];
         t.copy_from_slice(&self.0[..8]);

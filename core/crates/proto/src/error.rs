@@ -1,47 +1,47 @@
-//! Hata tipleri.
+//! Error types.
 
-/// Ayristirma/dogrulama hatalari. Hicbir hata `panic` degildir; havadan gelen
-/// bayt dizisi ne olursa olsun fonksiyonlar `Err` doner.
+/// Parsing and validation errors. No error is a panic: whatever bytes arrive over
+/// the air, the functions in this crate return `Err`.
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
 pub enum ProtoError {
-    /// Girdi beklenenden kisa.
-    #[error("girdi eksik (kesilmis)")]
+    /// The input is shorter than expected.
+    #[error("input is truncated")]
     Truncated,
-    /// Mesaj bittikten sonra fazladan bayt var.
-    #[error("mesajdan sonra fazladan bayt var")]
+    /// There are extra bytes after the end of the message.
+    #[error("trailing bytes after the message")]
     TrailingBytes,
-    /// Desteklenmeyen protokol surumu.
-    #[error("desteklenmeyen protokol surumu: {0}")]
+    /// Unsupported protocol version.
+    #[error("unsupported protocol version: {0}")]
     UnsupportedVersion(u8),
-    /// Taninmayan mesaj turu.
-    #[error("bilinmeyen mesaj turu: {0}")]
+    /// Unknown message kind.
+    #[error("unknown message kind: {0}")]
     UnknownKind(u8),
-    /// Ayrilmis `flags` alani sifir olmali (v1).
-    #[error("ayrilmis flags sifir olmali: {0:#04x}")]
+    /// The reserved `flags` byte must be zero in v1.
+    #[error("reserved flags must be zero: {0:#04x}")]
     NonZeroFlags(u8),
-    /// Bir alan izin verilen boyutu asiyor.
-    #[error("{field} cok uzun: {len} > {max}")]
+    /// A field exceeds its allowed size.
+    #[error("{field} is too long: {len} > {max}")]
     TooLong {
-        /// Alan adi.
+        /// Field name.
         field: &'static str,
-        /// Gorulen uzunluk.
+        /// Observed length.
         len: usize,
-        /// Izin verilen azami uzunluk.
+        /// Maximum allowed length.
         max: usize,
     },
-    /// `lifetime_secs` 0 veya azami degerin ustunde.
-    #[error("gecersiz lifetime_secs")]
+    /// `lifetime_secs` is zero or above the maximum.
+    #[error("invalid lifetime_secs")]
     InvalidLifetime,
-    /// `hops_left` azami degerin ustunde.
-    #[error("gecersiz hops_left: {0}")]
+    /// `hops_left` is above the maximum.
+    #[error("invalid hops_left: {0}")]
     InvalidHops(u8),
-    /// Alan, mesaj turuyla uyumsuz.
-    #[error("gecersiz alan: {0}")]
+    /// A field is inconsistent with the message kind.
+    #[error("invalid field: {0}")]
     InvalidField(&'static str),
-    /// Parcalama / birlestirme hatasi.
-    #[error("parca hatasi: {0}")]
+    /// Fragmentation or reassembly error.
+    #[error("fragment error: {0}")]
     Fragment(&'static str),
 }
 
-/// Crate genelinde kullanilan sonuc tipi.
+/// Result type used throughout the crate.
 pub type Result<T> = core::result::Result<T, ProtoError>;

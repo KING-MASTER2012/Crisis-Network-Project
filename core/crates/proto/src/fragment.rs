@@ -1,35 +1,35 @@
-//! Parcalama: bir [`Frame`]'i BLE MTU'suna sigacak parcalara boler.
+//! Fragmentation: cuts a [`Frame`] into pieces that fit a BLE MTU.
 //!
 //! ```text
-//! transfer_id  [8]  MessageId'nin ilk 8 bayti
+//! transfer_id  [8]  the first 8 bytes of the MessageId
 //! index        u8   0..total
 //! total        u8   1..=255
-//! data         [..] en az 1 bayt
+//! data         [..] at least 1 byte
 //! ```
 //!
-//! Bu modul **durumsuzdur**: [`split`] ve [`reassemble`] saf fonksiyonlardir.
-//! Zaman asimi, bellek sinirlari ve hangi parcanin hangi esten geldigi takibi
-//! `mesh`'in (Faz C3) isidir.
+//! This module is **stateless**: [`split`] and [`reassemble`] are pure functions.
+//! Timeouts, memory limits and per-peer tracking of which fragment came from whom
+//! belong to the `mesh` crate (phase C3).
 
 use crate::error::{ProtoError, Result};
 use crate::frame::Frame;
 use crate::limits::{FRAGMENT_HEADER_LEN, MAX_FRAGMENTS, MAX_FRAME_LEN};
 
-/// Tek bir parca.
+/// One fragment.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Fragment {
-    /// Ayni mesajin parcalarini eslestiren etiket (`MessageId`'nin ilk 8 bayti).
+    /// Tag that groups the fragments of one message (first 8 bytes of its `MessageId`).
     pub transfer_id: [u8; 8],
-    /// Bu parcanin sirasi (0'dan baslar).
+    /// Position of this fragment (starts at 0).
     pub index: u8,
-    /// Toplam parca sayisi.
+    /// Total number of fragments.
     pub total: u8,
-    /// Cerceve baytlarinin bu parcaya dusen kismi.
+    /// The slice of the frame bytes carried by this fragment.
     pub data: Vec<u8>,
 }
 
 impl Fragment {
-    /// Kanonik baytlara cevirir.
+    /// Encodes the fragment canonically.
     pub fn encode(&self) -> Vec<u8> {
         let mut out = Vec::with_capacity(FRAGMENT_HEADER_LEN + self.data.len());
         out.extend_from_slice(&self.transfer_id);
@@ -39,17 +39,19 @@ impl Fragment {
         out
     }
 
-    /// Siki ayristirma.
+    /// Strict parsing.
     pub fn decode(bytes: &[u8]) -> Result<Self> {
         if bytes.len() <= FRAGMENT_HEADER_LEN {
-            return Err(ProtoError::Fragment("parca bos veya basliktan kisa"));
+            return Err(ProtoError::Fragment(
+                "fragment is empty or shorter than its header",
+            ));
         }
         let mut transfer_id = [0u8; 8];
         transfer_id.copy_from_slice(&bytes[..8]);
         let index = bytes[8];
         let total = bytes[9];
         if total == 0 || index >= total {
-            return Err(ProtoError::Fragment("gecersiz index/total"));
+            return Err(ProtoError::Fragment("invalid index/total"));
         }
         let data = &bytes[FRAGMENT_HEADER_LEN..];
         if data.len() > MAX_FRAME_LEN {
@@ -68,12 +70,12 @@ impl Fragment {
     }
 }
 
-/// Cerceveyi, kodlanmis her parca en fazla `max_fragment_size` bayt olacak
-/// sekilde boler (baslik dahil).
+/// Splits a frame so that every encoded fragment is at most `max_fragment_size`
+/// bytes (header included).
 pub fn split(frame: &Frame, max_fragment_size: usize) -> Result<Vec<Fragment>> {
     if max_fragment_size <= FRAGMENT_HEADER_LEN {
         return Err(ProtoError::Fragment(
-            "max_fragment_size basliktan buyuk olmali",
+            "max_fragment_size must be larger than the header",
         ));
     }
     let bytes = frame.encode()?;
@@ -81,49 +83,52 @@ pub fn split(frame: &Frame, max_fragment_size: usize) -> Result<Vec<Fragment>> {
     let chunk = max_fragment_size - FRAGMENT_HEADER_LEN;
     let total = bytes.len().div_ceil(chunk);
     if total > MAX_FRAGMENTS {
-        return Err(ProtoError::Fragment("cok fazla parca (>255)"));
+        return Err(ProtoError::Fragment("too many fragments (>255)"));
     }
     Ok(bytes
         .chunks(chunk)
         .enumerate()
         .map(|(i, c)| Fragment {
             transfer_id,
-            index: i as u8, // total <= 255 oldugundan i <= 254
+            index: i as u8, // total <= 255, so i <= 254
             total: total as u8,
             data: c.to_vec(),
         })
         .collect())
 }
 
-/// Bir mesaja ait **tum** parcalardan cerceveyi geri kurar.
+/// Rebuilds the frame from **all** fragments of one message.
 ///
-/// Parcalarin sirasi onemsizdir. Ayni indeksin birebir ayni kopyasi kabul edilir;
-/// farkli icerikli kopya, eksik parca, karisik `transfer_id`/`total` veya
-/// birlestirilen cercevenin kimligiyle `transfer_id`'nin uyusmamasi `Err`'dir.
+/// Order does not matter. An exact duplicate of a fragment is accepted; a
+/// duplicate with different content, a missing fragment, mixed `transfer_id`/`total`
+/// values, or a `transfer_id` that does not match the id of the reassembled
+/// frame are all errors.
 pub fn reassemble(fragments: &[Fragment]) -> Result<Frame> {
     let first = fragments
         .first()
-        .ok_or(ProtoError::Fragment("parca listesi bos"))?;
+        .ok_or(ProtoError::Fragment("fragment list is empty"))?;
     let total = usize::from(first.total);
     let mut slots: Vec<Option<&[u8]>> = vec![None; total];
     let mut size = 0usize;
     for f in fragments {
         if f.transfer_id != first.transfer_id || f.total != first.total {
-            return Err(ProtoError::Fragment("parcalar farkli transferlere ait"));
+            return Err(ProtoError::Fragment(
+                "fragments belong to different transfers",
+            ));
         }
         let slot = slots
             .get_mut(usize::from(f.index))
-            .ok_or(ProtoError::Fragment("index total'i asiyor"))?;
+            .ok_or(ProtoError::Fragment("index exceeds total"))?;
         match *slot {
             Some(existing) if existing != f.data.as_slice() => {
-                return Err(ProtoError::Fragment("ayni index icin celisen veri"));
+                return Err(ProtoError::Fragment("conflicting data for the same index"));
             }
             Some(_) => {}
             None => {
                 size += f.data.len();
                 if size > MAX_FRAME_LEN {
                     return Err(ProtoError::Fragment(
-                        "birlesik boyut cerceve sinirini asiyor",
+                        "combined size exceeds the maximum frame length",
                     ));
                 }
                 *slot = Some(f.data.as_slice());
@@ -132,12 +137,12 @@ pub fn reassemble(fragments: &[Fragment]) -> Result<Frame> {
     }
     let mut bytes = Vec::with_capacity(size);
     for s in &slots {
-        bytes.extend_from_slice(s.ok_or(ProtoError::Fragment("eksik parca"))?);
+        bytes.extend_from_slice(s.ok_or(ProtoError::Fragment("missing fragment"))?);
     }
     let frame = Frame::decode(&bytes)?;
     if frame.envelope.message_id()?.transfer_tag() != first.transfer_id {
         return Err(ProtoError::Fragment(
-            "transfer_id mesaj kimligiyle uyusmuyor",
+            "transfer_id does not match the message id",
         ));
     }
     Ok(frame)
@@ -205,14 +210,14 @@ mod tests {
     }
 
     #[test]
-    fn tampered_data_fails_id_check_or_decode() {
+    fn tampered_data_never_panics() {
         let f = frame(300);
         let mut parts = split(&f, 64).unwrap();
         let last = parts.len() - 1;
         parts[last].data[0] ^= 0xff;
-        // govdeye dokunuldugunda kimlik uyusmaz; imzaya dokunuldugunda kimlik
-        // ayni kalir ama imza dogrulamasi (crypto) reddeder.
-        let _ = reassemble(&parts); // panic etmemeli
+        // Touching the body changes the id and is rejected here; touching only the
+        // signature keeps the id, and `crypto::verify_envelope` rejects it later.
+        let _ = reassemble(&parts); // must not panic
     }
 
     #[test]

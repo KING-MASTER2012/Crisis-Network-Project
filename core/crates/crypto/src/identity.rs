@@ -1,4 +1,4 @@
-//! Dugumun gizli kimligi ve zarf imzalama/dogrulama.
+//! A node's secret identity, plus envelope signing and verification.
 
 use core::fmt;
 
@@ -10,11 +10,12 @@ use crate::contact::ContactCard;
 use crate::error::{CryptoError, Result};
 use crate::{kdf, seal, x25519};
 
-/// Bir dugumun gizli kimligi.
+/// A node's secret identity.
 ///
-/// 32 baytlik **tohum** her seyin kaynagidir: Ed25519 imza anahtari tohumun kendisi,
-/// X25519 sifreleme anahtari ise tohumdan HKDF ile turetilir. Tohumu yedeklemek
-/// kimligi geri getirir. `Debug` ciktisi gizli veri icermez; `Clone` bilerek yoktur.
+/// The 32-byte **seed** is the source of everything: the Ed25519 signing key is
+/// the seed itself, and the X25519 encryption key is derived from it with HKDF.
+/// Backing up the seed restores the identity. `Debug` output contains no secrets,
+/// and there is deliberately no `Clone`.
 pub struct Identity {
     seed: Zeroizing<[u8; 32]>,
     signing: SigningKey,
@@ -30,14 +31,14 @@ impl fmt::Debug for Identity {
 }
 
 impl Identity {
-    /// Isletim sistemi rastgeleligiyle yeni kimlik uretir.
+    /// Generates a new identity from the operating system's randomness.
     pub fn generate() -> Result<Self> {
         let mut seed = Zeroizing::new([0u8; 32]);
         getrandom::fill(&mut seed[..]).map_err(|_| CryptoError::Rng)?;
         Self::from_seed(&seed)
     }
 
-    /// Tohumdan kimligi (yeniden) kurar. Ayni tohum her zaman ayni kimligi verir.
+    /// (Re)builds the identity from a seed. The same seed always yields the same identity.
     pub fn from_seed(seed: &[u8; 32]) -> Result<Self> {
         Ok(Self {
             seed: Zeroizing::new(*seed),
@@ -46,17 +47,17 @@ impl Identity {
         })
     }
 
-    /// Yedeklenecek/`KeyStore`'a yazilacak tohum.
+    /// The seed to back up or hand to a `KeyStore`.
     pub fn seed(&self) -> &[u8; 32] {
         &self.seed
     }
 
-    /// Bu kimligin agdaki adresi.
+    /// This identity's address on the network.
     pub fn node_id(&self) -> NodeId {
         NodeId::new(self.signing.verifying_key().to_bytes())
     }
 
-    /// X25519 acik anahtari.
+    /// The X25519 public key.
     pub fn exchange_public(&self) -> [u8; 32] {
         x25519::public_from_secret(&self.exchange_secret)
     }
@@ -65,7 +66,7 @@ impl Identity {
         &self.exchange_secret
     }
 
-    /// Paylasilabilir, kendinden imzali kimlik karti.
+    /// A shareable, self-signed identity card.
     pub fn contact_card(&self) -> ContactCard {
         let node_id = self.node_id();
         let exchange_key = self.exchange_public();
@@ -75,7 +76,7 @@ impl Identity {
         ContactCard::from_parts(node_id, exchange_key, sig.to_bytes())
     }
 
-    /// Hazir bir govdeyi imzalar. `body.sender` bu kimlik olmalidir.
+    /// Signs a ready-made body. `body.sender` must be this identity.
     pub fn sign_body(&self, body: EnvelopeBody) -> Result<Envelope> {
         if body.sender != self.node_id() {
             return Err(CryptoError::SenderMismatch);
@@ -85,7 +86,7 @@ impl Identity {
         Ok(Envelope { body, signature })
     }
 
-    /// Imzali, sifresiz duyuru olusturur.
+    /// Creates a signed, unencrypted announcement.
     pub fn broadcast(
         &self,
         payload: &[u8],
@@ -103,7 +104,7 @@ impl Identity {
         })
     }
 
-    /// `to`'ya sifreli (sealed box) ve imzali ozel mesaj olusturur.
+    /// Creates a private message encrypted (sealed box) and signed for `to`.
     pub fn direct(
         &self,
         to: &ContactCard,
@@ -123,7 +124,7 @@ impl Identity {
         })
     }
 
-    /// `acked` mesajinin ulastigini `to`'ya bildiren imzali Ack olusturur.
+    /// Creates a signed Ack telling `to` that the message `acked` arrived.
     pub fn ack(
         &self,
         to: &NodeId,
@@ -142,7 +143,8 @@ impl Identity {
         })
     }
 
-    /// Bu kimlige gelen `Direct` zarfi dogrular ve acar. Once imza, sonra sifre.
+    /// Verifies and decrypts a `Direct` envelope addressed to this identity.
+    /// The signature is checked first, decryption second.
     pub fn open_direct(&self, env: &Envelope) -> Result<Zeroizing<Vec<u8>>> {
         verify_envelope(env)?;
         if env.body.kind != Kind::Direct || env.body.recipient != Some(self.node_id()) {
@@ -152,8 +154,8 @@ impl Identity {
     }
 }
 
-/// Zarf imzasini **siki** (`verify_strict`) dogrular. Bir dugum, dogrulamadan
-/// gecmeyen zarfi saklamamali ve iletmemelidir.
+/// Verifies an envelope signature **strictly** (`verify_strict`). A node must not
+/// store or forward an envelope that fails this check.
 pub fn verify_envelope(env: &Envelope) -> Result<()> {
     let input = env.body.signing_input()?;
     let vk = VerifyingKey::from_bytes(env.body.sender.as_bytes())
@@ -223,7 +225,7 @@ mod tests {
         for i in 0..bytes.len() {
             let mut bad = bytes;
             bad[i] ^= 1;
-            assert!(ContactCard::from_bytes(&bad).is_err(), "bayt {i}");
+            assert!(ContactCard::from_bytes(&bad).is_err(), "byte {i}");
         }
         assert!(ContactCard::from_bytes(&bytes[..127]).is_err());
     }

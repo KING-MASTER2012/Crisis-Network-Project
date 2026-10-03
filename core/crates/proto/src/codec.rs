@@ -1,4 +1,4 @@
-//! Dahili bayt okuyucu. Tum tamsayilar big-endian'dir.
+//! Internal byte reader. All integers are big-endian.
 
 use crate::error::{ProtoError, Result};
 
@@ -48,7 +48,7 @@ impl<'a> Reader<'a> {
         Ok(u64::from_be_bytes(self.array()?))
     }
 
-    /// Okuma bittiginde cagrilir; artan bayt varsa hata.
+    /// Called when reading is done; fails if any bytes are left over.
     pub(crate) fn finish(self) -> Result<()> {
         if self.remaining() == 0 {
             Ok(())

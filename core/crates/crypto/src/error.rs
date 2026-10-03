@@ -1,47 +1,47 @@
-//! Hata tipi.
+//! Error type.
 
 use proto::ProtoError;
 
-/// Kripto katmani hatalari. Sifre cozme hatalari kasitli olarak ayrintisizdir.
+/// Crypto-layer errors. Decryption failures are intentionally detail-free.
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
 pub enum CryptoError {
-    /// Anahtar bicimi veya noktasi gecersiz.
-    #[error("gecersiz anahtar")]
+    /// The key encoding or point is invalid.
+    #[error("invalid key")]
     InvalidKey,
-    /// Imza dogrulanamadi.
-    #[error("imza gecersiz")]
+    /// The signature could not be verified.
+    #[error("invalid signature")]
     BadSignature,
-    /// Sifre cozulemedi (yanlis anahtar, bozuk veri veya baglam uyusmazligi).
-    #[error("sifre cozulemedi")]
+    /// Decryption failed (wrong key, corrupted data or context mismatch).
+    #[error("decryption failed")]
     Decrypt,
-    /// Sifreleme basarisiz.
-    #[error("sifreleme basarisiz")]
+    /// Encryption failed.
+    #[error("encryption failed")]
     Encrypt,
-    /// X25519 sonucu tamamen sifir (dusuk dereceli nokta).
-    #[error("gecersiz ortak sir (dusuk dereceli nokta)")]
+    /// The X25519 result was all zeros (low-order point).
+    #[error("invalid shared secret (low-order point)")]
     LowOrderPoint,
-    /// Anahtar turetme hatasi.
-    #[error("anahtar turetme hatasi")]
+    /// Key derivation failed.
+    #[error("key derivation failed")]
     Kdf,
-    /// Isletim sistemi rastgelelik kaynagi basarisiz.
-    #[error("rastgelelik kaynagi basarisiz")]
+    /// The operating system's randomness source failed.
+    #[error("randomness source failed")]
     Rng,
-    /// Kisi karti gecersiz (uzunluk veya imza).
-    #[error("gecersiz kisi karti")]
+    /// The contact card is invalid (length or signature).
+    #[error("invalid contact card")]
     InvalidContactCard,
-    /// Zarf bu kimlige ait degil veya turu uygun degil.
-    #[error("zarf bu kimlige ait degil")]
+    /// The envelope does not belong to this identity or has the wrong kind.
+    #[error("envelope is not addressed to this identity")]
     NotForMe,
-    /// Govdenin `sender` alani imzalayan kimlikle ayni degil.
-    #[error("govde baska bir gonderene ait")]
+    /// The body's `sender` field is not the signing identity.
+    #[error("body belongs to a different sender")]
     SenderMismatch,
-    /// Anahtar deposu hatasi (platform mesaji).
-    #[error("anahtar deposu: {0}")]
+    /// Key store failure (platform message).
+    #[error("key store: {0}")]
     KeyStore(String),
-    /// Protokol (kodlama/sinir) hatasi.
+    /// Protocol (encoding/limit) error.
     #[error(transparent)]
     Proto(#[from] ProtoError),
 }
 
-/// Crate genelinde kullanilan sonuc tipi.
+/// Result type used throughout the crate.
 pub type Result<T> = core::result::Result<T, CryptoError>;
