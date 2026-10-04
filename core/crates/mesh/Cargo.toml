@@ -1,10 +1,15 @@
 [package]
 name = "mesh"
+description = "Crisis Network mesh logic: sans-IO propagation, synchronisation, fragment reassembly and abuse protection."
 edition.workspace = true
 version.workspace = true
 rust-version.workspace = true
 
 [dependencies]
+proto.workspace = true
+crypto.workspace = true
+storage.workspace = true
+thiserror.workspace = true
 
 [lints]
 workspace = true

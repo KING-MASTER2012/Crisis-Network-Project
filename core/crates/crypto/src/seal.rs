@@ -17,7 +17,7 @@
 //! (sender, recipient) pair.
 
 use chacha20poly1305::aead::{Aead, KeyInit, Payload};
-use chacha20poly1305::{ChaCha20Poly1305, Key, Nonce};
+use chacha20poly1305::{ChaCha20Poly1305, Nonce};
 use proto::limits::{MAX_PLAINTEXT_LEN, SEAL_OVERHEAD};
 use proto::{NodeId, ProtoError};
 use zeroize::Zeroizing;
@@ -63,10 +63,11 @@ pub fn seal_with_ephemeral(
     let okm = kdf::derive_seal_material(&shared, &eph_pub, recipient.exchange_key())?;
     let aad = aad(sender, &recipient.node_id());
 
-    let cipher = ChaCha20Poly1305::new(Key::from_slice(&okm[..32]));
+    let cipher = ChaCha20Poly1305::new_from_slice(&okm[..32]).map_err(|_| CryptoError::Encrypt)?;
+    let nonce_bytes: [u8; 12] = okm[32..].try_into().map_err(|_| CryptoError::Encrypt)?;
     let ct = cipher
         .encrypt(
-            Nonce::from_slice(&okm[32..]),
+            &Nonce::from(nonce_bytes),
             Payload {
                 msg: plaintext,
                 aad: &aad,
@@ -95,10 +96,11 @@ pub fn open(recipient: &Identity, sender: &NodeId, sealed: &[u8]) -> Result<Zero
         .map_err(|_| CryptoError::Decrypt)?;
     let aad = aad(sender, &recipient.node_id());
 
-    let cipher = ChaCha20Poly1305::new(Key::from_slice(&okm[..32]));
+    let cipher = ChaCha20Poly1305::new_from_slice(&okm[..32]).map_err(|_| CryptoError::Decrypt)?;
+    let nonce_bytes: [u8; 12] = okm[32..].try_into().map_err(|_| CryptoError::Decrypt)?;
     let pt = cipher
         .decrypt(
-            Nonce::from_slice(&okm[32..]),
+            &Nonce::from(nonce_bytes),
             Payload {
                 msg: &sealed[32..],
                 aad: &aad,

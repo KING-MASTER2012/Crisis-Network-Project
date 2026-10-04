@@ -99,6 +99,7 @@ proptest! {
         let _ = Envelope::decode(&bytes);
         let _ = Frame::decode(&bytes);
         let _ = Fragment::decode(&bytes);
+        let _ = proto::Packet::decode(&bytes);
     }
 
     #[test]

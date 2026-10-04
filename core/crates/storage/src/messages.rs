@@ -178,6 +178,19 @@ impl Storage {
         Ok(InsertOutcome::Inserted { seq, evicted })
     }
 
+    /// The highest log sequence number currently stored (0 if the log is empty).
+    ///
+    /// Sequence numbers handed out later are always larger, so this is a safe
+    /// starting point for tracking "everything after position N".
+    pub fn head_seq(&self) -> Result<u64> {
+        let v: i64 =
+            self.conn
+                .query_row("SELECT COALESCE(MAX(seq), 0) FROM messages", [], |r| {
+                    r.get(0)
+                })?;
+        Ok(from_i64(v))
+    }
+
     /// Whether a live (not expired) message with this id is stored.
     pub fn contains(&self, id: &MessageId, now_ms: u64) -> Result<bool> {
         Ok(self.conn.query_row(

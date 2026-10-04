@@ -20,9 +20,11 @@ pub struct Storage {
 fn apply_key(conn: &Connection, key: &DbKey) -> Result<()> {
     use zeroize::Zeroizing;
 
+    const HEX: &[u8; 16] = b"0123456789abcdef";
     let mut hex = Zeroizing::new(String::with_capacity(64));
     for b in key.as_bytes() {
-        hex.push_str(&format!("{b:02x}"));
+        hex.push(char::from(HEX[usize::from(b >> 4)]));
+        hex.push(char::from(HEX[usize::from(b & 0x0f)]));
     }
     let sql = Zeroizing::new(format!("PRAGMA key = \"x'{}'\";", hex.as_str()));
     conn.execute_batch(sql.as_str()).map_err(map_open_error)
