@@ -39,15 +39,6 @@ jobs:
             - uses: Swatinem/rust-cache@v2
             - run: cargo test --workspace
 
-    # SQLCipher needs a C toolchain and Perl (vendored OpenSSL), so it runs on Linux only.
-    sqlcipher:
-        runs-on: ubuntu-latest
-        steps:
-            - uses: actions/checkout@v4
-            - uses: dtolnay/rust-toolchain@stable
-            - uses: Swatinem/rust-cache@v2
-            - run: cargo test -p storage --no-default-features --features sqlcipher
-
     deny:
         runs-on: ubuntu-latest
         steps:

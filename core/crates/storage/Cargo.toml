@@ -6,11 +6,12 @@ version.workspace = true
 rust-version.workspace = true
 
 [features]
-# Plain bundled SQLite (default). No at-rest encryption.
+# Bundled SQLite (default). The same crate also works against SQLCipher: an application
+# that wants at-rest encryption enables a SQLCipher feature on `rusqlite` in its own
+# manifest (for example `bundled-sqlcipher-vendored-openssl`), and `Storage::open`
+# detects it at run time. Nothing here pulls in OpenSSL.
 default = ["bundled"]
 bundled = ["rusqlite/bundled"]
-# SQLCipher with a vendored OpenSSL. Build with `--no-default-features --features sqlcipher`.
-sqlcipher = ["rusqlite/bundled-sqlcipher-vendored-openssl"]
 
 [dependencies]
 proto.workspace = true

@@ -28,7 +28,7 @@ sha2 = "0.11.0"
 zeroize = { version = "1.9.0", features = ["zeroize_derive"] }
 getrandom = "0.4.3"
 
-# --- Storage (crate `storage`); the bundled/sqlcipher choice is made by that crate's features ---
+# --- Storage (crate `storage`); features are chosen by that crate (and, for SQLCipher, by the final application) ---
 rusqlite = { version = "0.40.2", default-features = false }
 
 # --- General ---

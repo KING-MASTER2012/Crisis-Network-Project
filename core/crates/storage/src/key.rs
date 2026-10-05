@@ -14,7 +14,6 @@ impl DbKey {
         Self(Zeroizing::new(key))
     }
 
-    #[cfg_attr(not(feature = "sqlcipher"), allow(dead_code))]
     pub(crate) fn as_bytes(&self) -> &[u8; 32] {
         &self.0
     }

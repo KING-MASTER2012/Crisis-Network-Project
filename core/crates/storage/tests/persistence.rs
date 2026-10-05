@@ -104,39 +104,34 @@ fn a_newer_database_is_rejected() {
     ));
 }
 
-#[cfg(not(feature = "sqlcipher"))]
+/// With plain SQLite a key must be refused; with SQLCipher it must really encrypt.
+/// Either way the data is never silently stored unencrypted.
 #[test]
-fn a_key_without_sqlcipher_support_is_refused_not_ignored() {
-    let dir = tempfile::tempdir().unwrap();
-    let path = dir.path().join("crisis.db");
-    let key = DbKey::new([7; 32]);
-    assert!(matches!(
-        Storage::open(&path, Config::default(), Some(&key)),
-        Err(StorageError::EncryptionUnavailable)
-    ));
-    assert_eq!(format!("{key:?}"), "DbKey(<redacted>)");
-}
-
-#[cfg(feature = "sqlcipher")]
-#[test]
-fn encrypted_database_needs_the_right_key() {
+fn a_key_is_either_honoured_or_refused() {
     let dir = tempfile::tempdir().unwrap();
     let path = dir.path().join("crisis.db");
     let key = DbKey::new([7; 32]);
     let wrong = DbKey::new([8; 32]);
-    let env = broadcast(1);
-    {
-        let mut s = Storage::open(&path, Config::default(), Some(&key)).unwrap();
-        s.insert(&env, T0).unwrap();
+    assert_eq!(format!("{key:?}"), "DbKey(<redacted>)");
+
+    match Storage::open(&path, Config::default(), Some(&key)) {
+        Err(StorageError::EncryptionUnavailable) => {} // plain SQLite build
+        Err(other) => panic!("unexpected error: {other}"),
+        Ok(mut s) => {
+            // SQLCipher build.
+            let env = broadcast(1);
+            s.insert(&env, T0).unwrap();
+            drop(s);
+            assert!(matches!(
+                Storage::open(&path, Config::default(), Some(&wrong)),
+                Err(StorageError::NotADatabaseOrWrongKey)
+            ));
+            assert!(matches!(
+                Storage::open(&path, Config::default(), None),
+                Err(StorageError::NotADatabaseOrWrongKey)
+            ));
+            let s = Storage::open(&path, Config::default(), Some(&key)).unwrap();
+            assert!(s.contains(&env.message_id().unwrap(), T0).unwrap());
+        }
     }
-    assert!(matches!(
-        Storage::open(&path, Config::default(), Some(&wrong)),
-        Err(StorageError::NotADatabaseOrWrongKey)
-    ));
-    assert!(matches!(
-        Storage::open(&path, Config::default(), None),
-        Err(StorageError::NotADatabaseOrWrongKey)
-    ));
-    let s = Storage::open(&path, Config::default(), Some(&key)).unwrap();
-    assert!(s.contains(&env.message_id().unwrap(), T0).unwrap());
 }

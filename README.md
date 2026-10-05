@@ -10,14 +10,14 @@ decision records.
 
 ## Repository layout
 
-| Path | Contents |
-|---|---|
-| `core/crates/proto` | Wire format (envelope, ids, hop frame, fragmentation) |
-| `core/crates/crypto` | Identity, signatures, contact cards, sealed box |
-| `core/crates/storage` | On-device SQLite message store |
-| `core/crates/mesh` | Mesh logic (placeholder) |
-| `core/crates/cli` | Command-line client, binary `crisis` (placeholder) |
-| `docs/` | mdBook documentation |
+| Path                  | Contents                                              |
+|-----------------------|-------------------------------------------------------|
+| `core/crates/proto`   | Wire format (envelope, ids, hop frame, fragmentation) |
+| `core/crates/crypto`  | Identity, signatures, contact cards, sealed box       |
+| `core/crates/storage` | On-device SQLite message store                        |
+| `core/crates/mesh`    | Mesh logic (placeholder)                              |
+| `core/crates/cli`     | Command-line client, binary `crisis` (placeholder)    |
+| `docs/`               | mdBook documentation                                  |
 
 ## Development
 
@@ -27,11 +27,16 @@ cargo test --workspace
 cargo clippy --workspace --all-targets -- -D warnings
 ```
 
-Encrypted storage (SQLCipher) is opt-in and needs a C toolchain and Perl:
+The CI checks use all features:
 
 ```text
-cargo test -p storage --no-default-features --features sqlcipher
+cargo clippy --workspace --all-features -- -D warnings
+cargo test --workspace --all-features
 ```
+
+Encrypted storage is decided by the final application: it enables a SQLCipher feature on
+`rusqlite` in its own manifest, and `storage::Storage::open` detects SQLCipher at run time
+(a key is refused when only plain SQLite is linked). The workspace itself never needs OpenSSL or Perl.
 
 Documentation:
 

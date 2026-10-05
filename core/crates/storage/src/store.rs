@@ -2,7 +2,8 @@
 
 use std::path::Path;
 
-use rusqlite::Connection;
+use rusqlite::{Connection, OptionalExtension};
+use zeroize::Zeroizing;
 
 use crate::config::Config;
 use crate::error::{Result, StorageError, map_open_error};
@@ -16,11 +17,22 @@ pub struct Storage {
     pub(crate) config: Config,
 }
 
-#[cfg(feature = "sqlcipher")]
+/// Applies the encryption key, refusing to continue if the linked SQLite is not SQLCipher.
+///
+/// Plain SQLite silently ignores `PRAGMA key`, which would leave the data unencrypted,
+/// so the presence of SQLCipher is checked first through `PRAGMA cipher_version`
+/// (which only SQLCipher answers).
 fn apply_key(conn: &Connection, key: &DbKey) -> Result<()> {
-    use zeroize::Zeroizing;
-
     const HEX: &[u8; 16] = b"0123456789abcdef";
+
+    let cipher: Option<String> = conn
+        .query_row("PRAGMA cipher_version", [], |r| r.get(0))
+        .optional()
+        .map_err(map_open_error)?;
+    if cipher.as_deref().is_none_or(str::is_empty) {
+        return Err(StorageError::EncryptionUnavailable);
+    }
+
     let mut hex = Zeroizing::new(String::with_capacity(64));
     for b in key.as_bytes() {
         hex.push(char::from(HEX[usize::from(b >> 4)]));
@@ -30,17 +42,13 @@ fn apply_key(conn: &Connection, key: &DbKey) -> Result<()> {
     conn.execute_batch(sql.as_str()).map_err(map_open_error)
 }
 
-#[cfg(not(feature = "sqlcipher"))]
-fn apply_key(_conn: &Connection, _key: &DbKey) -> Result<()> {
-    Err(StorageError::EncryptionUnavailable)
-}
-
 impl Storage {
     /// Opens (creating if needed) the database at `path`.
     ///
-    /// `key` enables at-rest encryption and requires the `sqlcipher` feature;
-    /// without it, passing a key returns [`StorageError::EncryptionUnavailable`]
-    /// rather than silently storing data unencrypted.
+    /// `key` enables at-rest encryption and requires the application to link
+    /// SQLCipher instead of plain SQLite; otherwise passing a key returns
+    /// [`StorageError::EncryptionUnavailable`] rather than silently storing data
+    /// unencrypted.
     pub fn open(path: &Path, config: Config, key: Option<&DbKey>) -> Result<Self> {
         let conn = Connection::open(path).map_err(map_open_error)?;
         Self::init(conn, config, key, true)

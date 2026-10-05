@@ -14,9 +14,8 @@ pub enum StorageError {
     /// The file is not a database, or the encryption key is wrong.
     #[error("not a database, or wrong encryption key")]
     NotADatabaseOrWrongKey,
-    /// A key was supplied, but this build has no SQLCipher support
-    /// (enable the `sqlcipher` feature).
-    #[error("database encryption is unavailable in this build (enable the `sqlcipher` feature)")]
+    /// A key was supplied, but the linked SQLite is not SQLCipher.
+    #[error("database encryption is unavailable: the linked SQLite is not SQLCipher")]
     EncryptionUnavailable,
     /// The database was not created by this application.
     #[error("database was not created by this application")]

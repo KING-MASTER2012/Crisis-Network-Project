@@ -117,6 +117,7 @@ pub(crate) fn migrate(conn: &mut Connection, migrations: &[Migration]) -> Result
     Ok(())
 }
 
+#[cfg(test)]
 pub(crate) fn current_version(conn: &Connection) -> Result<u32> {
     Ok(conn.query_row("PRAGMA user_version", [], |r| r.get(0))?)
 }

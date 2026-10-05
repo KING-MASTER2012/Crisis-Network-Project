@@ -7,13 +7,13 @@
 //!
 //! Layers, innermost first:
 //!
-//! 1. [`envelope::Envelope`]: the signed, persistent message. [`id::MessageId`]
-//!    is its hash.
-//! 2. [`frame::Frame`]: `hops_left` (outside the signature, changes on every hop)
-//!    plus the envelope.
-//! 3. [`fragment::Fragment`]: a frame cut into pieces that fit a BLE MTU.
-//! 4. [`link::Packet`]: what two neighbouring nodes actually exchange
-//!    (`Inv`, `Want` and `Fragment` packets).
+//! 1. The signed, persistent message is the [`envelope::Envelope`]; its hash is the
+//!    [`id::MessageId`].
+//! 2. The [`frame::Frame`] adds `hops_left` (outside the signature, it changes on
+//!    every hop) to an envelope.
+//! 3. A [`fragment::Fragment`] is a frame cut into pieces that fit a BLE MTU.
+//! 4. A [`link::Packet`] is what two neighbouring nodes actually exchange (`Inv`,
+//!    `Want` and `Fragment` packets).
 //!
 //! Specification: the "Protocol v1" chapter of the book (`docs/src/protocol/v1.md`).
 //! This crate is its reference implementation; if the two disagree, the

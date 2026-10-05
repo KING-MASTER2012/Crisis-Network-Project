@@ -172,10 +172,9 @@ impl Reassembler {
             return Err(Rejection::Invalid);
         };
         let fragments: Vec<Fragment> = done.parts.into_iter().flatten().collect();
-        match reassemble(&fragments) {
-            Ok(frame) => Ok(Accepted::Complete(frame)),
-            Err(_) => Err(Rejection::Invalid),
-        }
+        reassemble(&fragments)
+            .map(Accepted::Complete)
+            .map_err(|_| Rejection::Invalid)
     }
 
     /// Drops transfers older than the timeout. Returns how many were dropped.
