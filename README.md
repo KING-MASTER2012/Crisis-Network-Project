@@ -10,14 +10,24 @@ decision records.
 
 ## Repository layout
 
-| Path                  | Contents                                              |
-|-----------------------|-------------------------------------------------------|
-| `core/crates/proto`   | Wire format (envelope, ids, hop frame, fragmentation) |
-| `core/crates/crypto`  | Identity, signatures, contact cards, sealed box       |
-| `core/crates/storage` | On-device SQLite message store                        |
-| `core/crates/mesh`    | Mesh logic (placeholder)                              |
-| `core/crates/cli`     | Command-line client, binary `crisis` (placeholder)    |
-| `docs/`               | mdBook documentation                                  |
+| Path | Contents |
+|---|---|
+| `core/crates/proto` | Wire format (envelope, ids, hop frame, fragmentation) |
+| `core/crates/crypto` | Identity, signatures, contact cards, sealed box |
+| `core/crates/storage` | On-device SQLite message store |
+| `core/crates/mesh` | Sans-IO propagation, synchronisation, reassembly and abuse protection |
+| `core/crates/engine` | High-level API: identity, contacts, publishing, history |
+| `core/crates/sim` | Deterministic network simulator (many engines, one virtual clock) |
+| `core/crates/cli` | Command-line tools, binary `crisis`: `simulate`, `identity`, `node` (UDP test node) |
+| `docs/` | mdBook documentation |
+
+## Trying it
+
+```text
+cargo run -p cli -- simulate --scenario crowd --nodes 20 --loss 50 --json
+cargo run -p cli -- node --listen 127.0.0.1:9001 --peer 127.0.0.1:9002 --identity a.key
+cargo run -p cli -- node --listen 127.0.0.1:9002 --peer 127.0.0.1:9001 --identity b.key
+```
 
 ## Development
 

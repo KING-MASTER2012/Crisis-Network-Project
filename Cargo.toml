@@ -48,6 +48,8 @@ tempfile = "3.27.0"
 proto = { path = "core/crates/proto" }
 crypto = { path = "core/crates/crypto" }
 mesh = { path = "core/crates/mesh" }
+engine = { path = "core/crates/engine" }
+sim = { path = "core/crates/sim" }
 storage = { path = "core/crates/storage" }
 
 [workspace.lints.rust]

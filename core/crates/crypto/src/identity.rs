@@ -113,6 +113,31 @@ impl Identity {
         lifetime_secs: u32,
     ) -> Result<Envelope> {
         let payload = seal::seal(&self.node_id(), to, plaintext)?;
+        self.direct_envelope(to, payload, created_at_ms, lifetime_secs)
+    }
+
+    /// Like [`Identity::direct`], but with a caller-supplied ephemeral key, which makes
+    /// the result reproducible. **For the simulator and test vectors only**: reusing
+    /// one `eph_secret` for two different messages breaks the encryption.
+    pub fn direct_with_ephemeral(
+        &self,
+        to: &ContactCard,
+        plaintext: &[u8],
+        created_at_ms: u64,
+        lifetime_secs: u32,
+        eph_secret: &[u8; 32],
+    ) -> Result<Envelope> {
+        let payload = seal::seal_with_ephemeral(&self.node_id(), to, plaintext, eph_secret)?;
+        self.direct_envelope(to, payload, created_at_ms, lifetime_secs)
+    }
+
+    fn direct_envelope(
+        &self,
+        to: &ContactCard,
+        payload: Vec<u8>,
+        created_at_ms: u64,
+        lifetime_secs: u32,
+    ) -> Result<Envelope> {
         self.sign_body(EnvelopeBody {
             kind: Kind::Direct,
             sender: self.node_id(),
@@ -182,7 +207,7 @@ mod tests {
         let id = Identity::from_seed(&h32(
             "9d61b19deffd5a60ba844af492ec2cc44449c5697b326919703bac031cae7f60",
         ))
-        .unwrap();
+            .unwrap();
         assert_eq!(
             *id.node_id().as_bytes(),
             h32("d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a")

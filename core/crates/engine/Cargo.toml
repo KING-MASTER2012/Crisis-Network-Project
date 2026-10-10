@@ -1,0 +1,19 @@
+[package]
+name = "engine"
+description = "Crisis Network engine: the high-level API that ties identity, storage and the mesh together."
+edition.workspace = true
+version.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+proto.workspace = true
+crypto.workspace = true
+storage.workspace = true
+mesh.workspace = true
+thiserror.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true
+
+[lints]
+workspace = true

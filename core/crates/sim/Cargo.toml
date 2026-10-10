@@ -1,0 +1,16 @@
+[package]
+name = "sim"
+description = "Crisis Network deterministic network simulator: many engines, one virtual clock, reproducible by seed."
+edition.workspace = true
+version.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+proto.workspace = true
+crypto.workspace = true
+mesh.workspace = true
+engine.workspace = true
+thiserror.workspace = true
+
+[lints]
+workspace = true

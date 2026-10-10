@@ -1,14 +1,30 @@
 [package]
 name = "cli"
+description = "The `crisis` command-line client: a UDP test node, identity tool and network simulator front end."
 edition.workspace = true
 version.workspace = true
 rust-version.workspace = true
+
+[lib]
+name = "cli"
+path = "src/lib.rs"
 
 [[bin]]
 name = "crisis"
 path = "src/main.rs"
 
 [dependencies]
+proto.workspace = true
+crypto.workspace = true
+mesh.workspace = true
+engine.workspace = true
+sim.workspace = true
+storage.workspace = true
+zeroize.workspace = true
+thiserror.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true
 
 [lints]
 workspace = true
