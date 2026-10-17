@@ -10,13 +10,18 @@ use std::net::{SocketAddr, UdpSocket};
 use std::time::Duration;
 
 use engine::{Engine, Output, TransportAction};
-use mesh::{Notification, PeerId};
+use mesh::{DisconnectReason, Notification, PeerId};
 use proto::{MessageId, NodeId};
 
 use crate::error::CliError;
 
 /// Largest datagram this node reads.
 const MAX_DATAGRAM: usize = 2048;
+
+/// Addresses remembered as banned. Anybody can send a datagram with a forged source
+/// address, so the list must not grow without bound; the numerically smallest address is
+/// forgotten first once it is full.
+const MAX_BANNED_ADDRS: usize = 1024;
 
 /// Errors that only mean "nothing to read right now" or "that neighbour is not
 /// listening yet". On Windows a datagram sent to a closed port makes the *next*
@@ -82,7 +87,11 @@ impl UdpNode {
     }
 
     /// Registers a neighbour. Does nothing if the address is already known or banned.
-    pub fn add_peer(&mut self, now_ms: u64, addr: SocketAddr) -> Result<Vec<Notification>, CliError> {
+    pub fn add_peer(
+        &mut self,
+        now_ms: u64,
+        addr: SocketAddr,
+    ) -> Result<Vec<Notification>, CliError> {
         if self.by_addr.contains_key(&addr) || self.banned.contains(&addr) {
             return Ok(Vec::new());
         }
@@ -144,6 +153,13 @@ impl UdpNode {
         Ok((id, self.apply(output)?))
     }
 
+    fn remember_ban(&mut self, addr: SocketAddr) {
+        self.banned.insert(addr);
+        while self.banned.len() > MAX_BANNED_ADDRS {
+            self.banned.pop_first();
+        }
+    }
+
     /// Sends what the engine asked to send and returns what it wants the user to see.
     fn apply(&mut self, output: Output) -> Result<Vec<Notification>, CliError> {
         for action in output.transport {
@@ -157,10 +173,14 @@ impl UdpNode {
                         }
                     }
                 }
-                TransportAction::Disconnect { peer, .. } => {
+                TransportAction::Disconnect { peer, reason } => {
                     if let Some(addr) = self.by_peer.remove(&peer) {
                         self.by_addr.remove(&addr);
-                        self.banned.insert(addr);
+                        // Only misbehaviour is remembered; a full table or a small packet
+                        // size is not the neighbour's fault.
+                        if reason == DisconnectReason::Banned {
+                            self.remember_ban(addr);
+                        }
                     }
                 }
             }

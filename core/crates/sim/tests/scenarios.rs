@@ -1,9 +1,7 @@
 //! End-to-end behaviour of the whole stack, measured by the simulator.
 
 use mesh::MeshConfig;
-use sim::{
-    Change, LinkModel, Report, Scenario, ScenarioParams, SimConfig, builtin_scenario, run,
-};
+use sim::{Change, LinkModel, Report, Scenario, ScenarioParams, SimConfig, builtin_scenario, run};
 
 fn fast_repair(loss_permille: u32, seed: u64) -> SimConfig {
     SimConfig {
@@ -44,7 +42,10 @@ fn twenty_nodes_over_a_lossy_network_deliver_everything_exactly_once() {
     let scenario = builtin_scenario("crowd", &params).unwrap();
     let report = run(&fast_repair(50, 7), &scenario).unwrap();
 
-    assert!(report.totals.packets_dropped > 0, "the network really was lossy");
+    assert!(
+        report.totals.packets_dropped > 0,
+        "the network really was lossy"
+    );
     assert_full_delivery(&report);
     assert_eq!(report.totals.mesh_invalid_signatures, 0);
     assert_eq!(report.totals.mesh_peers_banned, 0);
@@ -96,7 +97,11 @@ fn direct_messages_reach_their_recipient_and_are_acknowledged() {
     assert_full_delivery(&report);
     for message in &report.messages {
         assert_eq!(message.kind, "direct");
-        assert!(message.acked_after_ms.is_some(), "message {} was never acknowledged", message.index);
+        assert!(
+            message.acked_after_ms.is_some(),
+            "message {} was never acknowledged",
+            message.index
+        );
         assert!(message.acked_after_ms >= message.latency_max_ms);
     }
 }

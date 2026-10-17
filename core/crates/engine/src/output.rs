@@ -39,7 +39,8 @@ impl Output {
         for action in actions {
             match action {
                 Action::SendPacket { peer, bytes } => {
-                    out.transport.push(TransportAction::SendPacket { peer, bytes });
+                    out.transport
+                        .push(TransportAction::SendPacket { peer, bytes });
                 }
                 Action::Disconnect { peer, reason } => {
                     out.transport
@@ -88,7 +89,10 @@ mod tests {
             Action::SetTimer { at_ms: 20 },
         ]);
         assert_eq!(out.transport.len(), 2);
-        assert_eq!(out.notifications, vec![Notification::PeerConnected { peer }]);
+        assert_eq!(
+            out.notifications,
+            vec![Notification::PeerConnected { peer }]
+        );
         assert_eq!(out.next_timer_ms, Some(20));
         assert!(!out.is_empty());
         assert!(Output::default().is_empty());

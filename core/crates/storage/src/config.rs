@@ -19,6 +19,14 @@ pub struct Config {
     /// The local node. Messages sent by it or addressed to it get
     /// [`crate::Priority::Own`] and are never evicted by quota pressure.
     pub local_node: Option<NodeId>,
+    /// Byte budget for `Own`-priority messages that *other nodes* can make us hold:
+    /// messages addressed to the local node, and the acknowledgements it creates.
+    ///
+    /// Anyone can address messages to us, so without a bound an attacker could pin the
+    /// whole store with unevictable data. Once this budget is used up, such messages are
+    /// stored with their ordinary transit priority and can be evicted again. Messages
+    /// the local user writes are not counted here. `0` pins nothing on behalf of others.
+    pub max_inbound_own_bytes: u64,
 }
 
 impl Default for Config {
@@ -28,6 +36,7 @@ impl Default for Config {
             max_tombstones: 100_000,
             max_peers: 10_000,
             local_node: None,
+            max_inbound_own_bytes: 8 * 1024 * 1024,
         }
     }
 }

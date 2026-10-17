@@ -198,7 +198,11 @@ fn split_flags(
                     .cloned()
                     .ok_or_else(|| usage(format!("--{name} needs a value")))?,
             };
-            flags.values.entry(name.to_string()).or_default().push(value);
+            flags
+                .values
+                .entry(name.to_string())
+                .or_default()
+                .push(value);
         } else {
             return Err(usage(format!("unknown option `--{name}`")));
         }
@@ -210,8 +214,8 @@ fn parse_simulate(args: &[String]) -> Result<SimulateOptions, CliError> {
     let flags = split_flags(
         args,
         &[
-            "scenario", "nodes", "messages", "seed", "loss", "latency", "jitter", "mtu",
-            "settle", "direct", "resync",
+            "scenario", "nodes", "messages", "seed", "loss", "latency", "jitter", "mtu", "settle",
+            "direct", "resync",
         ],
         &["json"],
     )?;
@@ -290,20 +294,30 @@ mod tests {
         let Command::Simulate(d) = parse(&words("simulate")).unwrap() else {
             panic!("expected simulate");
         };
-        assert_eq!((d.scenario.as_str(), d.nodes, d.messages, d.seed), ("crowd", 20, 10, 1));
-        assert_eq!((d.loss_permille, d.mtu, d.json, d.resync_ms), (0, 247, false, None));
+        assert_eq!(
+            (d.scenario.as_str(), d.nodes, d.messages, d.seed),
+            ("crowd", 20, 10, 1)
+        );
+        assert_eq!(
+            (d.loss_permille, d.mtu, d.json, d.resync_ms),
+            (0, 247, false, None)
+        );
 
         let line = "simulate --scenario ring --nodes=8 --loss 50 --seed 9 --resync 5000 --json";
         let Command::Simulate(o) = parse(&words(line)).unwrap() else {
             panic!("expected simulate");
         };
-        assert_eq!((o.scenario.as_str(), o.nodes, o.loss_permille, o.seed), ("ring", 8, 50, 9));
+        assert_eq!(
+            (o.scenario.as_str(), o.nodes, o.loss_permille, o.seed),
+            ("ring", 8, 50, 9)
+        );
         assert_eq!((o.resync_ms, o.json), (Some(5000), true));
     }
 
     #[test]
     fn node_options() {
-        let line = "node --listen 127.0.0.1:9001 --peer 127.0.0.1:9002 --peer 127.0.0.1:9003 --db a.db";
+        let line =
+            "node --listen 127.0.0.1:9001 --peer 127.0.0.1:9002 --peer 127.0.0.1:9003 --db a.db";
         let Command::Node(n) = parse(&words(line)).unwrap() else {
             panic!("expected node");
         };

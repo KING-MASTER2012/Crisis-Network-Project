@@ -24,6 +24,7 @@ pub use report::{MessageReport, Report, Totals};
 pub use rng::SimRng;
 pub use runner::{LinkModel, SimConfig, run};
 pub use scenario::{
-    Change, Link, PlannedMessage, Scenario, ScenarioParams, Target, TimedChange, Workload,
-    SCENARIO_NAMES, builtin_scenario, grid_links, line_links, plan_messages, random_links, ring_links, star_links,
+    Change, Link, PlannedMessage, SCENARIO_NAMES, Scenario, ScenarioParams, Target, TimedChange,
+    Workload, builtin_scenario, grid_links, line_links, plan_messages, random_links, ring_links,
+    star_links,
 };

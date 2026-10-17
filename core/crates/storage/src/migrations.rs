@@ -79,11 +79,23 @@ BEGIN
 END;
 ";
 
+/// Version 2: a covering index for the "pinned by other nodes" byte count, so that the
+/// quota check in `Storage::insert` reads the index only (see `Config::max_inbound_own_bytes`).
+const V2: &str = "
+CREATE INDEX messages_pinned ON messages (priority, kind, sender, size);
+";
+
 /// All migrations, in order. Versions must be contiguous, starting at 1.
-pub(crate) const MIGRATIONS: &[Migration] = &[Migration {
-    version: 1,
-    sql: V1,
-}];
+pub(crate) const MIGRATIONS: &[Migration] = &[
+    Migration {
+        version: 1,
+        sql: V1,
+    },
+    Migration {
+        version: 2,
+        sql: V2,
+    },
+];
 
 /// Brings the database to the newest version in `migrations`.
 pub(crate) fn migrate(conn: &mut Connection, migrations: &[Migration]) -> Result<()> {
@@ -126,24 +138,56 @@ pub(crate) fn current_version(conn: &Connection) -> Result<u32> {
 mod tests {
     use super::*;
 
-    const V2_TEST: &str = "ALTER TABLE peers ADD COLUMN note TEXT;";
+    const V3_TEST: &str = "ALTER TABLE peers ADD COLUMN note TEXT;";
 
     fn mem() -> Connection {
         Connection::open_in_memory().unwrap()
+    }
+
+    fn latest() -> u32 {
+        MIGRATIONS.last().map_or(0, |m| m.version)
     }
 
     #[test]
     fn fresh_database_gets_latest_schema() {
         let mut c = mem();
         migrate(&mut c, MIGRATIONS).unwrap();
-        assert_eq!(current_version(&c).unwrap(), 1);
+        assert_eq!(current_version(&c).unwrap(), latest());
         let app_id: i32 = c
             .query_row("PRAGMA application_id", [], |r| r.get(0))
             .unwrap();
         assert_eq!(app_id, APPLICATION_ID);
         // Running again is a no-op.
         migrate(&mut c, MIGRATIONS).unwrap();
+        assert_eq!(current_version(&c).unwrap(), latest());
+    }
+
+    #[test]
+    fn version_one_databases_are_upgraded_with_the_pinned_index() {
+        let mut c = mem();
+        migrate(&mut c, &MIGRATIONS[..1]).unwrap();
         assert_eq!(current_version(&c).unwrap(), 1);
+        c.execute(
+            "INSERT INTO messages (id, kind, sender, created_at_ms, received_at_ms, expires_at_ms,
+                                    size, priority, envelope)
+             VALUES (zeroblob(32), 1, zeroblob(32), 0, 0, 10, 100, 1, x'00')",
+            [],
+        )
+        .unwrap();
+        migrate(&mut c, MIGRATIONS).unwrap();
+        assert_eq!(current_version(&c).unwrap(), latest());
+        let rows: i64 = c
+            .query_row("SELECT COUNT(*) FROM messages", [], |r| r.get(0))
+            .unwrap();
+        assert_eq!(rows, 1);
+        let indexes: i64 = c
+            .query_row(
+                "SELECT COUNT(*) FROM sqlite_master WHERE type = 'index' AND name = 'messages_pinned'",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(indexes, 1);
     }
 
     #[test]
@@ -163,11 +207,15 @@ mod tests {
             },
             Migration {
                 version: 2,
-                sql: V2_TEST,
+                sql: V2,
+            },
+            Migration {
+                version: 3,
+                sql: V3_TEST,
             },
         ];
         migrate(&mut c, &extended).unwrap();
-        assert_eq!(current_version(&c).unwrap(), 2);
+        assert_eq!(current_version(&c).unwrap(), 3);
         let (n, note): (i64, Option<String>) = c
             .query_row("SELECT COUNT(*), MAX(note) FROM peers", [], |r| {
                 Ok((r.get(0)?, r.get(1)?))
@@ -186,17 +234,18 @@ mod tests {
             },
             Migration {
                 version: 2,
-                sql: V2_TEST,
+                sql: V2,
+            },
+            Migration {
+                version: 3,
+                sql: V3_TEST,
             },
         ];
         migrate(&mut c, &extended).unwrap();
         let err = migrate(&mut c, MIGRATIONS).unwrap_err();
         assert!(matches!(
             err,
-            StorageError::SchemaTooNew {
-                found: 2,
-                supported: 1
-            }
+            StorageError::SchemaTooNew { found: 3, supported } if supported == latest()
         ));
     }
 
@@ -229,11 +278,15 @@ mod tests {
             },
             Migration {
                 version: 2,
+                sql: V2,
+            },
+            Migration {
+                version: 3,
                 sql: "ALTER TABLE peers ADD COLUMN ok_col TEXT; THIS IS NOT SQL;",
             },
         ];
         assert!(migrate(&mut c, &broken).is_err());
-        assert_eq!(current_version(&c).unwrap(), 1);
+        assert_eq!(current_version(&c).unwrap(), latest());
         let has_col: i64 = c
             .query_row(
                 "SELECT COUNT(*) FROM pragma_table_info('peers') WHERE name = 'ok_col'",

@@ -121,7 +121,11 @@ impl Report {
         ));
         out.push_str(&format!(
             "packets: {} sent, {} delivered, {} lost, {} undeliverable | {} bytes\n",
-            t.packets_sent, t.packets_delivered, t.packets_dropped, t.packets_undeliverable, t.bytes_sent
+            t.packets_sent,
+            t.packets_delivered,
+            t.packets_dropped,
+            t.packets_undeliverable,
+            t.bytes_sent
         ));
         out.push_str(&format!(
             "duplicate notifications: {} | duplicate frames: {} | gave up: {}\n",

@@ -195,7 +195,20 @@ impl Mesh {
             });
             return;
         }
+        if !self.peers.contains_key(&peer) && self.peers.len() >= self.config.max_peers {
+            out.push(Action::Disconnect {
+                peer,
+                reason: DisconnectReason::TooManyPeers,
+            });
+            return;
+        }
         if let Some(state) = self.peers.get_mut(&peer) {
+            if link_mtu < state.mtu {
+                // Fragments queued for the old, larger link would not fit any more. The
+                // peer's reassembly times out and the message is requested again later.
+                state.data.clear();
+            }
+            state.ctrl.retain(|packet| packet.len() <= link_mtu);
             state.mtu = link_mtu;
         } else {
             let state = PeerState::new(&self.config, link_mtu, now_ms);
@@ -244,6 +257,17 @@ impl Mesh {
 
     fn ban(&mut self, now_ms: u64, peer: PeerId, out: &mut Vec<Action>) {
         let until = now_ms.saturating_add(self.config.ban_duration_ms);
+        if !self.banned.contains_key(&peer) && self.banned.len() >= self.config.max_banned_peers {
+            // Forget the ban that would end first; the table stays bounded.
+            let soonest = self
+                .banned
+                .iter()
+                .min_by_key(|(_, ends_ms)| **ends_ms)
+                .map(|(banned_peer, _)| *banned_peer);
+            if let Some(forgotten) = soonest {
+                self.banned.remove(&forgotten);
+            }
+        }
         self.banned.insert(peer, until);
         self.stats.peers_banned += 1;
         self.drop_peer_state(now_ms, peer);
@@ -298,6 +322,11 @@ impl Mesh {
         }
         let missing = self.storage.missing(ids, now_ms)?;
         let mut wanted: Vec<MessageId> = Vec::new();
+        let mut asked_of_peer = self
+            .inflight
+            .values()
+            .filter(|entry| entry.peer == peer)
+            .count();
         for id in missing {
             if self.rejected.contains(&id) {
                 continue;
@@ -312,10 +341,15 @@ impl Mesh {
                 }
                 continue;
             }
-            if self.inflight.len() >= self.config.max_inflight {
+            // A peer may announce ids it will never deliver; its share of the request
+            // table is limited so that it cannot starve everybody else.
+            if self.inflight.len() >= self.config.max_inflight
+                || asked_of_peer >= self.config.max_inflight_per_peer
+            {
                 self.stats.inflight_full += 1;
                 continue;
             }
+            asked_of_peer += 1;
             self.inflight.insert(
                 id,
                 Inflight {
@@ -327,7 +361,13 @@ impl Mesh {
             );
             wanted.push(id);
         }
-        for chunk in wanted.chunks(MAX_IDS_PER_PACKET) {
+        // A request must fit the link like any other packet, however many ids the peer
+        // squeezed into its announcement.
+        let per_packet = self
+            .peers
+            .get(&peer)
+            .map_or(1, |state| ids_per_packet(state.mtu));
+        for chunk in wanted.chunks(per_packet) {
             self.send_ctrl(peer, &Packet::Want(chunk.to_vec()));
         }
         Ok(())
@@ -389,12 +429,12 @@ impl Mesh {
         let envelope = frame.envelope;
         let id = envelope.message_id()?;
 
-        self.inflight.remove(&id);
         if let Some(state) = self.peers.get_mut(&from) {
             state.knows.insert(id);
         }
 
         if self.storage.missing(&[id], now_ms)?.is_empty() {
+            self.inflight.remove(&id);
             self.stats.duplicates += 1;
             return Ok(());
         }
@@ -405,17 +445,22 @@ impl Mesh {
             .get_peer(&sender)?
             .is_some_and(|p| p.trust == TrustState::Blocked);
         if blocked {
+            self.inflight.remove(&id);
             self.rejected.insert(id);
             self.stats.blocked_dropped += 1;
             return Ok(());
         }
 
+        // The message id does not cover the signature, so anybody can send a frame with
+        // the id of a message we are waiting for and a forged signature. The pending
+        // request must survive such a frame: it is cleared only after verification.
         if verify_envelope(&envelope).is_err() {
             self.stats.invalid_signatures += 1;
             let points = self.config.penalty_invalid_signature;
             self.penalize(now_ms, from, points, out);
             return Ok(());
         }
+        self.inflight.remove(&id);
 
         if !self.sender_allowed(now_ms, &sender) {
             self.stats.sender_rate_limited += 1;

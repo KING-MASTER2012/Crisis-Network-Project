@@ -133,7 +133,11 @@ impl Engine {
     ///
     /// Returns the message id and the resulting output; if the mesh refused the
     /// message, the output contains a `PublishRejected` notification.
-    pub fn publish_broadcast(&mut self, now_ms: u64, payload: &[u8]) -> Result<(MessageId, Output)> {
+    pub fn publish_broadcast(
+        &mut self,
+        now_ms: u64,
+        payload: &[u8],
+    ) -> Result<(MessageId, Output)> {
         let lifetime = self.default_lifetime_secs;
         self.publish_broadcast_with(now_ms, payload, lifetime)
     }
@@ -160,7 +164,9 @@ impl Engine {
         to: &NodeId,
         plaintext: &[u8],
     ) -> Result<(MessageId, Output)> {
-        let card = self.contact_card_of(to)?.ok_or(EngineError::UnknownContact)?;
+        let card = self
+            .contact_card_of(to)?
+            .ok_or(EngineError::UnknownContact)?;
         self.publish_direct_to_card(now_ms, &card, plaintext)
     }
 
@@ -190,13 +196,10 @@ impl Engine {
         ephemeral: &[u8; 32],
     ) -> Result<(MessageId, Output)> {
         let lifetime = self.default_lifetime_secs;
-        let envelope = self.mesh.identity().direct_with_ephemeral(
-            card,
-            plaintext,
-            now_ms,
-            lifetime,
-            ephemeral,
-        )?;
+        let envelope = self
+            .mesh
+            .identity()
+            .direct_with_ephemeral(card, plaintext, now_ms, lifetime, ephemeral)?;
         self.publish_envelope(now_ms, envelope)
     }
 
@@ -216,7 +219,8 @@ impl Engine {
     /// Verifies a contact card received out of band (for example scanned from a QR
     /// code) and remembers it. Returns the verified card.
     pub fn add_contact(&mut self, now_ms: u64, card_bytes: &[u8]) -> Result<ContactCard> {
-        let card = ContactCard::from_bytes(card_bytes).map_err(|_| EngineError::InvalidContactCard)?;
+        let card =
+            ContactCard::from_bytes(card_bytes).map_err(|_| EngineError::InvalidContactCard)?;
         self.mesh
             .storage_mut()
             .set_contact_card(&card.node_id(), card_bytes, now_ms)?;

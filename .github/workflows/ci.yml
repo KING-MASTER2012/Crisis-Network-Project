@@ -58,3 +58,19 @@ jobs:
             - run: cargo doc --workspace --no-deps
               env:
                   RUSTDOCFLAGS: -D warnings
+
+    fuzz-smoke:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
+            - uses: dtolnay/rust-toolchain@nightly
+            - uses: Swatinem/rust-cache@v2
+              with:
+                  workspaces: core/fuzz
+            - run: cargo install cargo-fuzz --locked
+            - name: Run every fuzz target briefly
+              working-directory: core
+              run: |
+                  for target in $(cargo fuzz list); do
+                      cargo fuzz run "$target" -- -max_total_time=30 -rss_limit_mb=2048
+                  done

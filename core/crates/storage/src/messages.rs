@@ -63,7 +63,11 @@ impl RawRow {
 }
 
 impl Storage {
-    /// The retention priority a message would get on this node.
+    /// The *nominal* retention priority of a message on this node.
+    ///
+    /// [`Storage::insert`] may store a message with a lower priority than this when
+    /// the budget for data that other nodes can pin is used up
+    /// (see [`crate::Config::max_inbound_own_bytes`]).
     pub fn priority_of(&self, body: &EnvelopeBody) -> Priority {
         if let Some(local) = &self.config.local_node
             && (body.sender == *local || body.recipient == Some(*local))
@@ -77,6 +81,17 @@ impl Storage {
         }
     }
 
+    /// Whether other nodes can make us hold this message with `Own` priority: it is
+    /// addressed to us by someone else, or it is an acknowledgement we created in reply.
+    fn is_pinned_by_others(&self, body: &EnvelopeBody) -> bool {
+        let Some(local) = &self.config.local_node else {
+            return false;
+        };
+        let inbound = body.sender != *local && body.recipient == Some(*local);
+        let own_ack = body.sender == *local && body.kind == Kind::Ack;
+        inbound || own_ack
+    }
+
     /// Appends an envelope to the log.
     ///
     /// The envelope's signature must already have been verified by the caller.
@@ -85,6 +100,12 @@ impl Storage {
     /// a live tombstone yields [`InsertOutcome::Tombstoned`]; neither changes the
     /// store. Expiry is counted from `now_ms` (our clock), never from the sender's
     /// `created_at_ms`, which cannot be trusted.
+    ///
+    /// `Own` priority is granted to messages the local user wrote without limit, but to
+    /// messages that other nodes address to us (and the acks we create for them) only
+    /// while they stay within [`crate::Config::max_inbound_own_bytes`]; beyond that they
+    /// are stored with their transit priority. This keeps an attacker from filling the
+    /// store with data that can never be evicted.
     ///
     /// When the byte budget would be exceeded, messages of priority lower than or
     /// equal to the new one (and never [`Priority::Own`]) are evicted, lowest
@@ -96,7 +117,18 @@ impl Storage {
         let id = envelope.message_id()?;
         let body = &envelope.body;
         let size = blob.len() as u64;
-        let priority = self.priority_of(body);
+        let nominal = self.priority_of(body);
+        let pinned_by_others = nominal == Priority::Own && self.is_pinned_by_others(body);
+        let transit = match body.kind {
+            Kind::Direct => Priority::Direct,
+            Kind::Broadcast => Priority::Broadcast,
+            Kind::Ack => Priority::Ack,
+        };
+        let local_bytes = self
+            .config
+            .local_node
+            .map_or([0u8; 32], |node| *node.as_bytes());
+        let max_inbound_own = self.config.max_inbound_own_bytes;
         let max_total = self.config.max_total_bytes;
         let expires_at_ms = now_ms.saturating_add(u64::from(body.lifetime_secs) * 1000);
 
@@ -120,6 +152,22 @@ impl Storage {
         if known {
             return Ok(InsertOutcome::Duplicate);
         }
+
+        let priority = if pinned_by_others {
+            let pinned: i64 = tx.query_row(
+                "SELECT COALESCE(SUM(size), 0) FROM messages
+                  WHERE priority = ?1 AND (kind = ?2 OR sender <> ?3)",
+                params![Priority::Own as i64, Kind::Ack as i64, &local_bytes[..]],
+                |r| r.get(0),
+            )?;
+            if from_i64(pinned).saturating_add(size) > max_inbound_own {
+                transit
+            } else {
+                Priority::Own
+            }
+        } else {
+            nominal
+        };
 
         let (_, total) = counters(&tx)?;
         let need = total.saturating_add(size).saturating_sub(max_total);

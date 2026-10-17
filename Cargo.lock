@@ -377,6 +377,7 @@ name = "mesh"
 version = "0.1.0"
 dependencies = [
  "crypto",
+ "proptest",
  "proto",
  "storage",
  "thiserror",

@@ -132,3 +132,42 @@ proptest! {
         prop_assert!(r.is_err());
     }
 }
+
+proptest! {
+    /// Parsing is strict and canonical: whatever a corrupted encoding still parses to
+    /// encodes back to exactly the same bytes, so no two byte strings mean one message.
+    #[test]
+    fn whatever_parses_is_canonical(
+        f in arb_frame(),
+        pos in any::<prop::sample::Index>(),
+        value in any::<u8>(),
+        cut in any::<bool>(),
+    ) {
+        let mut bytes = f.encode().unwrap();
+        let i = pos.index(bytes.len());
+        bytes[i] = value;
+        if cut {
+            bytes.truncate(i + 1);
+        }
+        if let Ok(parsed) = Frame::decode(&bytes) {
+            prop_assert_eq!(parsed.encode().unwrap(), bytes);
+        }
+    }
+
+    /// Every byte covered by the signature also changes the message id, so an id can
+    /// never be shared by two different signed messages.
+    #[test]
+    fn every_signed_byte_affects_the_message_id(
+        body in arb_body(),
+        pos in any::<prop::sample::Index>(),
+        bit in 0u8..8,
+    ) {
+        let env = Envelope { body, signature: [0u8; SIGNATURE_LEN] };
+        let mut bytes = env.encode().unwrap();
+        let i = pos.index(bytes.len() - SIGNATURE_LEN);
+        bytes[i] ^= 1 << bit;
+        if let Ok(other) = Envelope::decode(&bytes) {
+            prop_assert_ne!(other.message_id().unwrap(), env.message_id().unwrap());
+        }
+    }
+}

@@ -1,0 +1,62 @@
+[package]
+name = "core-fuzz"
+version = "0.0.0"
+publish = false
+edition = "2024"
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4"
+arbitrary = { version = "1", features = ["derive"] }
+proto = { path = "../crates/proto" }
+crypto = { path = "../crates/crypto" }
+storage = { path = "../crates/storage" }
+mesh = { path = "../crates/mesh" }
+
+# Keeps this crate out of the main workspace: it needs a nightly toolchain.
+[workspace]
+members = ["."]
+
+[[bin]]
+name = "packet_decode"
+path = "fuzz_targets/packet_decode.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "frame_decode"
+path = "fuzz_targets/frame_decode.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "fragment_roundtrip"
+path = "fuzz_targets/fragment_roundtrip.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "crypto_inputs"
+path = "fuzz_targets/crypto_inputs.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "storage_ops"
+path = "fuzz_targets/storage_ops.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "mesh_events"
+path = "fuzz_targets/mesh_events.rs"
+test = false
+doc = false
+bench = false

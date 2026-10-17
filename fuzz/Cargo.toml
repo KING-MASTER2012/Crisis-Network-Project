@@ -1,0 +1,63 @@
+[package]
+name = "cli-fuzz"
+version = "0.0.0"
+publish = false
+edition = "2024"
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4"
+
+[dependencies.cli]
+path = ".."
+
+[[bin]]
+name = "fuzz_target_1"
+path = "fuzz_targets/fuzz_target_1.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "crypto_inputs"
+path = "fuzz_targets/crypto_inputs.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "fragment_roundtrip"
+path = "fuzz_targets/fragment_roundtrip.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "frame_decode"
+path = "fuzz_targets/frame_decode.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "mesh_events"
+path = "fuzz_targets/mesh_events.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "packet_decode"
+path = "fuzz_targets/packet_decode.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "storage_ops"
+path = "fuzz_targets/storage_ops.rs"
+test = false
+doc = false
+bench = false

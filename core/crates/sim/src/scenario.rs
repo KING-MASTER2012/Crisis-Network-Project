@@ -266,7 +266,11 @@ pub fn builtin_scenario(name: &str, params: &ScenarioParams) -> Result<Scenario>
         "partition" => {
             let half = nodes / 2;
             let mut links = ring_links(half);
-            links.extend(ring_links(nodes - half).into_iter().map(|(a, b)| (a + half, b + half)));
+            links.extend(
+                ring_links(nodes - half)
+                    .into_iter()
+                    .map(|(a, b)| (a + half, b + half)),
+            );
             links
         }
         other => {

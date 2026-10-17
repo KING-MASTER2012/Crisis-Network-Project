@@ -106,8 +106,34 @@ fn short(node: &NodeId) -> String {
     node.to_string().chars().take(8).collect()
 }
 
+/// Characters that change how surrounding text is displayed without being visible themselves
+/// (zero-width marks, bidirectional overrides, the byte order mark).
+fn is_invisible_format(c: char) -> bool {
+    matches!(
+        c,
+        '\u{200B}'..='\u{200F}' | '\u{202A}'..='\u{202E}' | '\u{2060}'..='\u{2064}' | '\u{2066}'..='\u{2069}' | '\u{FEFF}'
+    )
+}
+
+/// Message text as shown on the terminal.
+///
+/// Text from the network is untrusted: raw control characters would let a sender clear the
+/// screen, move the cursor, change the window title or fake extra lines (for example a
+/// `[delivered]` line). Control and invisible formatting characters are shown as `\u{..}`
+/// instead; ordinary text in any language is untouched.
 fn text_of(bytes: &[u8]) -> String {
-    String::from_utf8_lossy(bytes).into_owned()
+    use std::fmt::Write as _;
+
+    let text = String::from_utf8_lossy(bytes);
+    let mut out = String::with_capacity(text.len());
+    for c in text.chars() {
+        if c.is_control() || is_invisible_format(c) {
+            let _ = write!(out, "\\u{{{:x}}}", u32::from(c));
+        } else {
+            out.push(c);
+        }
+    }
+    out
 }
 
 /// A one-line description of a notification, as printed by the interactive node.
@@ -118,7 +144,11 @@ pub fn describe(note: &Notification) -> Option<String> {
         Notification::MessageReceived {
             sender, kind, body, ..
         } => {
-            let label = if *kind == Kind::Direct { "direct" } else { "broadcast" };
+            let label = if *kind == Kind::Direct {
+                "direct"
+            } else {
+                "broadcast"
+            };
             Some(format!("[{label}] {}: {}", short(sender), text_of(body)))
         }
         Notification::Delivered { id } => Some(format!("[delivered] {id}")),
@@ -164,12 +194,18 @@ fn resolve_contact(engine: &Engine, prefix: &str) -> Result<NodeId, String> {
         .filter(|c| c.node_id.to_string().starts_with(&prefix));
     match (matches.next(), matches.next()) {
         (Some(only), None) => Ok(only.node_id),
-        (None, _) => Err(format!("no contact starts with `{prefix}` (see `contacts`)")),
+        (None, _) => Err(format!(
+            "no contact starts with `{prefix}` (see `contacts`)"
+        )),
         (Some(_), Some(_)) => Err(format!("`{prefix}` matches several contacts")),
     }
 }
 
-fn execute(node: &mut UdpNode, command: NodeCommand, out: &mut dyn Write) -> Result<Flow, CliError> {
+fn execute(
+    node: &mut UdpNode,
+    command: NodeCommand,
+    out: &mut dyn Write,
+) -> Result<Flow, CliError> {
     let now = now_ms();
     match command {
         NodeCommand::Help => out.write_all(crate::args::HELP.as_bytes())?,
@@ -208,7 +244,11 @@ fn execute(node: &mut UdpNode, command: NodeCommand, out: &mut dyn Write) -> Res
                     TrustState::Verified => "verified",
                     TrustState::Blocked => "blocked",
                 };
-                let card = if contact.card.is_some() { "card" } else { "no card" };
+                let card = if contact.card.is_some() {
+                    "card"
+                } else {
+                    "no card"
+                };
                 writeln!(out, "{}  {trust}  {card}", contact.node_id)?;
             }
         }
@@ -219,7 +259,10 @@ fn execute(node: &mut UdpNode, command: NodeCommand, out: &mut dyn Write) -> Res
                     Direction::Outgoing => "->",
                     Direction::Incoming => "<-",
                 };
-                let who = entry.counterpart.as_ref().map_or_else(|| "everyone".to_string(), short);
+                let who = entry
+                    .counterpart
+                    .as_ref()
+                    .map_or_else(|| "everyone".to_string(), short);
                 let body = entry
                     .body
                     .as_deref()
@@ -321,7 +364,10 @@ mod tests {
         );
         assert_eq!(parse_command("quit").unwrap(), Some(NodeCommand::Quit));
         assert_eq!(parse_command("q").unwrap(), Some(NodeCommand::Quit));
-        assert_eq!(parse_command("history").unwrap(), Some(NodeCommand::History));
+        assert_eq!(
+            parse_command("history").unwrap(),
+            Some(NodeCommand::History)
+        );
     }
 
     #[test]
@@ -330,7 +376,38 @@ mod tests {
         assert!(parse_command("send").unwrap_err().contains("usage"));
         assert!(parse_command("send ab12").unwrap_err().contains("usage"));
         assert!(parse_command("contact").unwrap_err().contains("needs"));
-        assert!(parse_command("dance").unwrap_err().contains("unknown command"));
+        assert!(
+            parse_command("dance")
+                .unwrap_err()
+                .contains("unknown command")
+        );
+    }
+
+    #[test]
+    fn terminal_control_sequences_in_messages_are_neutralised() {
+        // Clear screen + a fake status line, as an attacker would send them.
+        let hostile = b"hi\x1b[2J\x1b]0;owned\x07\n[delivered] 0000";
+        let shown = text_of(hostile);
+        assert!(!shown.chars().any(char::is_control), "{shown:?}");
+        assert!(shown.contains("\\u{1b}[2J"));
+        assert!(shown.contains("\\u{a}[delivered]"));
+        // A right-to-left override cannot reorder what follows it.
+        assert!(!text_of("a\u{202E}b".as_bytes()).contains('\u{202E}'));
+        // Invalid UTF-8 is replaced, not passed through.
+        assert!(text_of(&[0xff, 0xfe]).contains('\u{FFFD}'));
+    }
+
+    #[test]
+    fn ordinary_text_in_any_language_is_unchanged() {
+        for text in [
+            "hello, world",
+            "Merhaba, dünya: şğüöçı İ",
+            "помощь здесь",
+            "救命",
+            "ok \u{1F198}",
+        ] {
+            assert_eq!(text_of(text.as_bytes()), text);
+        }
     }
 
     #[test]

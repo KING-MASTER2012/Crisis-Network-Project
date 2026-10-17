@@ -48,12 +48,21 @@ pub struct MeshConfig {
     pub max_want_attempts: u32,
     /// Maximum messages requested but not yet received.
     pub max_inflight: usize,
+    /// Maximum requests in flight towards one peer. A peer that announces messages it
+    /// never delivers can therefore tie up only this many of the `max_inflight` slots.
+    pub max_inflight_per_peer: usize,
     /// Ids remembered per peer as "the peer already has this".
     pub peer_known_ids: usize,
     /// Messages whose hop budget is remembered.
     pub max_tracked_hops: usize,
     /// Ids of messages from blocked senders that are not requested again.
     pub max_rejected_ids: usize,
+
+    /// Neighbours served at the same time. A further neighbour is turned away
+    /// ([`crate::DisconnectReason::TooManyPeers`]) until a slot frees up.
+    pub max_peers: usize,
+    /// Bans remembered. When the table is full, the ban that ends soonest is forgotten.
+    pub max_banned_peers: usize,
 
     /// How often expired messages are purged from the store (ms).
     pub purge_interval_ms: u64,
@@ -113,9 +122,13 @@ impl Default for MeshConfig {
             want_timeout_ms: 3_000,
             max_want_attempts: 4,
             max_inflight: 1024,
+            max_inflight_per_peer: 256,
             peer_known_ids: 512,
             max_tracked_hops: 4096,
             max_rejected_ids: 1024,
+
+            max_peers: 128,
+            max_banned_peers: 1024,
 
             purge_interval_ms: 10_000,
 
@@ -202,6 +215,10 @@ impl MeshConfig {
             "max_want_attempts must be positive",
         )?;
         check(self.max_inflight > 0, "max_inflight must be positive")?;
+        check(
+            self.max_inflight_per_peer > 0,
+            "max_inflight_per_peer must be positive",
+        )?;
         check(self.peer_known_ids > 0, "peer_known_ids must be positive")?;
         check(
             self.max_tracked_hops > 0,
@@ -210,6 +227,11 @@ impl MeshConfig {
         check(
             self.max_rejected_ids > 0,
             "max_rejected_ids must be positive",
+        )?;
+        check(self.max_peers > 0, "max_peers must be positive")?;
+        check(
+            self.max_banned_peers > 0,
+            "max_banned_peers must be positive",
         )?;
         check(
             self.purge_interval_ms > 0,
@@ -263,5 +285,8 @@ mod tests {
         assert!(bad(|c| c.max_data_queue = 4));
         assert!(bad(|c| c.byte_burst = 10));
         assert!(bad(|c| c.penalty_decay_per_sec = 0));
+        assert!(bad(|c| c.max_inflight_per_peer = 0));
+        assert!(bad(|c| c.max_peers = 0));
+        assert!(bad(|c| c.max_banned_peers = 0));
     }
 }

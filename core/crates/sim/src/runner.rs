@@ -69,7 +69,9 @@ impl SimConfig {
             return Err(SimError::InvalidConfig("latency_ms must be at least 1"));
         }
         if self.link.loss_permille > 1000 {
-            return Err(SimError::InvalidConfig("loss_permille must not exceed 1000"));
+            return Err(SimError::InvalidConfig(
+                "loss_permille must not exceed 1000",
+            ));
         }
         if self.mtu < MIN_LINK_MTU {
             return Err(SimError::InvalidConfig("mtu is below the mesh minimum"));
@@ -137,7 +139,8 @@ fn identity_for(seed: u64, index: usize) -> Result<Identity> {
 
 /// The ephemeral encryption key of the direct message with this index.
 fn ephemeral_for(seed: u64, index: usize) -> [u8; 32] {
-    let mut rng = SimRng::new(seed ^ (index as u64 + 1).wrapping_mul(0x9FB2_1C65_1E98_DF25) ^ 0xE9E5);
+    let mut rng =
+        SimRng::new(seed ^ (index as u64 + 1).wrapping_mul(0x9FB2_1C65_1E98_DF25) ^ 0xE9E5);
     let mut bytes = [0u8; 32];
     for chunk in bytes.chunks_mut(8) {
         chunk.copy_from_slice(&rng.next_u64().to_be_bytes());
@@ -302,8 +305,18 @@ impl World {
         let before = self.queue.len();
         self.queue.retain(|f| link_key(f.from, f.to) != key);
         self.totals.packets_undeliverable += (before - self.queue.len()) as u64;
-        self.feed(a, Event::PeerLost { peer: PeerId(b as u64) })?;
-        self.feed(b, Event::PeerLost { peer: PeerId(a as u64) })
+        self.feed(
+            a,
+            Event::PeerLost {
+                peer: PeerId(b as u64),
+            },
+        )?;
+        self.feed(
+            b,
+            Event::PeerLost {
+                peer: PeerId(a as u64),
+            },
+        )
     }
 
     fn apply(&mut self, change: Change) -> Result<()> {
@@ -325,9 +338,8 @@ impl World {
                 let card = self.cards[to].clone();
                 // A fixed ephemeral key per message keeps the whole run reproducible.
                 let ephemeral = ephemeral_for(self.seed, index);
-                self.engines[plan.from].publish_direct_to_card_with_ephemeral(
-                    self.now, &card, &payload, &ephemeral,
-                )?
+                self.engines[plan.from]
+                    .publish_direct_to_card_with_ephemeral(self.now, &card, &payload, &ephemeral)?
             }
         };
         self.tracked.push(Tracked {

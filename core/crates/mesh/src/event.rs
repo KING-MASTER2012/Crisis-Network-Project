@@ -48,6 +48,9 @@ pub enum DisconnectReason {
     Banned,
     /// The link's packet size is below [`crate::MIN_LINK_MTU`].
     MtuTooSmall,
+    /// The mesh already serves [`crate::MeshConfig::max_peers`] neighbours. The platform
+    /// may retry later; this is not a ban.
+    TooManyPeers,
 }
 
 /// Why a locally published message was not accepted.

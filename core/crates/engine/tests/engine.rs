@@ -14,7 +14,7 @@ fn engine(seed: u8) -> Engine {
         Identity::from_seed(&[seed; 32]).unwrap(),
         T0,
     )
-        .unwrap()
+    .unwrap()
 }
 
 /// Two engines wired back to back with instant, in-order delivery.
@@ -95,9 +95,7 @@ impl Pair {
 fn a_broadcast_is_published_and_shows_up_in_the_authors_history() {
     let mut e = engine(1);
     let (id, out) = e.publish_broadcast(T0, b"hello").unwrap();
-    assert!(out
-        .notifications
-        .contains(&Notification::Published { id }));
+    assert!(out.notifications.contains(&Notification::Published { id }));
 
     let page = e.history(0, 10, T0).unwrap();
     assert_eq!(page.entries.len(), 1);
@@ -110,10 +108,12 @@ fn a_broadcast_is_published_and_shows_up_in_the_authors_history() {
 
     // Publishing the same thing in the same millisecond is a duplicate, not a second message.
     let (_, again) = e.publish_broadcast(T0, b"hello").unwrap();
-    assert!(again
-        .notifications
-        .iter()
-        .any(|n| matches!(n, Notification::PublishRejected { .. })));
+    assert!(
+        again
+            .notifications
+            .iter()
+            .any(|n| matches!(n, Notification::PublishRejected { .. }))
+    );
 }
 
 #[test]
@@ -135,7 +135,10 @@ fn a_direct_message_needs_a_contact_and_then_travels_encrypted() {
     assert_eq!(contacts.len(), 1);
     assert_eq!(contacts[0].card, Some(b_card));
 
-    let (id, out) = pair.a.publish_direct(pair.now, &b_id, b"for your eyes only").unwrap();
+    let (id, out) = pair
+        .a
+        .publish_direct(pair.now, &b_id, b"for your eyes only")
+        .unwrap();
     pair.absorb(true, out);
     pair.settle();
 
@@ -147,11 +150,12 @@ fn a_direct_message_needs_a_contact_and_then_travels_encrypted() {
         .filter(|e| e.direction == Direction::Incoming)
         .collect();
     assert_eq!(incoming.len(), 1);
-    assert_eq!(incoming[0].body.as_deref(), Some(&b"for your eyes only"[..]));
+    assert_eq!(
+        incoming[0].body.as_deref(),
+        Some(&b"for your eyes only"[..])
+    );
     assert_eq!(incoming[0].counterpart, Some(pair.a.node_id()));
-    assert!(pair
-        .notes_a
-        .contains(&Notification::Delivered { id }));
+    assert!(pair.notes_a.contains(&Notification::Delivered { id }));
 
     // A's own history shows the message but cannot read it back: it is sealed to B.
     let mine = pair.a.history(0, 10, pair.now).unwrap();
@@ -182,7 +186,9 @@ fn tampered_or_foreign_contact_cards_are_refused() {
 fn a_blocked_author_is_not_stored() {
     let mut pair = Pair::new();
     let author = pair.a.node_id();
-    pair.b.set_trust(pair.now, &author, TrustState::Blocked).unwrap();
+    pair.b
+        .set_trust(pair.now, &author, TrustState::Blocked)
+        .unwrap();
     pair.publish_from_a_broadcast(b"unwanted");
     assert!(pair.b.history(0, 10, pair.now).unwrap().entries.is_empty());
     assert_eq!(pair.b.stats().blocked_dropped, 1);
@@ -205,7 +211,9 @@ fn history_pages_do_not_skip_or_repeat() {
         after = page.next_after_seq;
         seen.extend(page.entries.into_iter().map(|e| e.body.unwrap()));
     }
-    let expected: Vec<Vec<u8>> = (0..10).map(|i| format!("message {i}").into_bytes()).collect();
+    let expected: Vec<Vec<u8>> = (0..10)
+        .map(|i| format!("message {i}").into_bytes())
+        .collect();
     assert_eq!(seen, expected);
     assert!(e.history(0, 0, T0).unwrap().entries.is_empty());
 }
@@ -232,7 +240,7 @@ fn a_file_backed_engine_keeps_its_history_across_restarts() {
             None,
             T0,
         )
-            .unwrap();
+        .unwrap();
         e.publish_broadcast(T0, b"remember me").unwrap().0
     };
     let e = Engine::open(
@@ -242,7 +250,7 @@ fn a_file_backed_engine_keeps_its_history_across_restarts() {
         None,
         T0 + 1,
     )
-        .unwrap();
+    .unwrap();
     let page = e.history(0, 10, T0 + 1).unwrap();
     assert_eq!(page.entries.len(), 1);
     assert_eq!(page.entries[0].id, id);
