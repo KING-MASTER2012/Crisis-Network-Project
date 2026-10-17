@@ -18,6 +18,13 @@ crate-type = ["cdylib", "staticlib", "lib"]
 name = "uniffi-bindgen"
 path = "src/bin/uniffi-bindgen.rs"
 
+[features]
+# At-rest encryption for the platform builds that need it (Android: `cargo ndk ... --features
+# sqlcipher`, driven by `-Pcrisis.sqlcipher=true` in clients/android). It switches the bundled
+# SQLite for a bundled SQLCipher and builds OpenSSL from source, which needs a C toolchain,
+# Perl and make. Off by default, so the workspace build, its tests and CI stay free of OpenSSL.
+sqlcipher = ["dep:rusqlite", "rusqlite/bundled-sqlcipher-vendored-openssl"]
+
 [dependencies]
 proto.workspace = true
 crypto.workspace = true
@@ -28,6 +35,8 @@ uniffi.workspace = true
 thiserror.workspace = true
 zeroize.workspace = true
 getrandom.workspace = true
+# Only for the `sqlcipher` feature: it carries the SQLCipher feature flags of rusqlite.
+rusqlite = { workspace = true, optional = true }
 
 [dev-dependencies]
 tempfile.workspace = true
