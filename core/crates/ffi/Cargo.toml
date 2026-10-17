@@ -1,0 +1,43 @@
+[package]
+name = "ffi"
+description = "Crisis Network foreign-function interface: the versioned UniFFI surface of the core, for the Kotlin and Swift clients."
+edition.workspace = true
+version.workspace = true
+rust-version.workspace = true
+
+[lib]
+# The library is named after the generated bindings' namespace (`crisis_core`), which
+# also gives `libcrisis_core.so` / `.dylib` / `.a` / `.dll` a name that cannot be
+# confused with the system's libffi.
+name = "crisis_core"
+crate-type = ["cdylib", "staticlib", "lib"]
+
+[[bin]]
+# `cargo run -p ffi --bin uniffi-bindgen -- generate ...` (see scripts/gen-bindings.sh).
+name = "uniffi-bindgen"
+path = "src/bin/uniffi-bindgen.rs"
+
+[dependencies]
+proto.workspace = true
+crypto.workspace = true
+storage.workspace = true
+mesh.workspace = true
+engine.workspace = true
+uniffi.workspace = true
+thiserror.workspace = true
+zeroize.workspace = true
+getrandom.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true
+
+# This crate has its own lint table (it cannot also inherit the workspace one): the
+# code UniFFI generates needs `unsafe`, so the lint is relaxed here. Nothing written by
+# hand in this crate uses `unsafe`.
+[lints.rust]
+unsafe_code = "allow"
+unused_must_use = "warn"
+missing_docs = "warn"
+
+[lints.clippy]
+all = "warn"

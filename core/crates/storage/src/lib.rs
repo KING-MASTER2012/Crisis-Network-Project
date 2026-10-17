@@ -42,3 +42,12 @@ pub use error::{Result, StorageError};
 pub use key::DbKey;
 pub use store::Storage;
 pub use types::{InsertOutcome, Peer, Priority, PurgeReport, Stats, StoredMessage, TrustState};
+
+/// The database schema version this build writes and the newest it can read.
+///
+/// A database file written by a newer build is refused with
+/// [`StorageError::SchemaTooNew`]; the foreign-function layer reports this number so that
+/// an application can tell which core it is running.
+pub fn schema_version() -> u32 {
+    migrations::MIGRATIONS.last().map_or(0, |m| m.version)
+}

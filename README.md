@@ -10,16 +10,16 @@ decision records.
 
 ## Repository layout
 
-| Path                  | Contents                                                                            |
-|-----------------------|-------------------------------------------------------------------------------------|
-| `core/crates/proto`   | Wire format (envelope, ids, hop frame, fragmentation)                               |
-| `core/crates/crypto`  | Identity, signatures, contact cards, sealed box                                     |
-| `core/crates/storage` | On-device SQLite message store                                                      |
-| `core/crates/mesh`    | Sans-IO propagation, synchronisation, reassembly and abuse protection               |
-| `core/crates/engine`  | High-level API: identity, contacts, publishing, history                             |
-| `core/crates/sim`     | Deterministic network simulator (many engines, one virtual clock)                   |
-| `core/crates/cli`     | Command-line tools, binary `crisis`: `simulate`, `identity`, `node` (UDP test node) |
-| `docs/`               | mdBook documentation                                                                |
+| Path | Contents |
+|---|---|
+| `core/crates/proto` | Wire format (envelope, ids, hop frame, fragmentation) |
+| `core/crates/crypto` | Identity, signatures, contact cards, sealed box |
+| `core/crates/storage` | On-device SQLite message store |
+| `core/crates/mesh` | Sans-IO propagation, synchronisation, reassembly and abuse protection |
+| `core/crates/engine` | High-level API: identity, contacts, publishing, history |
+| `core/crates/sim` | Deterministic network simulator (many engines, one virtual clock) |
+| `core/crates/cli` | Command-line tools, binary `crisis`: `simulate`, `identity`, `node` (UDP test node) |
+| `docs/` | mdBook documentation |
 
 ## Trying it
 
@@ -47,6 +47,13 @@ cargo test --workspace --all-features
 Encrypted storage is decided by the final application: it enables a SQLCipher feature on
 `rusqlite` in its own manifest, and `storage::Storage::open` detects SQLCipher at run time
 (a key is refused when only plain SQLite is linked). The workspace itself never needs OpenSSL or Perl.
+
+Bindings for Kotlin and Swift (crate `ffi`, library `crisis_core`):
+
+```text
+scripts/gen-bindings.sh            # Linux, macOS, Git Bash
+powershell scripts/gen-bindings.ps1 # Windows
+```
 
 Fuzzing (needs a nightly toolchain and `cargo install cargo-fuzz`):
 

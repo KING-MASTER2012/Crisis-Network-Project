@@ -53,7 +53,7 @@ sim = { path = "core/crates/sim" }
 storage = { path = "core/crates/storage" }
 
 [workspace.lints.rust]
-# The `ffi` crate (phase C6) will define its own [lints] table; everywhere else unsafe is denied.
+# The `ffi` crate defines its own [lints] table (UniFFI's generated code needs unsafe); everywhere else unsafe is denied.
 unsafe_code = "deny"
 unused_must_use = "warn"
 missing_docs = "warn"
