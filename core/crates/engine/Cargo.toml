@@ -4,6 +4,7 @@ description = "Crisis Network engine: the high-level API that ties identity, sto
 edition.workspace = true
 version.workspace = true
 rust-version.workspace = true
+license.workspace = true
 
 [dependencies]
 proto.workspace = true

@@ -1,0 +1,10 @@
+[book]
+title = "Crisis Network"
+description = "Protocol specification, threat model, architecture and decision records of the Crisis Network."
+authors = ["Crisis Network Project"]
+src = "src"
+
+[build]
+build-dir = "book"
+
+[output.html]

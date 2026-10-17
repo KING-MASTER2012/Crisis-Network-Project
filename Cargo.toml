@@ -9,23 +9,24 @@ resolver = "3"
 edition = "2024"
 version = "0.1.0"
 rust-version = "1.93.0"
+license = "GPL-3.0-only"
 
 [workspace.dependencies]
 # --- Async / IO ---
-tokio = { version = "1.53.2", features = ["full"] }
+tokio = { version = "1.53.3", features = ["full"] }
 bytes = { version = "1.12.1", features = ["default", "serde"] }
 
 # --- Serde (helper/CLI output layers only; the wire format is hand-encoded, see ADR-0003) ---
 serde = { version = "1.0.229", features = ["derive"] }
-serde_json = { version = "1.0.151", features = ["default"] }
+serde_json = { version = "1.0.154", features = ["default"] }
 
 # --- Cryptography (crate `crypto`) ---
 ed25519-dalek = "3.0.0"
 x25519-dalek = "3.0.0"
 chacha20poly1305 = "0.11.0"
 hkdf = "0.13.0"
-sha2 = "0.11.0"
-zeroize = { version = "1.9.0", features = ["zeroize_derive"] }
+sha2 = "0.11.1"
+zeroize = { version = "1.9.1", features = ["zeroize_derive"] }
 getrandom = "0.4.3"
 
 # --- Storage (crate `storage`); features are chosen by that crate (and, for SQLCipher, by the final application) ---
@@ -34,14 +35,14 @@ rusqlite = { version = "0.40.2", default-features = false }
 # --- General ---
 thiserror = "2.0.21"
 anyhow = { version = "1.0.104", features = ["default", "std"] }
-uuid = { version = "1.27.0", features = ["default", "serde"] }
+uuid = { version = "1.28.0", features = ["default", "serde"] }
 chrono = "0.4.45"
 tracing = { version = "0.1.44", features = ["tracing-attributes", "async-await"] }
 tracing-subscriber = "0.3.23"
 uniffi = { version = "0.32.2", features = ["cli", "tokio"] }
 
 # --- Testing ---
-proptest = "1.11.0"
+proptest = "1.12.0"
 tempfile = "3.27.0"
 
 # --- Internal crates ---

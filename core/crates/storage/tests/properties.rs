@@ -2,6 +2,7 @@
 
 mod common;
 
+use std::collections::hash_map::Entry;
 use std::collections::{HashMap, HashSet};
 
 use common::*;
@@ -46,12 +47,12 @@ proptest! {
                     let out = s.insert(&env, T0).unwrap();
                     if dead.contains(&n) {
                         prop_assert_eq!(out, InsertOutcome::Tombstoned);
-                    } else if live.contains_key(&n) {
-                        prop_assert_eq!(out, InsertOutcome::Duplicate);
-                    } else {
+                    } else if let Entry::Vacant(slot) = live.entry(n) {
                         let inserted = matches!(out, InsertOutcome::Inserted { .. });
                         prop_assert!(inserted);
-                        live.insert(n, env.message_id().unwrap());
+                        slot.insert(env.message_id().unwrap());
+                    } else {
+                        prop_assert_eq!(out, InsertOutcome::Duplicate);
                     }
                 }
                 Op::Delete(n) => {

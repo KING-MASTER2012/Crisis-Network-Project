@@ -4,6 +4,7 @@ description = "Crisis Network mesh logic: sans-IO propagation, synchronisation, 
 edition.workspace = true
 version.workspace = true
 rust-version.workspace = true
+license.workspace = true
 
 [dependencies]
 proto.workspace = true

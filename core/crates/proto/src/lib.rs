@@ -15,7 +15,7 @@
 //! 4. A [`link::Packet`] is what two neighbouring nodes actually exchange (`Inv`,
 //!    `Want` and `Fragment` packets).
 //!
-//! Specification: the "Protocol v1" chapter of the book (`docs/src/protocol/v1.md`).
+//! Specification: the "Protocol v1" chapter of the book (`doc/src/protocol/v1.md`).
 //! This crate is its reference implementation; if the two disagree, the
 //! specification wins and the code is considered buggy.
 #![forbid(unsafe_code)]

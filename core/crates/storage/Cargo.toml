@@ -4,6 +4,7 @@ description = "Crisis Network on-device message store (SQLite): append-only log,
 edition.workspace = true
 version.workspace = true
 rust-version.workspace = true
+license.workspace = true
 
 [features]
 # Bundled SQLite (default). The same crate also works against SQLCipher: an application

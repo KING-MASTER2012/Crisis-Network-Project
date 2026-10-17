@@ -4,6 +4,7 @@ description = "The `crisis` command-line client: a UDP test node, identity tool 
 edition.workspace = true
 version.workspace = true
 rust-version.workspace = true
+license.workspace = true
 
 [lib]
 name = "cli"

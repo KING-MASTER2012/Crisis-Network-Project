@@ -4,6 +4,7 @@ description = "Crisis Network foreign-function interface: the versioned UniFFI s
 edition.workspace = true
 version.workspace = true
 rust-version.workspace = true
+license.workspace = true
 
 [lib]
 # The library is named after the generated bindings' namespace (`crisis_core`), which

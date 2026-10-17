@@ -52,7 +52,7 @@ jobs:
             - uses: peaceiris/actions-mdbook@v2
               with:
                   mdbook-version: latest
-            - run: mdbook build docs
+            - run: mdbook build doc
             - uses: dtolnay/rust-toolchain@stable
             - uses: Swatinem/rust-cache@v2
             - run: cargo doc --workspace --no-deps
@@ -69,10 +69,9 @@ jobs:
                   workspaces: core/fuzz
             - run: cargo install cargo-fuzz --locked
             - name: Run every fuzz target briefly
-              working-directory: core
               run: |
-                  for target in $(cargo fuzz list); do
-                      cargo fuzz run "$target" -- -max_total_time=30 -rss_limit_mb=2048
+                  for target in $(cargo fuzz list --fuzz-dir core/fuzz); do
+                      cargo fuzz run --fuzz-dir core/fuzz "$target" -- -max_total_time=30 -rss_limit_mb=2048
                   done
 
     bindings:
@@ -82,7 +81,7 @@ jobs:
             - uses: dtolnay/rust-toolchain@stable
             - uses: Swatinem/rust-cache@v2
             - name: Generate the Kotlin and Swift bindings
-              run: scripts/gen-bindings.sh
+              run: bash scripts/gen-bindings.sh
             - uses: actions/upload-artifact@v4
               with:
                   name: bindings

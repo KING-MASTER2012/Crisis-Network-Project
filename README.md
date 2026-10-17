@@ -5,7 +5,7 @@ Bluetooth Low Energy, keep them in a local SQLite database, and synchronise with
 access returns.
 
 The shared Rust core lives in `core/`. Platform apps (Android, Apple, Desktop) will be added on top of it.
-See the book in `docs/` for the protocol specification, the threat model, the architecture and the
+See the book in `doc/` for the protocol specification, the threat model, the architecture and the
 decision records.
 
 ## Repository layout
@@ -19,7 +19,7 @@ decision records.
 | `core/crates/engine` | High-level API: identity, contacts, publishing, history |
 | `core/crates/sim` | Deterministic network simulator (many engines, one virtual clock) |
 | `core/crates/cli` | Command-line tools, binary `crisis`: `simulate`, `identity`, `node` (UDP test node) |
-| `docs/` | mdBook documentation |
+| `doc/` | mdBook documentation |
 
 ## Trying it
 

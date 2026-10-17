@@ -82,7 +82,8 @@ fn a_flood_of_inbound_messages_cannot_block_the_users_own_messages() {
 fn acks_created_locally_count_towards_the_budget() {
     let me = node(7);
     let mut s = store_with(Config {
-        max_total_bytes: 1_000,
+        // `max_total_bytes` must be at least one maximum-size envelope (1_234 bytes).
+        max_total_bytes: 1_300,
         // Room for two acks (2 x 178 = 356), not for three.
         max_inbound_own_bytes: 2 * ACK + 10,
         local_node: Some(me),
@@ -94,9 +95,9 @@ fn acks_created_locally_count_towards_the_budget() {
     for e in [&ack1, &ack2, &ack3] {
         assert!(inserted(&s.insert(e, T0).unwrap()));
     }
-    // A 500-byte broadcast does not fit (534 + 500 > 1_000). The third ack is no longer
-    // pinned, so it is the one that goes.
-    let big = envelope(Kind::Broadcast, 1, 0, 9, SZ, 3600);
+    // An 800-byte broadcast does not fit (534 + 800 > 1_300). The third ack is no longer
+    // pinned, so it is the one that goes (534 - 178 + 800 = 1_156 <= 1_300).
+    let big = envelope(Kind::Broadcast, 1, 0, 9, 800, 3600);
     let out = s.insert(&big, T0 + 1).unwrap();
     assert!(matches!(out, InsertOutcome::Inserted { evicted: 1, .. }));
     assert!(!s.contains(&ack3.message_id().unwrap(), T0 + 1).unwrap());
