@@ -99,8 +99,8 @@ fn a_signature_with_a_non_reduced_scalar_is_rejected() {
     // Add the group order to S: the same signature in a different encoding.
     let mut tampered = env.clone();
     let mut carry = 0u16;
-    for i in 0..32 {
-        let sum = u16::from(env.signature[32 + i]) + u16::from(GROUP_ORDER_LE[i]) + carry;
+    for (i, order_byte) in GROUP_ORDER_LE.iter().enumerate() {
+        let sum = u16::from(env.signature[32 + i]) + u16::from(*order_byte) + carry;
         tampered.signature[32 + i] = (sum & 0xff) as u8;
         carry = sum >> 8;
     }
