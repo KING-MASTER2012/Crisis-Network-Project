@@ -12,3 +12,7 @@ indent_size = tab
 # Windows scripts
 [*.{bat,cmd,ps1}]
 end_of_line = crlf
+
+# Unix scripts must keep LF line endings.
+[{gradlew,gradlew.sh,*.sh}]
+end_of_line = lf

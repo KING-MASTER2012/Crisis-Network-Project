@@ -1,12 +1,15 @@
-
+# Version set checked on 2026-10-18. The build tools are tied together:
+#   AGP 9.4.0 requires Gradle >= 9.6.0 (wrapper), JDK 17+, SDK Build Tools 36.0.0; default NDK r28c.
+#   AGP 9.x has built-in Kotlin, so there is no `org.jetbrains.kotlin.android` plugin any more.
+#   androidx.core 1.19 requires compileSdk 37 (set in the modules).
 [versions]
 agp = "9.4.0"
-kotlin = "2.3.21"
-composeBom = "2025.10.01"
-activityCompose = "1.11.0"
-coreKtx = "1.17.0"
-coroutines = "1.10.2"
-jna = "5.17.0"
+kotlin = "2.4.10"
+composeBom = "2026.09.00"
+activityCompose = "1.13.0"
+coreKtx = "1.19.1"
+coroutines = "1.11.0"
+jna = "5.19.1"
 junit = "4.13.2"
 androidxTestExtJunit = "1.3.0"
 androidxTestRunner = "1.7.0"
@@ -19,6 +22,7 @@ androidx-compose-foundation = { group = "androidx.compose.foundation", name = "f
 androidx-compose-material3 = { group = "androidx.compose.material3", name = "material3" }
 androidx-compose-ui = { group = "androidx.compose.ui", name = "ui" }
 kotlinx-coroutines-android = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-android", version.ref = "coroutines" }
+# UniFFI's Kotlin bindings load the native library through JNA; the Android build is the @aar.
 jna = { group = "net.java.dev.jna", name = "jna", version.ref = "jna" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 androidx-test-ext-junit = { group = "androidx.test.ext", name = "junit", version.ref = "androidxTestExtJunit" }

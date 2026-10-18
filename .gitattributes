@@ -14,6 +14,12 @@
 *.cmd text eol=crlf
 *.ps1 text eol=crlf
 
+# Gradle wrapper: the Unix script must keep LF (a CRLF "#!/bin/sh^M" does not run), the batch
+# file keeps CRLF, the wrapper JAR is binary.
+gradlew text eol=lf
+gradlew.bat text eol=crlf
+*.jar binary
+
 # Standart Binaries
 *.png binary
 *.jpg binary
