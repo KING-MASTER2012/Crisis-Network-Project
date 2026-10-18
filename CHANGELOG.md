@@ -9,8 +9,11 @@ emulator, `./gradlew :core:runtime:connectedDebugAndroidTest`.
 * `android` and `android-smoke`: `android-actions/setup-android@v3` failed with
   `Failed to find package 'tools'` because its default package list contains `tools`, which the
   current command-line tools no longer provide. The packages are now named explicitly
-  (`platform-tools`, `platforms;android-37`, `build-tools;36.0.0`, `ndk;28.2.13676358`); the separate
+  (`platform-tools`, `platforms;android-37.0`, `build-tools;36.0.0`, `ndk;28.2.13676358`); the separate
   NDK step is gone.
+* `android` and `android-smoke`: the next failure was `Failed to find package 'platforms;android-37'`.
+  Since API 36 the platform packages carry a minor version suffix; Android 17 is published as
+  `platforms;android-37.0` (and `android-37.1`). `compileSdk = 37` still resolves to it.
 * `android` also runs `:core:runtime:testDebugUnitTest`; `android-smoke` also runs
   `:core:runtime:connectedDebugAndroidTest`.
 

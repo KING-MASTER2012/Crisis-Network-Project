@@ -30,7 +30,7 @@ All versions live in `gradle/libs.versions.toml` (plugins and libraries) and
 ## One-time setup
 
 1. Install Android Studio (a version that supports AGP 9.4) and let it install the SDK
-   platform 37, Build Tools 36.0.0 and NDK `28.2.13676358` (SDK Manager > SDK Tools >
+   platform 37 (package `platforms;android-37.0`), Build Tools 36.0.0 and NDK `28.2.13676358` (SDK Manager > SDK Tools >
    NDK (Side by side) > show package details).
 2. Install Rust and the Android targets and cargo-ndk:
 

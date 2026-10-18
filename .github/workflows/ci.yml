@@ -103,9 +103,10 @@ jobs:
             # command-line tools ("Failed to find package 'tools'"). Name the packages explicitly instead.
             # Keep the NDK version in sync with clients/android/core/ffi/build.gradle.kts and the
             # platform / build-tools versions with clients/android/README.md.
+            # Platform packages for API 36+ have a minor suffix: use `platforms;android-37.0`, not `android-37`.
             - uses: android-actions/setup-android@v3
               with:
-                  packages: "platform-tools platforms;android-37 build-tools;36.0.0 ndk;28.2.13676358"
+                  packages: "platform-tools platforms;android-37.0 build-tools;36.0.0 ndk;28.2.13676358"
             - name: Install cargo-ndk
               run: cargo install cargo-ndk --locked
             - uses: gradle/actions/setup-gradle@v4
@@ -137,9 +138,10 @@ jobs:
             # command-line tools ("Failed to find package 'tools'"). Name the packages explicitly instead.
             # Keep the NDK version in sync with clients/android/core/ffi/build.gradle.kts and the
             # platform / build-tools versions with clients/android/README.md.
+            # Platform packages for API 36+ have a minor suffix: use `platforms;android-37.0`, not `android-37`.
             - uses: android-actions/setup-android@v3
               with:
-                  packages: "platform-tools platforms;android-37 build-tools;36.0.0 ndk;28.2.13676358"
+                  packages: "platform-tools platforms;android-37.0 build-tools;36.0.0 ndk;28.2.13676358"
             - name: Install cargo-ndk
               run: cargo install cargo-ndk --locked
             - uses: gradle/actions/setup-gradle@v4
