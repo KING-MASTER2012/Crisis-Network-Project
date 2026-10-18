@@ -1,3 +1,26 @@
+# Changes: Android phase A1 (core runtime layer) and CI fix
+
+Written without a Kotlin or Android toolchain: **the Android sources were not compiled or run
+here**. Run `./gradlew :app:assembleDebug :core:runtime:testDebugUnitTest` and, on a device or
+emulator, `./gradlew :core:runtime:connectedDebugAndroidTest`.
+
+## CI
+
+* `android` and `android-smoke`: `android-actions/setup-android@v3` failed with
+  `Failed to find package 'tools'` because its default package list contains `tools`, which the
+  current command-line tools no longer provide. The packages are now named explicitly
+  (`platform-tools`, `platforms;android-37`, `build-tools;36.0.0`, `ndk;28.2.13676358`); the separate
+  NDK step is gone.
+* `android` also runs `:core:runtime:testDebugUnitTest`; `android-smoke` also runs
+  `:core:runtime:connectedDebugAndroidTest`.
+
+## New module `:core:runtime`
+
+See `clients/android/README.md`, section "Runtime layer": `NodeRuntime` (single-threaded actor,
+`next_timer_ms` tick loop), `MonotonicWallClock`, `CoreFailure` mapping, Keystore-wrapped seed and
+database key (`SecretVault`), `EncryptionPolicy`, `NodeBootstrap`, `Transport` and
+`LoopbackNetwork`. JVM unit tests plus an instrumented loopback test.
+
 # Changes: phase C6 (FFI and versioned core)
 
 ## Before you build

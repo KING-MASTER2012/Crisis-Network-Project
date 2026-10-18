@@ -21,3 +21,4 @@ rootProject.name = "crisis-network-android"
 
 include(":app")
 include(":core:ffi")
+include(":core:runtime")

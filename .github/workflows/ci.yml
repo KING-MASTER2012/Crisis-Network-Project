@@ -99,9 +99,13 @@ jobs:
               with:
                   distribution: temurin
                   java-version: "17"
+            # The action's default package list contains `tools`, which no longer exists in the current
+            # command-line tools ("Failed to find package 'tools'"). Name the packages explicitly instead.
+            # Keep the NDK version in sync with clients/android/core/ffi/build.gradle.kts and the
+            # platform / build-tools versions with clients/android/README.md.
             - uses: android-actions/setup-android@v3
-            - name: Install the pinned NDK (keep in sync with clients/android/core/ffi/build.gradle.kts)
-              run: sdkmanager "ndk;28.2.13676358"
+              with:
+                  packages: "platform-tools platforms;android-37 build-tools;36.0.0 ndk;28.2.13676358"
             - name: Install cargo-ndk
               run: cargo install cargo-ndk --locked
             - uses: gradle/actions/setup-gradle@v4
@@ -109,7 +113,7 @@ jobs:
               run: chmod +x clients/android/gradlew
             - name: Build the debug APK and run lint
               working-directory: clients/android
-              run: ./gradlew :app:assembleDebug :app:lintDebug --stacktrace
+              run: ./gradlew :app:assembleDebug :app:lintDebug :core:runtime:testDebugUnitTest --stacktrace
             - uses: actions/upload-artifact@v4
               with:
                   name: android-debug-apk
@@ -129,9 +133,13 @@ jobs:
               with:
                   distribution: temurin
                   java-version: "17"
+            # The action's default package list contains `tools`, which no longer exists in the current
+            # command-line tools ("Failed to find package 'tools'"). Name the packages explicitly instead.
+            # Keep the NDK version in sync with clients/android/core/ffi/build.gradle.kts and the
+            # platform / build-tools versions with clients/android/README.md.
             - uses: android-actions/setup-android@v3
-            - name: Install the pinned NDK (keep in sync with clients/android/core/ffi/build.gradle.kts)
-              run: sdkmanager "ndk;28.2.13676358"
+              with:
+                  packages: "platform-tools platforms;android-37 build-tools;36.0.0 ndk;28.2.13676358"
             - name: Install cargo-ndk
               run: cargo install cargo-ndk --locked
             - uses: gradle/actions/setup-gradle@v4
@@ -147,4 +155,4 @@ jobs:
                   api-level: 33
                   arch: x86_64
                   working-directory: clients/android
-                  script: ./gradlew :app:connectedDebugAndroidTest --stacktrace
+                  script: ./gradlew :app:connectedDebugAndroidTest :core:runtime:connectedDebugAndroidTest --stacktrace
