@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Crisis Network</string>
+    <string name="selftest_title">Core self-test</string>
+    <string name="selftest_running">Running the checks…</string>
+    <string name="selftest_passed">All checks passed</string>
+    <string name="selftest_failed">Some checks failed</string>
+    <string name="selftest_core_line">Core %1$s · FFI API %2$d · protocol %3$d</string>
+    <string name="selftest_limits_line">Min link MTU %1$d B · max payload %2$d B</string>
+    <string name="selftest_library_missing">The native core could not be loaded.</string>
+    <string name="selftest_encryption_active">Database encryption: active</string>
+    <string name="selftest_encryption_inactive">Database encryption: not compiled in</string>
+    <string name="selftest_run_again">Run again</string>
+</resources>

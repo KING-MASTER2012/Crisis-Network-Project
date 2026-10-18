@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Kriz Ağı</string>
+    <string name="selftest_title">Çekirdek öz sınaması</string>
+    <string name="selftest_running">Kontroller çalışıyor…</string>
+    <string name="selftest_passed">Tüm kontroller geçti</string>
+    <string name="selftest_failed">Bazı kontroller başarısız</string>
+    <string name="selftest_core_line">Çekirdek %1$s · FFI API %2$d · protokol %3$d</string>
+    <string name="selftest_limits_line">En düşük bağlantı MTU %1$d B · en büyük yük %2$d B</string>
+    <string name="selftest_library_missing">Yerel çekirdek yüklenemedi.</string>
+    <string name="selftest_encryption_active">Veritabanı şifreleme: etkin</string>
+    <string name="selftest_encryption_inactive">Veritabanı şifreleme: derlemede yok</string>
+    <string name="selftest_run_again">Yeniden çalıştır</string>
+</resources>
