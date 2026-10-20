@@ -7,7 +7,7 @@ plugins {
 }
 
 // Same switch as in :core:ffi; the instrumented test then asserts that SQLCipher is really active.
-val withSqlcipher: Boolean = providers.gradleProperty("crisis.sqlcipher").orElse(providers.gradleProperty("crisisSqlcipher")).map(String::toBoolean).getOrElse(false)
+val withSqlcipher: Boolean = providers.gradleProperty("crisisSqlcipher").orElse(providers.gradleProperty("crisis.sqlcipher")).map(String::toBoolean).getOrElse(false)
 
 android {
     namespace = "org.crisisnetwork.android"

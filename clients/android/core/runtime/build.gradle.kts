@@ -1,5 +1,6 @@
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+import java.time.Duration
 
 // :core:runtime is the Android-side runtime of the Rust core (phase A1): the single-threaded
 // node actor, the clock policy, the Keystore-wrapped secrets and the Transport abstraction with
@@ -28,6 +29,15 @@ android {
 
 tasks.withType<KotlinCompile>().configureEach {
     compilerOptions.jvmTarget.set(JvmTarget.JVM_17)
+}
+
+// A stuck test must fail the build (and show which test it was), not run until the CI limit.
+tasks.withType<org.gradle.api.tasks.testing.Test>().configureEach {
+    timeout.set(Duration.ofMinutes(10))
+    testLogging {
+        events("started", "passed", "skipped", "failed")
+        exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL
+    }
 }
 
 dependencies {

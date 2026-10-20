@@ -5,6 +5,8 @@ import java.io.IOException
 import java.io.RandomAccessFile
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
+import java.time.Duration
+import java.util.concurrent.TimeUnit
 
 // :core:ffi builds the Rust core (crate `ffi`, library `crisis_core`) for Android and
 // exposes the UniFFI-generated Kotlin API. Two generated artefacts feed this module:
@@ -19,15 +21,29 @@ plugins {
 }
 
 val repoRoot: File = rootProject.projectDir.resolve("../..").canonicalFile
-val rustProfile: String = providers.gradleProperty("crisis.rustProfile").orElse(providers.gradleProperty("crisisRustProfile")).getOrElse("release")
-val withSqlcipher: Boolean = providers.gradleProperty("crisis.sqlcipher").orElse(providers.gradleProperty("crisisSqlcipher")).map(String::toBoolean).getOrElse(false)
-val skipRust: Boolean = providers.gradleProperty("crisis.skipRust").orElse(providers.gradleProperty("crisisSkipRust")).map(String::toBoolean).getOrElse(false)
+val rustProfile: String = providers.gradleProperty("crisisRustProfile").orElse(providers.gradleProperty("crisis.rustProfile")).getOrElse("release")
+val withSqlcipher: Boolean = providers.gradleProperty("crisisSqlcipher").orElse(providers.gradleProperty("crisis.sqlcipher")).map(String::toBoolean).getOrElse(false)
+val skipRust: Boolean = providers.gradleProperty("crisisSkipRust").orElse(providers.gradleProperty("crisis.skipRust")).map(String::toBoolean).getOrElse(false)
 
-// All three ABIs are built: arm64-v8a (phones), armeabi-v7a (old phones), x86_64 (emulator).
-val abis = listOf("arm64-v8a", "armeabi-v7a", "x86_64")
-val rustTriples = listOf("aarch64-linux-android", "armv7-linux-androideabi", "x86_64-linux-android")
+// By default all three ABIs are built: arm64-v8a (phones), armeabi-v7a (old phones), x86_64
+// (emulator). `-Pcrisis.abis=x86_64` (comma separated, alias crisisAbis) builds a subset; CI uses
+// it for the emulator job, which only needs x86_64.
+val allAbis = linkedMapOf(
+    "arm64-v8a" to "aarch64-linux-android",
+    "armeabi-v7a" to "armv7-linux-androideabi",
+    "x86_64" to "x86_64-linux-android",
+)
+val requestedAbis: List<String>? =
+    providers.gradleProperty("crisisAbis").orElse(providers.gradleProperty("crisis.abis")).orNull
+        ?.split(',')?.map { it.trim() }?.filter { it.isNotEmpty() }
+val abis: List<String> = (requestedAbis ?: allAbis.keys.toList()).also { list ->
+    require(list.isNotEmpty() && list.all { it in allAbis }) {
+        "crisis.abis must be a comma separated subset of ${allAbis.keys}, got: $list"
+    }
+}
+val rustTriples: List<String> = abis.map { allAbis.getValue(it) }
 // ABIs subject to the Google Play 16 KB page-size requirement (64-bit only).
-val abisNeeding16kAlignment = listOf("arm64-v8a", "x86_64")
+val abisNeeding16kAlignment: List<String> = listOf("arm64-v8a", "x86_64").filter { it in abis }
 val pinnedNdkVersion = "28.2.13676358" // r28c: AGP 9.4's default NDK, 16 KB aligned by default
 
 val generatedKotlinDir: File = layout.buildDirectory.dir("generated/uniffi/kotlin").get().asFile
@@ -67,15 +83,30 @@ val rustSources = fileTree(repoRoot) {
 
 val isWindows = System.getProperty("os.name").lowercase().contains("windows")
 
-/** Runs a command and returns (exit code, output), or `null` when it cannot be started. */
-fun probe(vararg command: String): Pair<Int, String>? =
+/**
+ * Runs a command and returns (exit code, output), or `null` when it cannot be started. A command
+ * that does not finish within 60 s is killed and reported as exit code -1 (the build must never
+ * hang here).
+ */
+fun probe(vararg command: String): Pair<Int, String>? {
+    val output = File.createTempFile("crisis-probe", ".txt")
     try {
-        val process = ProcessBuilder(*command).redirectErrorStream(true).start()
-        val output = process.inputStream.bufferedReader().readText().trim()
-        process.waitFor() to output
+        val process = ProcessBuilder(*command)
+            .redirectErrorStream(true)
+            .redirectOutput(output)
+            .start()
+        process.outputStream.close() // nothing to read from stdin: never wait for input
+        if (!process.waitFor(60, TimeUnit.SECONDS)) {
+            process.destroyForcibly()
+            return -1 to "timed out after 60 s: ${command.joinToString(" ")}"
+        }
+        return process.exitValue() to output.readText().trim()
     } catch (e: IOException) {
-        null
+        return null
+    } finally {
+        output.delete()
     }
+}
 
 // ---- Toolchain check: clear messages instead of a cryptic Exec failure --------------------------
 
@@ -114,6 +145,7 @@ val generateKotlinBindings = tasks.register<Exec>("generateKotlinBindings") {
     group = "crisis"
     description = "Generates the Kotlin bindings of the core into <repo>/target/bindings/kotlin."
     dependsOn(checkRustToolchain)
+    timeout.set(Duration.ofMinutes(45))
     workingDir = repoRoot
     if (isWindows) {
         commandLine(
@@ -146,6 +178,7 @@ val buildRustLibs = tasks.register<Exec>("buildRustLibs") {
     dependsOn(checkRustToolchain)
     // Both cargo invocations share the repository's `target` directory: never run them at once.
     mustRunAfter(generateKotlinBindings)
+    timeout.set(Duration.ofMinutes(60))
     workingDir = repoRoot
 
     val cargoArgs = mutableListOf("ndk")
@@ -159,6 +192,7 @@ val buildRustLibs = tasks.register<Exec>("buildRustLibs") {
     inputs.property("rustProfile", rustProfile)
     inputs.property("sqlcipher", withSqlcipher)
     inputs.property("ndkVersion", pinnedNdkVersion)
+    inputs.property("abis", abis)
     outputs.dir(generatedJniLibsDir)
     onlyIf { !skipRust }
 

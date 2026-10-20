@@ -1,3 +1,18 @@
+# Changes: CI timeouts (android, android-smoke)
+
+Not run here (no Android/Kotlin toolchain, no network): verify on the next CI run.
+
+* `android` hung for 6 h in the Gradle step; `android-smoke` hit "Timeout waiting for emulator to boot".
+  Every job now has `timeout-minutes`, the Android Gradle step is split (native core, APK, lint, unit
+  tests) with a limit per step, and reports are uploaded on failure.
+* Both Android jobs run on `ubuntu-24.04`, free disk space first, and build with the `dev` Cargo
+  profile (no fat LTO); the smoke job builds only `x86_64`, builds the APKs before the emulator
+  starts, checks `/dev/kvm`, and uses `emulator-boot-timeout: 900`.
+* `:core:ffi`: new `crisis.abis` option, `probe()` can no longer block, Exec tasks have timeouts,
+  and the dot-free aliases now take precedence over `gradle.properties` (before, `-PcrisisRustProfile=dev`
+  was silently ignored because `crisis.rustProfile=release` is set there).
+* `:core:runtime`: unit test tasks have a 10 min limit and log each test.
+
 # Changes: Android phase A1 (core runtime layer) and CI fix
 
 Written without a Kotlin or Android toolchain: **the Android sources were not compiled or run
