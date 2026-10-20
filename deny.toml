@@ -1,6 +1,13 @@
 # cargo-deny: security advisories, licenses and sources.
 [advisories]
 version = 2
+ignore = [
+    # `basic-toml` is unmaintained (no safe upgrade exists). It is only reached through
+    # uniffi -> uniffi_bindgen -> askama, i.e. the binding generator's template engine, and it
+    # parses the project's own askama.toml at build time, never untrusted input at run time.
+    # Remove this entry when a uniffi release no longer depends on it.
+    { id = "RUSTSEC-2026-0374", reason = "unmaintained, build-time only via uniffi_bindgen/askama" },
+]
 
 [licenses]
 version = 2

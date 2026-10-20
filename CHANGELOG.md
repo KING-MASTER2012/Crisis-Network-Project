@@ -1,3 +1,14 @@
+# Fix: the Gradle wrapper script called itself (root cause of the CI hangs), cargo-deny
+
+* `clients/android/gradlew` was the "alias" script (`exec "$(dirname "$0")/gradlew" "$@"`), which
+  runs itself in an endless loop: every `./gradlew ...` on Linux/macOS hung without any output,
+  until the 6 h / 40 min limits killed it. It is now the real POSIX wrapper script (it starts
+  `gradle/wrapper/gradle-wrapper.jar`). There is no `gradlew.sh`.
+* `deny.toml`: ignore RUSTSEC-2026-0374 (`basic-toml` unmaintained, reached only through
+  uniffi_bindgen/askama at build time) so that `cargo deny check` passes.
+* The previous entry's guess that the slow Rust build was the cause was wrong; its timeouts,
+  step split and `dev` profile stay because they make a future hang fail fast and cheaply.
+
 # Changes: CI timeouts (android, android-smoke)
 
 Not run here (no Android/Kotlin toolchain, no network): verify on the next CI run.

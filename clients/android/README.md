@@ -11,18 +11,18 @@ and the real UI follow in phases A2 to A7.
 
 ## Toolchain (versions checked on 2026-10-18)
 
-| Component                                 | Version                      | Why                                                                                |
-|-------------------------------------------|------------------------------|------------------------------------------------------------------------------------|
-| Android Gradle plugin                     | 9.4.0                        | Latest stable. Built-in Kotlin: there is no `org.jetbrains.kotlin.android` plugin. |
-| Gradle (wrapper)                          | 9.6.0                        | AGP 9.4 requires 9.6.0 or newer.                                                   |
-| Kotlin                                    | 2.4.10                       | Latest stable; also the Compose compiler plugin version.                           |
-| JDK                                       | 17 or newer                  | AGP 9.4 minimum. Android Studio's bundled JDK is fine.                             |
-| compileSdk / targetSdk / minSdk           | 37 / 36 / 26                 | androidx.core 1.19 needs compileSdk 37; targetSdk is raised deliberately later.    |
-| SDK Build Tools                           | 36.0.0                       | AGP 9.4 default (Android Studio installs it).                                      |
-| NDK                                       | 28.2.13676358 (r28c)         | AGP 9.4 default; 16 KB page aligned.                                               |
-| Compose BOM / activity-compose / core-ktx | 2026.09.00 / 1.13.0 / 1.19.1 | Latest stable.                                                                     |
-| kotlinx-coroutines / JNA                  | 1.11.0 / 5.19.1              | Latest stable.                                                                     |
-| Rust                                      | stable, 1.93 or newer        | Workspace `rust-version`.                                                          |
+| Component | Version | Why |
+| --- | --- | --- |
+| Android Gradle plugin | 9.4.0 | Latest stable. Built-in Kotlin: there is no `org.jetbrains.kotlin.android` plugin. |
+| Gradle (wrapper) | 9.6.0 | AGP 9.4 requires 9.6.0 or newer. |
+| Kotlin | 2.4.10 | Latest stable; also the Compose compiler plugin version. |
+| JDK | 17 or newer | AGP 9.4 minimum. Android Studio's bundled JDK is fine. |
+| compileSdk / targetSdk / minSdk | 37 / 36 / 26 | androidx.core 1.19 needs compileSdk 37; targetSdk is raised deliberately later. |
+| SDK Build Tools | 36.0.0 | AGP 9.4 default (Android Studio installs it). |
+| NDK | 28.2.13676358 (r28c) | AGP 9.4 default; 16 KB page aligned. |
+| Compose BOM / activity-compose / core-ktx | 2026.09.00 / 1.13.0 / 1.19.1 | Latest stable. |
+| kotlinx-coroutines / JNA | 1.11.0 / 5.19.1 | Latest stable. |
+| Rust | stable, 1.93 or newer | Workspace `rust-version`. |
 
 All versions live in `gradle/libs.versions.toml` (plugins and libraries) and
 `gradle/wrapper/gradle-wrapper.properties` (Gradle).
@@ -52,7 +52,7 @@ Windows (PowerShell) and Linux/macOS use the same wrapper:
 ```
 cd clients/android
 .\gradlew.bat :app:assembleDebug          # Windows
-./gradlew :app:assembleDebug              # Linux / macOS (./gradlew.sh is an alias)
+./gradlew :app:assembleDebug              # Linux / macOS (needs `chmod +x gradlew` once)
 ```
 
 Useful tasks:
@@ -72,12 +72,12 @@ the generated Kotlin as unresolved until the first build has run.
 
 ### Options (`gradle.properties` or `-P` on the command line)
 
-| Property                                         | Default   | Meaning                                                                                                                                |
-|--------------------------------------------------|-----------|----------------------------------------------------------------------------------------------------------------------------------------|
-| `crisis.rustProfile` (alias `crisisRustProfile`) | `release` | `release` (LTO, small) or `dev` (much faster Rust builds while iterating).                                                             |
-| `crisis.sqlcipher` (alias `crisisSqlcipher`)     | `false`   | Builds the core with SQLCipher so the database can be encrypted. The instrumented test then asserts that encryption is really active.  |
-| `crisis.skipRust` (alias `crisisSkipRust`)       | `false`   | Skips cargo and reuses libraries and bindings that are already built.                                                                  |
-| `crisis.abis` (alias `crisisAbis`)               | all three | Comma separated subset of `arm64-v8a,armeabi-v7a,x86_64`, e.g. `-Pcrisis.abis=x86_64` for emulator-only builds (CI smoke job).         |
+| Property | Default | Meaning |
+| --- | --- | --- |
+| `crisis.rustProfile` (alias `crisisRustProfile`) | `release` | `release` (LTO, small) or `dev` (much faster Rust builds while iterating). |
+| `crisis.sqlcipher` (alias `crisisSqlcipher`) | `false` | Builds the core with SQLCipher so the database can be encrypted. The instrumented test then asserts that encryption is really active. |
+| `crisis.skipRust` (alias `crisisSkipRust`) | `false` | Skips cargo and reuses libraries and bindings that are already built. |
+| `crisis.abis` (alias `crisisAbis`) | all three | Comma separated subset of `arm64-v8a,armeabi-v7a,x86_64`, e.g. `-Pcrisis.abis=x86_64` for emulator-only builds (CI smoke job). |
 
 The dot-free alias wins over the dotted name when both are set (for example when `gradle.properties` sets the dotted one).
 
@@ -115,14 +115,14 @@ next phases.
 
 Package `org.crisisnetwork.android.core.runtime`. No UI, no Bluetooth.
 
-| Part                                                  | What it does                                                                                                                                                                                                                                                                                                                                                                                                  |
-|-------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `NodeRuntime`                                         | Owns one `CrisisNode` as a **single-threaded actor**. Transport events, publish calls, queries and timer ticks all go through one mailbox and run one after another on the IO dispatcher (every core call blocks on SQLite). It ticks when the core's `next_timer_ms` is reached (and at least every 30 s), sends transport commands to the `Transport`, and publishes `CoreNotification`s on a `SharedFlow`. |
-| `NodeBootstrap`                                       | Checks the interface version, unwraps seed and database key from the vault, opens the database under `noBackupFilesDir/crisis` and returns a `NodeRuntime` (not started).                                                                                                                                                                                                                                     |
-| `MonotonicWallClock`                                  | The only time source the core sees (see below).                                                                                                                                                                                                                                                                                                                                                               |
-| `SecretVault`, `AesGcmSecretCipher`, `KeystoreAesKey` | Seed and database key sealed with a non-extractable Android Keystore AES-256-GCM key (StrongBox when available).                                                                                                                                                                                                                                                                                              |
-| `CoreFailure`                                         | Stable mapping of `CoreException` (`DatabaseUnreadable` for `WrongKeyOrNotADatabase`, `SchemaTooNew`, `EncryptionUnavailable`, ...). `InternalError` and `Unexpected` are fatal and stop the runtime.                                                                                                                                                                                                         |
-| `Transport`, `LoopbackNetwork`                        | What A2/A3 implement for BLE; the loopback connects two nodes in memory (with a real MTU limit) for tests and previews.                                                                                                                                                                                                                                                                                       |
+| Part | What it does |
+| --- | --- |
+| `NodeRuntime` | Owns one `CrisisNode` as a **single-threaded actor**. Transport events, publish calls, queries and timer ticks all go through one mailbox and run one after another on the IO dispatcher (every core call blocks on SQLite). It ticks when the core's `next_timer_ms` is reached (and at least every 30 s), sends transport commands to the `Transport`, and publishes `CoreNotification`s on a `SharedFlow`. |
+| `NodeBootstrap` | Checks the interface version, unwraps seed and database key from the vault, opens the database under `noBackupFilesDir/crisis` and returns a `NodeRuntime` (not started). |
+| `MonotonicWallClock` | The only time source the core sees (see below). |
+| `SecretVault`, `AesGcmSecretCipher`, `KeystoreAesKey` | Seed and database key sealed with a non-extractable Android Keystore AES-256-GCM key (StrongBox when available). |
+| `CoreFailure` | Stable mapping of `CoreException` (`DatabaseUnreadable` for `WrongKeyOrNotADatabase`, `SchemaTooNew`, `EncryptionUnavailable`, ...). `InternalError` and `Unexpected` are fatal and stop the runtime. |
+| `Transport`, `LoopbackNetwork` | What A2/A3 implement for BLE; the loopback connects two nodes in memory (with a real MTU limit) for tests and previews. |
 
 ### Clock policy
 
