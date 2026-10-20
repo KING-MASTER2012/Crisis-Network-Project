@@ -1,3 +1,9 @@
+# Fix: invalid resource file name (app)
+
+* `app/src/main/res/xml/data-extraction-rules.xml` -> `data_extraction_rules.xml`. Android resource
+  file names may only contain a-z, 0-9 and `_`; the hyphen failed `:app:packageDebugResources`
+  in both Android CI jobs. The manifest already referenced `@xml/data_extraction_rules`.
+
 # Fix: the Gradle wrapper script called itself (root cause of the CI hangs), cargo-deny
 
 * `clients/android/gradlew` was the "alias" script (`exec "$(dirname "$0")/gradlew" "$@"`), which
