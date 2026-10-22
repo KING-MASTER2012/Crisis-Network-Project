@@ -56,6 +56,7 @@ kotlin {
 dependencies {
     implementation(project(":core:ffi"))
     implementation(project(":core:runtime"))
+    implementation(project(":core:ble"))
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.activity.compose)

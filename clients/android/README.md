@@ -96,11 +96,11 @@ clients/android
 ├── app/              application shell (A0: self-test screen)
 └── core/
     ├── ffi/          native core for Android: cargo-ndk + UniFFI bindings + CoreSmoke
-    └── runtime/      A1: NodeRuntime actor, clock policy, secret vault, Transport + loopback
+    ├── runtime/      A1: NodeRuntime actor, clock policy, secret vault, Transport + loopback
+    └── ble/          A2: BLE link layer (scanner, advertiser, GATT server and client, BleTransport)
 ```
 
-Further modules (`:core:ble`, `:core:data`, `:core:designsystem`, `:feature:*`) are added by the
-next phases.
+Further modules (`:core:data`, `:core:designsystem`, `:feature:*`) are added by the next phases.
 
 ## Decisions taken in A0
 
@@ -162,6 +162,61 @@ have made other copies; this residual risk is documented for phase A7.
 The unit tests need no native library. The core itself only loads on a device or emulator, so the
 actor is tested there (the A1 exit criterion).
 
+## BLE link layer (`:core:ble`, phase A2)
+
+Package `org.crisisnetwork.android.core.ble`. Implements `Transport` over Bluetooth Low Energy; the
+radio profile (UUIDs, setup order, packet mapping) is in `docs/src/protocol/ble-link.md`.
+
+| Part | What it does |
+| --- | --- |
+| `BleScanner`, `BleAdvertiser`, `GattServerPort`, `GattConnector`, `GattLink` | Ports: everything that touches the Bluetooth stack sits behind them, so the state machine is tested with fakes. |
+| `BleTransport` | The state machine, one actor like `NodeRuntime`. Reports a link to the core (`PeerSeen`) only when it is usable and its MTU carries the core's minimum; assigns handles that are never reused; one bounded send queue and one send in flight per link; `PeerLost` exactly once; counters and `linkInfo()` snapshots for diagnostics. |
+| `android/*` | Thin adapters over `BluetoothLeScanner`, `BluetoothLeAdvertiser`, `BluetoothGattServer` and `BluetoothGatt`, with the API 33 / older API split for reads, writes and notifications. `BleSupport` builds the transport and answers "which permissions, is Bluetooth on". |
+| `BleConfig` | Role (`Central`, `Peripheral`, `Both`), minimum MTU (pass `core_info().min_link_mtu`), requested ATT MTU, link limit, timeouts, queue size. |
+
+Decisions:
+
+* One core packet = one write or notification, no framing; the link MTU is the ATT MTU minus 3.
+* The central enables notifications only after the MTU is settled, so the peripheral knows the MTU
+  when the link becomes ready.
+* Android 14 and newer negotiate the MTU themselves on connect; the adapter skips its own request
+  when the stack already reported one, and waits for the callback otherwise.
+* `gatt.close()` is always called; leaked client interfaces make new connections fail.
+* Manifest: `BLUETOOTH_SCAN` with `neverForLocation` (no location permission on Android 12+),
+  `BLUETOOTH_ADVERTISE`, `BLUETOOTH_CONNECT`; the legacy permissions are limited to `maxSdkVersion=30`.
+  Android 11 and older also need the system location switch on for scanning to return anything.
+* Not in A2 (phase A3): tie-break between two phones that connect to each other, rotating
+  advertisement token, connection rotation and limits by power profile, back-off per GATT error,
+  the real permission flow, the foreground service, screen-off scanning.
+
+### Tests
+
+```
+./gradlew :core:ble:testDebugUnitTest      # JVM: state machine against fakes, queue, handles, permissions
+```
+
+### Exit test on two real phones
+
+Not run here (no devices). Procedure:
+
+1. Install the debug APK on two phones (Bluetooth on; on Android 11 or older also location).
+2. Open **BLE link test (A2)** on both. Phone 1: role **Peripheral**, phone 2: role **Central**
+   (`Both` connects twice until A3). Tap **Start** and grant the permissions.
+3. Within a few seconds each phone shows one link with a handle and the packet size; the log shows
+   `link up`. Write down the packet size (ATT MTU is that plus 3).
+4. **Send** an announcement on one phone: it must appear in the other phone's log, and the other way.
+5. Tap **Reset counters** on both, then **Burst** on one phone (10 announcements of 1000 B). On the
+   other phone read the "Received" line (payload bytes per second between first and last). The
+   link rows show packets and bytes sent/received and the sending throughput on each side.
+6. Repeat for the other direction (it uses the other GATT characteristic) and, if possible, with
+   the phones at 1 m and at 5 m.
+
+Results (fill in):
+
+| Phones (model, Android) | Packet size / ATT MTU | Burst payload B/s | Link tx B/s | Notes |
+| --- | --- | --- | --- | --- |
+| | | | | |
+
 ## Troubleshooting
 
 * `The Rust/Android toolchain is incomplete`: follow the listed commands, then restart the
@@ -174,5 +229,8 @@ actor is tested there (the A1 exit criterion).
   `buildRustLibs` (it is appended to any `RUSTFLAGS` you already set).
 * The self-test says "this build has no SQLCipher": expected unless built with
   `-PcrisisSqlcipher=true`.
+* BLE test bench finds nothing: Android 11 and older need the system location switch on; on all
+  versions Bluetooth must be on and the permissions granted. `ble: ScanFailed(2)` means the app
+  started too many scans in 30 s: wait and press Start again.
 * Resource names must be lowercase with underscores: `data_extraction_rules.xml`, not
   `data-extraction-rules.xml` (aapt rejects hyphens).

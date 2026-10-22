@@ -4,6 +4,7 @@
 
 - [Architecture](architecture.md)
 - [Protocol](protocol/v1.md)
+- [BLE link profile](protocol/ble-link.md)
 - [Threat model](threat-model.md)
 
 # Decision records

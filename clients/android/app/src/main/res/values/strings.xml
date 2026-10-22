@@ -11,4 +11,5 @@
     <string name="selftest_encryption_active">Database encryption: active</string>
     <string name="selftest_encryption_inactive">Database encryption: not compiled in</string>
     <string name="selftest_run_again">Run again</string>
+    <string name="ble_test_open">BLE link test (A2)</string>
 </resources>

@@ -1,3 +1,24 @@
+# Changes: Android phase A2 (BLE link layer)
+
+Written without a Kotlin or Android toolchain: **the Android sources were not compiled or run
+here**, and nothing was measured on real phones. Run `./gradlew :app:assembleDebug
+:core:runtime:testDebugUnitTest :core:ble:testDebugUnitTest`, then follow "Exit test on two real
+phones" in `clients/android/README.md` and fill in its results table.
+
+* New module `:core:ble` with `BleTransport`, the `Transport` of the core over BLE: ports for
+  scanner, advertiser, GATT server, connector and link; handle allocator (never reused); bounded
+  per-link send queue with one send in flight; MTU and handshake rules; `PeerSeen` only for usable
+  links; counters and snapshots for diagnostics. The state machine has no Android dependency.
+* Android adapters for the platform APIs (`android` package), including the API 33 / older split
+  and an address-to-device cache for scan results; `BleSupport` for permissions and construction.
+* Library manifest with the BLE permissions and feature (`neverForLocation` for scanning).
+* App: development test bench (`BleLinkTestActivity`, opened from the self-test screen) that runs
+  the real node over real Bluetooth and shows links, MTU and throughput. English only.
+* Docs: `docs/src/protocol/ble-link.md` (the GATT profile); README section with the exit-test
+  procedure; CI runs `:core:ble:testDebugUnitTest`.
+* Not yet (A3): tie-break between two phones connecting to each other, rotating token, link
+  rotation and limits, back-off per GATT error, permission flow, foreground service, screen-off scan.
+
 # Fix: invalid resource file name (app)
 
 * `app/src/main/res/xml/data-extraction-rules.xml` -> `data_extraction_rules.xml`. Android resource

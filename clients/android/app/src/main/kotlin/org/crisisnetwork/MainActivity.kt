@@ -1,5 +1,6 @@
 package org.crisisnetwork.android
 
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -18,6 +19,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.darkColorScheme
@@ -89,6 +91,10 @@ private fun SelfTestScreen() {
             ReportView(current)
             Button(onClick = { runCount += 1 }) {
                 Text(stringResource(R.string.selftest_run_again))
+            }
+            // Phase A2 test bench: two phones, real Bluetooth.
+            OutlinedButton(onClick = { context.startActivity(Intent(context, BleLinkTestActivity::class.java)) }) {
+                Text(stringResource(R.string.ble_test_open))
             }
         }
     }

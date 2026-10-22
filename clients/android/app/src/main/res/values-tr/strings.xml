@@ -11,4 +11,5 @@
     <string name="selftest_encryption_active">Veritabanı şifreleme: etkin</string>
     <string name="selftest_encryption_inactive">Veritabanı şifreleme: derlemede yok</string>
     <string name="selftest_run_again">Yeniden çalıştır</string>
+    <string name="ble_test_open">BLE bağlantı sınaması (A2)</string>
 </resources>

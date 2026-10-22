@@ -17,6 +17,11 @@
             </intent-filter>
         </activity>
 
+        <!-- Phase A2 test bench (development tool); replaced by the real screens in A4/A5. -->
+        <activity
+            android:name=".BleLinkTestActivity"
+            android:exported="false" />
+
     </application>
 
 </manifest>
