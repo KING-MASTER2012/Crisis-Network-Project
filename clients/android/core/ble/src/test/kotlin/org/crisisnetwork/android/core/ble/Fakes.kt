@@ -3,6 +3,7 @@
 package org.crisisnetwork.android.core.ble
 
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.receiveAsFlow
@@ -23,6 +24,7 @@ internal class FakeGattLink(
     override val events: Flow<GattLinkEvent> = channel.receiveAsFlow()
 
     val sent = mutableListOf<ByteArray>()
+    val priorities = mutableListOf<LinkPriority>()
     var closeCount = 0
 
     /** The next this many calls of [send] are refused (as the platform does when it is busy). */
@@ -35,6 +37,10 @@ internal class FakeGattLink(
         }
         sent += bytes
         return true
+    }
+
+    override fun requestPriority(priority: LinkPriority) {
+        priorities += priority
     }
 
     override fun close() {
@@ -54,8 +60,12 @@ internal class FakeScanner : BleScanner {
     var stopCount = 0
     var failOnStart: Throwable? = null
 
-    override fun start() {
+    /** The mode of every start, in order. */
+    val modes = mutableListOf<ScanMode>()
+
+    override fun start(mode: ScanMode) {
         startCount += 1
+        modes += mode
         failOnStart?.let { throw it }
     }
 
@@ -63,8 +73,8 @@ internal class FakeScanner : BleScanner {
         stopCount += 1
     }
 
-    fun sight(address: String, rssi: Int = -60) {
-        channel.trySend(ScanEvent.Sighting(address, rssi))
+    fun sight(address: String, rssi: Int = -60, advertisement: BleAdvertisement? = null) {
+        channel.trySend(ScanEvent.Sighting(address, rssi, advertisement))
     }
 
     fun fail(code: Int) {
@@ -79,12 +89,20 @@ internal class FakeAdvertiser : BleAdvertiser {
     var startCount = 0
     var stopCount = 0
 
-    override fun start() {
+    /** Every start, in order: the mode and the advertisement (token) that went with it. */
+    val starts = mutableListOf<Pair<AdvertiseMode, BleAdvertisement?>>()
+
+    override fun start(mode: AdvertiseMode, advertisement: BleAdvertisement?) {
         startCount += 1
+        starts += mode to advertisement
     }
 
     override fun stop() {
         stopCount += 1
+    }
+
+    fun fail(code: Int) {
+        channel.trySend(AdvertiseEvent.Failed(code))
     }
 }
 
@@ -125,7 +143,14 @@ internal class FakeConnector : GattConnector {
 }
 
 /** A transport wired to fakes, with the transport events and diagnostics collected into lists. */
-internal class Harness(testScope: TestScope, config: BleConfig = BleConfig()) {
+internal class Harness(
+    testScope: TestScope,
+    config: BleConfig = BleConfig(),
+    tokens: List<Long> = listOf(1_000L),
+) {
+    private val tokenQueue = ArrayDeque(tokens)
+    private var lastToken = tokens.last()
+
     val scanner = FakeScanner()
     val advertiser = FakeAdvertiser()
     val connector = FakeConnector()
@@ -139,6 +164,7 @@ internal class Harness(testScope: TestScope, config: BleConfig = BleConfig()) {
             config = config,
             dispatcher = StandardTestDispatcher(testScope.testScheduler),
             clockMs = { testScope.currentTime },
+            tokenSource = { tokenQueue.removeFirstOrNull()?.also { lastToken = it } ?: lastToken },
         )
 
     val events = mutableListOf<TransportEvent>()
@@ -151,6 +177,9 @@ internal class Harness(testScope: TestScope, config: BleConfig = BleConfig()) {
         val collectors = UnconfinedTestDispatcher(testScope.testScheduler)
         testScope.backgroundScope.launch(collectors) { transport.events.collect { events += it } }
         testScope.backgroundScope.launch(collectors) { transport.diagnostics.collect { diagnostics += it } }
+        // The transport has a housekeeping tick that never ends by itself: whatever a test forgot to
+        // stop is stopped when the test scope ends, so that the scheduler can run dry.
+        testScope.backgroundScope.coroutineContext[Job]!!.invokeOnCompletion { transport.stop() }
     }
 
     /** Lets everything that is due run. */

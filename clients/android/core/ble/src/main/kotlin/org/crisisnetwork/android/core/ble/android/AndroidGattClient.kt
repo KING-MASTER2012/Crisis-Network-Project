@@ -19,6 +19,7 @@ import org.crisisnetwork.android.core.ble.CloseReason
 import org.crisisnetwork.android.core.ble.GattConnector
 import org.crisisnetwork.android.core.ble.GattLink
 import org.crisisnetwork.android.core.ble.GattLinkEvent
+import org.crisisnetwork.android.core.ble.LinkPriority
 import org.crisisnetwork.android.core.ble.LinkRole
 
 /** [GattConnector] over `BluetoothDevice.connectGatt`: the central side of the link. */
@@ -117,6 +118,25 @@ internal class AndroidGattClientLink(
         } catch (_: IllegalStateException) {
             false
         }
+
+    /** Asks for the connection interval class of [priority]; the peripheral cannot ask, so only this side does. */
+    override fun requestPriority(priority: LinkPriority) {
+        synchronized(lock) {
+            val g = gatt
+            if (closed || step != Step.Ready || g == null) return
+            val platform =
+                when (priority) {
+                    LinkPriority.LowPower -> BluetoothGatt.CONNECTION_PRIORITY_LOW_POWER
+                    LinkPriority.Balanced -> BluetoothGatt.CONNECTION_PRIORITY_BALANCED
+                    LinkPriority.High -> BluetoothGatt.CONNECTION_PRIORITY_HIGH
+                }
+            try {
+                g.requestConnectionPriority(platform)
+            } catch (_: SecurityException) {
+                // The permission was revoked: the link is about to end anyway.
+            }
+        }
+    }
 
     override fun close() {
         synchronized(lock) {

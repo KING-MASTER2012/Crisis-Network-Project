@@ -1,6 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
+    <!-- The mesh runs in a foreground service of type connectedDevice (phase A3): the app talks to
+         nearby devices over Bluetooth. Android 14 and newer require the type-specific permission,
+         and that the app holds one of the Bluetooth permissions (declared in :core:ble) when the
+         service starts. -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE" />
+
+    <!-- Android 13 and newer: needed for the service notification to be shown. Optional: the
+         service runs without it, Android only hides the notification. -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
     <application
         android:allowBackup="false"
         android:dataExtractionRules="@xml/data_extraction_rules"
@@ -17,10 +28,16 @@
             </intent-filter>
         </activity>
 
-        <!-- Phase A2 test bench (development tool); replaced by the real screens in A4/A5. -->
+        <!-- Phase A2/A3 test bench (development tool); replaced by the real screens in A4/A5. -->
         <activity
             android:name=".BleLinkTestActivity"
             android:exported="false" />
+
+        <!-- Keeps the node and the Bluetooth transport running in the background. -->
+        <service
+            android:name=".MeshService"
+            android:exported="false"
+            android:foregroundServiceType="connectedDevice" />
 
     </application>
 

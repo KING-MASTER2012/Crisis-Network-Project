@@ -185,9 +185,8 @@ Decisions:
 * Manifest: `BLUETOOTH_SCAN` with `neverForLocation` (no location permission on Android 12+),
   `BLUETOOTH_ADVERTISE`, `BLUETOOTH_CONNECT`; the legacy permissions are limited to `maxSdkVersion=30`.
   Android 11 and older also need the system location switch on for scanning to return anything.
-* Not in A2 (phase A3): tie-break between two phones that connect to each other, rotating
-  advertisement token, connection rotation and limits by power profile, back-off per GATT error,
-  the real permission flow, the foreground service, screen-off scanning.
+* Phase A3 (below) adds discovery with a tie-break, back-off, scan budget, link rotation, power
+  profiles, the permission flow and the foreground service.
 
 ### Tests
 
@@ -200,8 +199,9 @@ Decisions:
 Not run here (no devices). Procedure:
 
 1. Install the debug APK on two phones (Bluetooth on; on Android 11 or older also location).
-2. Open **BLE link test (A2)** on both. Phone 1: role **Peripheral**, phone 2: role **Central**
-   (`Both` connects twice until A3). Tap **Start** and grant the permissions.
+2. Open **BLE link test** on both. Phone 1: role **Peripheral**, phone 2: role **Central**
+   (since A3 `Both` on both phones also works: they agree on one link). Tap **Start** and grant
+   the permissions.
 3. Within a few seconds each phone shows one link with a handle and the packet size; the log shows
    `link up`. Write down the packet size (ATT MTU is that plus 3).
 4. **Send** an announcement on one phone: it must appear in the other phone's log, and the other way.
@@ -217,6 +217,78 @@ Results (fill in):
 | --- | --- | --- | --- | --- |
 | | | | | |
 
+## Discovery, topology and the foreground service (phase A3)
+
+### Radio behaviour (`:core:ble`)
+
+| Topic | Behaviour |
+| --- | --- |
+| Advertisement | Service UUID plus manufacturer data (company id `0xFFFF`): 1 flag byte (`can initiate`) and a **random 32-bit token**, replaced every 10 minutes. 30 of 31 bytes. Format: `BleAdvertisement`. |
+| Tie-break | Of two phones that both scan and advertise, the one with the **smaller token initiates**; the other waits. A peer without a token, or one that cannot initiate (`Peripheral`), is always connected to; a device that advertises no token always initiates. If we have no link at all for 30 s we also connect to devices we were leaving alone. |
+| Connecting | One attempt at a time (`maxConcurrentConnects`), optional spacing (the app uses 300 ms), strongest signal first. One slot of the link limit is kept free for incoming connections (limit 3 or more). |
+| Back-off | Per address: 5 s, doubled for every failure in a row, up to 60 s (GATT 133, timeouts). A device that lacks our service waits at least 30 s. A link that lived 20 s starts clean; a link that flaps counts as a failure. Three failures in a row (any address) pause all new connections for 5 s. |
+| Scan budget | Android allows 5 scan starts per 30 s: the transport stays at 4 and delays restarts. `ScanFailed(6)` (too frequent) waits 30 s, other codes back off from 5 s. A scan is refreshed every 25 minutes (Android demotes long scans). |
+| Link rotation | Only when the limit is reached **and** a neighbour is waiting: once per rotation interval the oldest *outgoing* link (older than 1 min) is closed and its address left alone for 1 min. Incoming links are never dropped from this side. |
+| Power profiles | `PowerProfile.Saver` / `Balanced` / `Aggressive` set scan mode (screen on, screen off), advertise mode, link limit (3 / 5 / 7), connection interval class and rotation interval. They change at run time (`setPowerProfile`), as does the screen state (`setScreenOn`). The scan is always filtered on the service UUID, which is what lets it run with the screen off. |
+
+`BleTransport.stats()` returns a `BleStats` snapshot (profile, scan mode, token, candidates, held by
+tie-break, back-off, counters) for the diagnostics screen (A6).
+
+### App (`:app`)
+
+* `MeshService`: foreground service, type `connectedDevice` (permissions `FOREGROUND_SERVICE` and
+  `FOREGROUND_SERVICE_CONNECTED_DEVICE`), persistent notification with the neighbour count, the
+  profile and a **Stop** action. Start it from a visible screen only (Android 12+ forbids starting
+  a foreground service from the background). After a restart by the system it comes back only when
+  the user had switched the mesh on and Android allows it.
+* `MeshController`: owns the node and the transport, remembers role and profile, follows the screen
+  state, publishes `state`. The service and the screens only observe it.
+* Permission flow (`BleSupport.readiness`): no BLE, then missing permissions (Android 12+: Nearby
+  devices; 11 and older: location), then Bluetooth off, then the location switch (11 and older).
+  The bench shows a rationale before the system dialog, a shortcut to the app settings after
+  "don't ask again", and asks for `POST_NOTIFICATIONS` (Android 13+, optional) once.
+* Strings for the rationale and the notification are in `values/` and `values-tr/`; A4's onboarding
+  reuses them.
+
+### Tests
+
+```
+./gradlew :core:ble:testDebugUnitTest      # includes DiscoveryTest and BleAdvertisementTest
+```
+
+### Exit test: three phones, relay A to C, and the battery
+
+Not run here (no devices).
+
+**Relay A - B - C.** Three phones with the debug APK, permissions granted:
+
+1. Phone A and C: role **Central**. Phone B: role **Both**. (A and C advertise nothing, so they
+   only connect to B and never to each other: the chain is forced by the roles.)
+2. Start the mesh on B first, then on A and C (**Start** in *BLE link test (A3)*). B shows two links.
+3. **Send** on A: the announcement must appear in C's log (and the other way). Note the time from
+   Send to arrival.
+4. Move A out of reach of C if you want a physical chain; the result must be the same.
+5. Two phones in `Both`: they must end with **one** link (check *Links* on both), with the smaller
+   token as the initiator (`BleStats`: `held by tie-break` on the other one).
+6. Switch the profile on one phone while linked: scan/advertise state in the stats line changes
+   at once and the link stays up.
+
+**Battery, screen off.** Per profile, one phone with the mesh running and one neighbour linked,
+screen off, unplugged, 60 minutes:
+
+```
+adb shell dumpsys batterystats --reset
+# ... run 60 minutes, screen off, USB unplugged (adb over Wi-Fi) ...
+adb shell dumpsys batterystats --charged org.crisisnetwork.android | grep -i -E "bluetooth|Estimated power|Uid"
+adb shell dumpsys bluetooth_manager | grep -i -E "scan|advert"
+```
+
+Results (fill in):
+
+| Phones | Profile | Screen | Neighbours | Drain %/h | BLE scan time | Notes |
+| --- | --- | --- | --- | --- | --- | --- |
+| | | | | | | |
+
 ## Troubleshooting
 
 * `The Rust/Android toolchain is incomplete`: follow the listed commands, then restart the
@@ -230,7 +302,13 @@ Results (fill in):
 * The self-test says "this build has no SQLCipher": expected unless built with
   `-PcrisisSqlcipher=true`.
 * BLE test bench finds nothing: Android 11 and older need the system location switch on; on all
-  versions Bluetooth must be on and the permissions granted. `ble: ScanFailed(2)` means the app
-  started too many scans in 30 s: wait and press Start again.
+  versions Bluetooth must be on and the permissions granted. `ble: ScanFailed(6)` means the app
+  started too many scans in 30 s (the transport waits and retries by itself since A3);
+  `ScanFailed(2)` is a failed scanner registration, retried with back-off.
+* `Cannot run in the foreground` in the bench: Android 14 and newer need a Bluetooth permission
+  before a `connectedDevice` service starts, and Android 12 and newer refuse a start from the
+  background. Start from the visible screen after granting the permissions.
+* Two phones in `Both` do not link: the smaller token initiates; the other must see the first
+  one's advertisement. If neither scan sees the other, the fallback connects after 30 s of isolation.
 * Resource names must be lowercase with underscores: `data_extraction_rules.xml`, not
   `data-extraction-rules.xml` (aapt rejects hyphens).

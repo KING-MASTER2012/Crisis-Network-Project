@@ -1,3 +1,35 @@
+# Changes: Android phase A3 (discovery, topology, power, foreground service)
+
+Written without a Kotlin or Android toolchain: **the Android sources were not compiled or run
+here**, and nothing was measured on real phones. Run `./gradlew :app:assembleDebug
+:core:ble:testDebugUnitTest`, then follow "Exit test: three phones" in `clients/android/README.md`.
+
+* `:core:ble`: advertisement with a rotating random token (`BleAdvertisement`) and the tie-break
+  (smaller token initiates); candidate list with strongest-signal-first connecting, one attempt at a
+  time, optional spacing; per-address exponential back-off and a pause after repeated failures
+  (GATT 133); scan-start budget (4 per 30 s), failure handling by error code and a 25-minute scan
+  refresh; link rotation under pressure with a free slot kept for incoming links; power profiles
+  (`PowerProfile`) with run-time `setPowerProfile` / `setScreenOn` (scan mode, advertise mode, link
+  limit, connection interval); `BleStats`; `BleSupport.readiness`.
+* Ports changed: `BleScanner.start(mode)`, `BleAdvertiser.start(mode, advertisement)`,
+  `ScanEvent.Sighting` carries the advertisement, `GattLink.requestPriority` (default no-op).
+  `BleConfig.maxLinks` is now a ceiling above the profile's limit (default 8).
+* App: `MeshService` (foreground service, type `connectedDevice`, persistent notification with a
+  Stop action), `MeshController` (owns the node; remembers role and profile; follows the screen),
+  permission flow with rationale / settings shortcut / Bluetooth and location prompts, notification
+  channel and strings (en, tr). The test bench now starts the mesh through the service and shows the
+  new state; `BleLinkTestController` only sends and counts.
+* Tests: `DiscoveryTest`, `BleAdvertisementTest`; the fakes follow the new ports and the harness
+  stops the transport when the test scope ends.
+* Not changed on purpose: `docs/src/protocol/ble-link.md` still says the tie-break is specified in
+  A3; the mdBook pages are updated at the end of the project (the advertisement format is in the
+  KDoc of `BleAdvertisement` until then).
+
+# Fix: `Unresolved reference 'cancel'` in `BleTransport.kt`
+
+* Added the missing `import kotlinx.coroutines.cancel` (`CoroutineScope.cancel()` is an extension).
+  Failed `:core:ble:compileDebugKotlin` in both Android CI jobs.
+
 # Changes: Android phase A2 (BLE link layer)
 
 Written without a Kotlin or Android toolchain: **the Android sources were not compiled or run

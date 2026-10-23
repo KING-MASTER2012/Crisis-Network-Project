@@ -21,7 +21,12 @@ import kotlinx.coroutines.flow.Flow
 /** What a [BleScanner] reports. */
 sealed interface ScanEvent {
     /** A device advertising the service was seen. May repeat for the same device. */
-    data class Sighting(val address: String, val rssi: Int) : ScanEvent
+    data class Sighting(
+        val address: String,
+        val rssi: Int,
+        /** The token and flag of the advertisement, `null` when it carries none (see [BleAdvertisement]). */
+        val advertisement: BleAdvertisement? = null,
+    ) : ScanEvent
 
     /** The platform stopped the scan or refused to start it. [code] is the platform's error code. */
     data class Failed(val code: Int) : ScanEvent
@@ -30,8 +35,11 @@ sealed interface ScanEvent {
 interface BleScanner {
     val events: Flow<ScanEvent>
 
-    /** Starts a scan filtered on [BleUuids.SERVICE]. Throws when Bluetooth is off or a permission is missing. */
-    fun start()
+    /**
+     * Starts a scan filtered on [BleUuids.SERVICE] in [mode]. Throws when Bluetooth is off or a
+     * permission is missing. Called again while a scan runs, it restarts the scan in the new mode.
+     */
+    fun start(mode: ScanMode)
 
     fun stop()
 }
@@ -46,8 +54,12 @@ sealed interface AdvertiseEvent {
 interface BleAdvertiser {
     val events: Flow<AdvertiseEvent>
 
-    /** Starts advertising [BleUuids.SERVICE] as connectable. Throws when Bluetooth is off or a permission is missing. */
-    fun start()
+    /**
+     * Starts advertising [BleUuids.SERVICE] as connectable, with [advertisement] (when not `null`)
+     * as manufacturer data. Throws when Bluetooth is off or a permission is missing. Called again
+     * while advertising, it restarts with the new mode and data (this is how the token rotates).
+     */
+    fun start(mode: AdvertiseMode, advertisement: BleAdvertisement?)
 
     fun stop()
 }
@@ -145,6 +157,9 @@ interface GattLink {
      * [GattLinkEvent.SendCompleted].
      */
     fun send(bytes: ByteArray): Boolean
+
+    /** Asks for the connection interval class of [priority]. Only a client link can; the default does nothing. */
+    fun requestPriority(priority: LinkPriority) {}
 
     /** Disconnects and releases the link. Idempotent. After it no event is delivered any more. */
     fun close()

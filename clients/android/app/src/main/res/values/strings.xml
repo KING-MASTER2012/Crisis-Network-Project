@@ -12,4 +12,30 @@
     <string name="selftest_encryption_inactive">Database encryption: not compiled in</string>
     <string name="selftest_run_again">Run again</string>
     <string name="ble_test_open">BLE link test (A2)</string>
+    <string name="mesh_channel_name">Mesh connection</string>
+    <string name="mesh_channel_description">Shown while the app keeps the Bluetooth mesh running in the background.</string>
+    <string name="mesh_notification_title">Crisis Network is running</string>
+    <string name="mesh_notification_starting">Starting…</string>
+    <string name="mesh_notification_stopping">Stopping…</string>
+    <string name="mesh_notification_stop">Stop</string>
+    <plurals name="mesh_notification_running">
+        <item quantity="one">%1$d neighbour connected · %2$s</item>
+        <item quantity="other">%1$d neighbours connected · %2$s</item>
+    </plurals>
+    <string name="mesh_profile_saver">Battery saver</string>
+    <string name="mesh_profile_balanced">Balanced</string>
+    <string name="mesh_profile_aggressive">Aggressive</string>
+    <string name="perm_rationale_title">Nearby devices</string>
+    <string name="perm_rationale_body">Crisis Network finds and talks to phones around you over Bluetooth, with no internet. Android groups this as \"Nearby devices\". The app does not use it to learn where you are.</string>
+    <string name="perm_rationale_body_legacy">Crisis Network finds and talks to phones around you over Bluetooth, with no internet. Android 11 and older only lets an app scan for Bluetooth devices when it may use the location permission. The app does not use it to learn where you are.</string>
+    <string name="perm_notifications_note">The notification permission is optional: without it the mesh still runs, but Android hides its notification.</string>
+    <string name="perm_continue">Continue</string>
+    <string name="perm_denied_title">Permission needed</string>
+    <string name="perm_denied_body">Without it the app cannot find or reach other phones. Open the app settings and allow it there.</string>
+    <string name="perm_open_settings">Open settings</string>
+    <string name="bluetooth_off_body">Bluetooth is switched off. Switch it on to join the mesh.</string>
+    <string name="bluetooth_turn_on">Turn on Bluetooth</string>
+    <string name="location_off_body">Android 11 and older return no Bluetooth scan results while the system location setting is off. Switch it on (the app does not use your location).</string>
+    <string name="location_open_settings">Location settings</string>
+    <string name="no_ble_body">This device has no Bluetooth Low Energy, so it cannot join the mesh.</string>
 </resources>

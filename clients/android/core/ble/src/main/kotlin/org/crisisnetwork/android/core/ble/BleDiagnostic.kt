@@ -32,6 +32,27 @@ sealed interface BleDiagnostic {
     /** A packet was dropped. */
     data class PacketDropped(val handle: ULong, val reason: DropReason) : BleDiagnostic
 
+    /** The scan was (re)started in [mode]. */
+    data class ScanStarted(val mode: ScanMode) : BleDiagnostic
+
+    /** A scan start was held back for [retryInMs] (platform limit of 5 starts per 30 s, or a failure). */
+    data class ScanBlocked(val retryInMs: Long) : BleDiagnostic
+
+    /** An address that failed [failures] times in a row is left alone for [delayMs]. */
+    data class ConnectBackoff(val address: String, val delayMs: Long, val failures: Int) : BleDiagnostic
+
+    /** Several connection attempts in a row failed: no new attempt for [forMs], to let the stack recover. */
+    data class ConnectionsPaused(val forMs: Long) : BleDiagnostic
+
+    /** The oldest outgoing link was closed to make room for a waiting neighbour. */
+    data class LinkRotated(val address: String) : BleDiagnostic
+
+    /** The advertised token was replaced. */
+    data object TokenRotated : BleDiagnostic
+
+    /** The power profile or the screen state changed. */
+    data class PowerChanged(val profile: PowerProfile, val screenOn: Boolean) : BleDiagnostic
+
     /** A bug or an unexpected platform exception inside the transport; the transport carries on. */
     data class InternalError(val message: String) : BleDiagnostic
 }
@@ -74,4 +95,28 @@ data class LinkInfo(
     val payloadMtu: Int,
     val queuedBytes: Int,
     val metrics: LinkMetrics,
+)
+
+/** A snapshot of the discovery and power state, for the diagnostics screen and the battery measurements. */
+data class BleStats(
+    val profile: PowerProfile,
+    val screenOn: Boolean,
+    val scanning: Boolean,
+    val scanMode: ScanMode?,
+    val advertising: Boolean,
+    /** The token being advertised, `null` when this device does not advertise one. Random, not an identity. */
+    val ownToken: Long?,
+    /** Links allowed right now: the smaller of the profile's limit and [BleConfig.maxLinks]. */
+    val effectiveMaxLinks: Int,
+    /** Devices seen recently that are not linked. */
+    val candidates: Int,
+    /** Of those, devices we leave to connect to us (they have the smaller token). */
+    val heldByTieBreak: Int,
+    /** Addresses currently in back-off. */
+    val backedOff: Int,
+    val connectAttempts: Long,
+    val connectFailures: Long,
+    val linkRotations: Long,
+    val tokenRotations: Long,
+    val scanStarts: Long,
 )

@@ -11,9 +11,29 @@ import org.crisisnetwork.android.core.ble.BleRole
 import org.crisisnetwork.android.core.ble.BleTransport
 
 /**
+ * What stands between the user and a running transport, in the order a screen should resolve it.
+ * See [BleSupport.readiness].
+ */
+sealed interface BleReadiness {
+    /** Everything is in place: the transport can be started. */
+    data object Ready : BleReadiness
+
+    /** The device has no Bluetooth Low Energy: nothing the user can do. */
+    data object NoBle : BleReadiness
+
+    /** Runtime permissions are missing; [permissions] is what to ask for (one dialog on every Android version). */
+    data class MissingPermissions(val permissions: List<String>) : BleReadiness
+
+    data object BluetoothOff : BleReadiness
+
+    /** Android 11 and older only: the system location switch is off, so scanning would find nothing. */
+    data object LocationSwitchOff : BleReadiness
+}
+
+/**
  * Entry points for the Android side: the transport itself and the checks that come before it.
- * The real permission flow (rationales, Android 12+ and older, settings shortcuts) is phase A3;
- * this is the minimum that lets a screen start the transport.
+ * [readiness] is the single question a screen asks before it starts the foreground service; the
+ * answers are the steps of the permission flow (rationale, request, settings shortcut).
  */
 object BleSupport {
     /**
@@ -50,6 +70,23 @@ object BleSupport {
                 locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER) ||
                     locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)
             )
+        }
+    }
+
+    /**
+     * The first thing that still has to be dealt with before the transport can start, in this
+     * order: no BLE at all, missing runtime permissions, Bluetooth off, location switch off (Android
+     * 11 and older). The foreground service of type `connectedDevice` also needs the Bluetooth
+     * permissions on Android 14 and newer, so asking for them first is not only polite.
+     */
+    fun readiness(context: Context, role: BleRole): BleReadiness {
+        if (!context.packageManager.hasSystemFeature(PackageManager.FEATURE_BLUETOOTH_LE)) return BleReadiness.NoBle
+        val missing = missingPermissions(context, role)
+        return when {
+            missing.isNotEmpty() -> BleReadiness.MissingPermissions(missing)
+            !isBluetoothEnabled(context) -> BleReadiness.BluetoothOff
+            isScanBlockedByLocationSwitch(context, role) -> BleReadiness.LocationSwitchOff
+            else -> BleReadiness.Ready
         }
     }
 
