@@ -1,3 +1,24 @@
+# Changes: Android phase A4 (design system, shell, onboarding)
+
+Written without a Kotlin or Android toolchain: **the Android sources were not compiled or run
+here**. Run `./gradlew :app:assembleDebug :app:testDebugUnitTest` and try the app on a phone and a
+tablet (or the foldable / resizable emulator).
+
+* Theme: `ThemeSettings`, brand colour schemes (light, dark, AMOLED, high contrast light/dark),
+  wallpaper colours on Android 12+, text scale on top of the system font scale, `StatusColors`.
+* Components: `ScreenColumn`, `InfoCard`, buttons, `StatusPill`, `EmptyState`, `SwitchRow`,
+  `ChoiceGroup` and the navigation icons (vector drawables).
+* Shell: five destinations; bottom bar on compact windows, rail from 600 dp; edge-to-edge with bar
+  icons that follow the in-app theme.
+* Onboarding: welcome, identity creation (`IdentityCreator` + `NullTransport`, explicit reset on an
+  unlockable vault), permissions with reasons (reused from the A3 bench as `rememberMeshStartFlow`),
+  background and battery explanation, done. Strings in English and Turkish.
+* Home (join / leave the mesh, neighbours), Settings (appearance, power profile, identity,
+  developer tools), Diagnostics (the A0 self-test moved here). `MainActivity` is now the host of
+  theme, onboarding and shell.
+* `:app` unit tests (`OnboardingFlowTest`, `ThemeSettingsTest`) and the CI step that runs them.
+* Placeholders for Chats, Announcements and Contacts until A5.
+
 # Changes: Android phase A3 (discovery, topology, power, foreground service)
 
 Written without a Kotlin or Android toolchain: **the Android sources were not compiled or run

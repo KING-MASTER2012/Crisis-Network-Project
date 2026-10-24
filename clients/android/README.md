@@ -4,10 +4,8 @@ Kotlin and Jetpack Compose client of the Crisis Network core. The core is the Ru
 `ffi` (library `crisis_core`); this project builds it for Android with cargo-ndk and calls it
 through the UniFFI-generated Kotlin bindings.
 
-Status: **phase A1** (core runtime layer, no UI and no BLE). The app is still the single self-test
-screen of A0; `:core:runtime` adds the actor that drives the core, the clock policy, the
-Keystore-wrapped secrets and a `Transport` abstraction with an in-memory loopback. BLE transport
-and the real UI follow in phases A2 to A7.
+Status: **phase A4** (design system, adaptive shell, onboarding; BLE and the foreground service from
+A2/A3). Chats, announcements and contacts are placeholders until A5; phases A5 to A7 follow.
 
 ## Toolchain (versions checked on 2026-10-18)
 
@@ -93,7 +91,7 @@ then reports "Task '.rustProfile=dev' not found". Use the dot-free alias or quot
 
 ```
 clients/android
-├── app/              application shell (A0: self-test screen)
+├── app/              application: theme, shell, onboarding, mesh service (A0 self-test now under Settings)
 └── core/
     ├── ffi/          native core for Android: cargo-ndk + UniFFI bindings + CoreSmoke
     ├── runtime/      A1: NodeRuntime actor, clock policy, secret vault, Transport + loopback
@@ -199,7 +197,7 @@ Decisions:
 Not run here (no devices). Procedure:
 
 1. Install the debug APK on two phones (Bluetooth on; on Android 11 or older also location).
-2. Open **BLE link test** on both. Phone 1: role **Peripheral**, phone 2: role **Central**
+2. Open **BLE link test** on both (Settings, Developer tools; debug builds only). Phone 1: role **Peripheral**, phone 2: role **Central**
    (since A3 `Both` on both phones also works: they agree on one link). Tap **Start** and grant
    the permissions.
 3. Within a few seconds each phone shows one link with a handle and the packet size; the log shows
@@ -216,6 +214,59 @@ Results (fill in):
 | Phones (model, Android) | Packet size / ATT MTU | Burst payload B/s | Link tx B/s | Notes |
 | --- | --- | --- | --- | --- |
 | | | | | |
+
+## Design system, shell and onboarding (phase A4)
+
+Package layout of `:app` (`ui/`):
+
+| Package | Content |
+| --- | --- |
+| `ui.theme` | `ThemeSettings` (mode, dynamic colour, high contrast, text scale), brand colour schemes, `CrisisTheme`, `StatusColors` for the announcement styles of A5. |
+| `ui.components` | `ScreenColumn`, `ScreenTitle`, `InfoCard` (with `Tone`), `PrimaryButton` / `SecondaryButton` / `QuietButton`, `StatusPill`, `EmptyState`, `SwitchRow`, `ChoiceGroup`. |
+| `ui.shell` | `Destination` (Home, Chats, Announcements, Contacts, Settings) and `AdaptiveShell`. |
+| `ui.permissions` | `rememberMeshStartFlow` + `BlockerCard`: the permission / Bluetooth / location flow of the A3 bench, reusable. |
+| `ui.onboarding` | `OnboardingFlow` (rules, tested), `IdentityCreator`, `OnboardingScreen`. |
+| `ui.screens` | Home, Settings, Diagnostics (the A0 self-test), placeholders. |
+| `ui.UiPreferences` | Appearance choices, introduction completed, public identity values. |
+
+**Theme.** Colour: wallpaper colours on Android 12+ (switch), else the brand palette; light, dark,
+AMOLED (true black surfaces) or system; *high contrast* (black/white, strong outlines) replaces the
+wallpaper colours because their contrast cannot be guaranteed. Text: the user's size (1.0, 1.15, 1.3,
+1.5) multiplies the system font scale. The system bar icons follow the app's own day/night choice.
+
+**Components** keep touch targets at 48 dp or more, wrap text instead of cutting it, expose roles
+(switch, radio button, heading) to TalkBack and never use colour alone (every tone has a label).
+
+**Adaptive navigation.** Compact windows (< 600 dp): navigation bar at the bottom. Medium and
+expanded (>= 600 dp): navigation rail at the start. The width is the window's, so split-screen and
+unfolding switch the layout. Content is limited to 640 dp. No navigation library: five top-level
+destinations with saved state; A5 adds the screens behind them.
+
+**Introduction** (first launch, five steps): welcome, **create identity**, nearby-devices permission
+with its reasons, background and battery, done (join now or open the app).
+
+* The identity is created by opening the node once without a radio (`NullTransport`): the core
+  generates the key pair from a fresh seed which the Keystore-backed vault seals (A1). The safety
+  number and the node id are public and cached in `UiPreferences` for display. There is no display
+  name in the core; the nickname is local and arrives with the contacts in A5.
+* A vault that cannot be unlocked offers an explicit, confirmed **reset** (deletes the identity and the
+  stored data), nothing is reset silently.
+* Permissions: reasons first, then the system dialog; after "don't ask again" a shortcut to the app
+  settings; Bluetooth off and the Android 11 location switch are handled. The permission step can be
+  skipped; the home screen asks again when joining.
+* Battery: explains the foreground notification and Doze, shows whether the app is excluded from
+  battery optimisation (`isIgnoringBatteryOptimizations`, no permission needed) and opens the system
+  list (`ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS`). The app does **not** request the exemption
+  by itself: Google Play restricts `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS`.
+* A killed process resumes after the identity step if the identity exists, so a second identity is
+  never created. Debug builds can show the introduction again (Settings, Developer tools).
+
+Tests: `app/src/test` (`OnboardingFlowTest`, `ThemeSettingsTest`: step rules, safety number format,
+theme decisions, width classes); CI runs `:app:testDebugUnitTest`.
+
+Not in A4: the real screens behind Chats, Announcements and Contacts (A5), the network diagnostics
+screen and the storage / lifetime settings (A6), a fake repository for previews (the
+Compose tooling dependency is not in the project).
 
 ## Discovery, topology and the foreground service (phase A3)
 
@@ -247,7 +298,7 @@ tie-break, back-off, counters) for the diagnostics screen (A6).
   devices; 11 and older: location), then Bluetooth off, then the location switch (11 and older).
   The bench shows a rationale before the system dialog, a shortcut to the app settings after
   "don't ask again", and asks for `POST_NOTIFICATIONS` (Android 13+, optional) once.
-* Strings for the rationale and the notification are in `values/` and `values-tr/`; A4's onboarding
+* Strings for the rationale and the notification are in `values/` and `values-tr/`; the A4 onboarding
   reuses them.
 
 ### Tests
@@ -264,7 +315,7 @@ Not run here (no devices).
 
 1. Phone A and C: role **Central**. Phone B: role **Both**. (A and C advertise nothing, so they
    only connect to B and never to each other: the chain is forced by the roles.)
-2. Start the mesh on B first, then on A and C (**Start** in *BLE link test (A3)*). B shows two links.
+2. Start the mesh on B first, then on A and C (**Start** in *BLE link test*). B shows two links.
 3. **Send** on A: the announcement must appear in C's log (and the other way). Note the time from
    Send to arrival.
 4. Move A out of reach of C if you want a physical chain; the result must be the same.
