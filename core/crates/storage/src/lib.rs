@@ -9,7 +9,10 @@
 //! * **quotas and retention**: a byte budget with a deterministic eviction policy,
 //!   plus time-based expiry,
 //! * **peers**: last-seen time, trust state and an opaque contact card,
-//! * an **upload marker** per message, for the later internet-sync phase.
+//! * an **upload marker** per message, for the later internet-sync phase,
+//! * **conversations**: a per-peer view of the log with backward paging, read markers
+//!   (unread counters) and, per message, a small note (the plaintext of a sent direct
+//!   message and the time its acknowledgement arrived).
 //!
 //! The crate stays deterministic: it never reads the clock. Every operation that
 //! depends on time takes `now_ms` from the caller, in the spirit of the sans-IO
@@ -29,6 +32,7 @@
 #![forbid(unsafe_code)]
 
 mod config;
+mod conversations;
 mod error;
 mod key;
 mod messages;
@@ -41,7 +45,10 @@ pub use config::Config;
 pub use error::{Result, StorageError};
 pub use key::DbKey;
 pub use store::Storage;
-pub use types::{InsertOutcome, Peer, Priority, PurgeReport, Stats, StoredMessage, TrustState};
+pub use types::{
+    Conversation, ConversationMessages, ConversationRow, InsertOutcome, MessageNote, Peer,
+    Priority, PurgeReport, Stats, StoredMessage, TrustState, UnreadCounts,
+};
 
 /// The database schema version this build writes and the newest it can read.
 ///

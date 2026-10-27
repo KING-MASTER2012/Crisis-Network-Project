@@ -2,9 +2,9 @@
 //! Two nodes are wired together by a small loop that plays the part of the radio.
 
 use crisis_core::{
-    CoreError, CoreNotification, CoreOutput, CrisisNode, MessageDirection, MessageKind,
-    NodeSettings, TransportCommand, TrustLevel, core_info, default_settings, generate_database_key,
-    generate_seed, inspect_contact_card, require_api_version,
+    ConversationRef, CoreError, CoreNotification, CoreOutput, CrisisNode, MessageDirection,
+    MessageKind, NodeSettings, TransportCommand, TrustLevel, core_info, default_settings,
+    generate_database_key, generate_seed, inspect_contact_card, require_api_version,
 };
 use std::sync::Arc;
 
@@ -135,6 +135,9 @@ fn a_direct_message_travels_decrypted_and_is_acknowledged() {
         .unwrap();
     assert_eq!(item.direction, MessageDirection::Outgoing);
     assert_eq!(item.counterpart.as_deref(), Some(&pair.b.node_id()[..]));
+    // The sender reads back what it wrote, and sees that it was delivered.
+    assert_eq!(item.body.as_deref(), Some(&b"meet at the square"[..]));
+    assert!(item.delivered_at_ms.is_some());
 }
 
 #[test]
@@ -320,4 +323,101 @@ fn the_node_can_be_shared_between_threads() {
         h.join().unwrap();
     }
     assert_eq!(n.history(0, 1000, T0 + 1000).unwrap().entries.len(), 80);
+}
+
+#[test]
+fn conversations_are_listed_paged_and_marked_read_across_the_boundary() {
+    let mut pair = Pair::new();
+    pair.a.add_contact(pair.now, pair.b.contact_card()).unwrap();
+    pair.b.add_contact(pair.now, pair.a.contact_card()).unwrap();
+    for text in ["one", "two", "three"] {
+        let sent = pair
+            .a
+            .publish_direct(pair.now, pair.b.node_id(), text.as_bytes().to_vec())
+            .unwrap();
+        pair.absorb(true, sent.output);
+        pair.settle();
+    }
+    let a_chat = ConversationRef::Direct {
+        peer: pair.b.node_id(),
+    };
+    let b_chat = ConversationRef::Direct {
+        peer: pair.a.node_id(),
+    };
+
+    // B sees one conversation with three unread messages and a preview.
+    let list = pair.b.conversations(10, pair.now).unwrap();
+    assert_eq!(list.len(), 1);
+    assert_eq!(list[0].conversation, b_chat);
+    assert_eq!(list[0].unread, 3);
+    assert_eq!(list[0].message_count, 3);
+    assert_eq!(
+        list[0].last.as_ref().and_then(|m| m.body.as_deref()),
+        Some(&b"three"[..])
+    );
+    assert_eq!(pair.b.unread_counts(pair.now).unwrap().direct, 3);
+
+    // Backwards paging: newest page first, each page oldest first.
+    let newest = pair
+        .b
+        .conversation_history(b_chat.clone(), None, 2, pair.now)
+        .unwrap();
+    let bodies: Vec<_> = newest
+        .entries
+        .iter()
+        .map(|m| m.body.clone().unwrap())
+        .collect();
+    assert_eq!(bodies, [b"two".to_vec(), b"three".to_vec()]);
+    let older = pair
+        .b
+        .conversation_history(b_chat.clone(), newest.older_before_seq, 2, pair.now)
+        .unwrap();
+    assert_eq!(older.entries.len(), 1);
+    assert_eq!(older.entries[0].body.as_deref(), Some(&b"one"[..]));
+    assert_eq!(older.older_before_seq, None);
+
+    // Reading clears the counter and the marker is part of every page.
+    let mark = pair.b.mark_conversation_read(b_chat.clone(), None).unwrap();
+    assert_eq!(pair.b.unread_counts(pair.now).unwrap().direct, 0);
+    let page = pair
+        .b
+        .conversation_history(b_chat, None, 10, pair.now)
+        .unwrap();
+    assert_eq!(page.read_up_to_seq, mark);
+
+    // The sender's side shows the same chat with its own text and the delivery time.
+    let mine = pair
+        .a
+        .conversation_history(a_chat, None, 10, pair.now)
+        .unwrap();
+    assert_eq!(mine.entries.len(), 3);
+    assert!(mine.entries.iter().all(|m| m.delivered_at_ms.is_some()));
+    assert_eq!(mine.entries[0].body.as_deref(), Some(&b"one"[..]));
+}
+
+#[test]
+fn announcements_and_bad_arguments_across_the_boundary() {
+    let n = node(1);
+    n.publish_broadcast(T0, b"hello all".to_vec()).unwrap();
+    let list = n.conversations(10, T0 + 1).unwrap();
+    assert_eq!(list.len(), 1);
+    assert_eq!(list[0].conversation, ConversationRef::Announcements);
+    assert_eq!(list[0].unread, 0, "own announcements are never unread");
+
+    let page = n
+        .conversation_history(ConversationRef::Announcements, None, 10, T0 + 1)
+        .unwrap();
+    assert_eq!(page.entries.len(), 1);
+    assert_eq!(page.entries[0].delivered_at_ms, None);
+
+    // A node id of the wrong length is refused, not guessed at.
+    let bad = ConversationRef::Direct { peer: vec![1; 5] };
+    assert!(matches!(
+        n.conversation_history(bad.clone(), None, 10, T0 + 1),
+        Err(CoreError::InvalidArgument { .. })
+    ));
+    assert!(matches!(
+        n.mark_conversation_read(bad, None),
+        Err(CoreError::InvalidArgument { .. })
+    ));
 }

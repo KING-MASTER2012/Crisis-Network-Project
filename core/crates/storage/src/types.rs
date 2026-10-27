@@ -114,3 +114,57 @@ pub struct Peer {
     /// and verified by the `crypto` crate.
     pub contact_card: Option<Vec<u8>>,
 }
+
+/// One conversation of the local user: the public announcements, or the direct messages
+/// exchanged with one peer.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Conversation {
+    /// Every broadcast this node holds, its own and everybody else's.
+    Broadcasts,
+    /// The direct messages between this node and one peer, in both directions.
+    Direct(NodeId),
+}
+
+/// What this node remembers about a stored message besides its envelope.
+///
+/// A note lives exactly as long as its message: when the message expires, is evicted or is
+/// deleted, the note goes with it.
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct MessageNote {
+    /// For a direct message this node sent: the text the user wrote. The envelope itself is
+    /// sealed to the recipient, so this local copy is the only way to read it back.
+    pub plaintext: Option<Vec<u8>>,
+    /// When the recipient's acknowledgement arrived (local clock, ms), if it did.
+    pub delivered_at_ms: Option<u64>,
+}
+
+/// One line of the conversation list, see [`crate::Storage::conversations`].
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct ConversationRow {
+    /// Which conversation this is.
+    pub conversation: Conversation,
+    /// Log position of its newest live message.
+    pub last_seq: u64,
+    /// Live messages in it (acknowledgements are not counted).
+    pub message_count: u64,
+    /// Incoming messages after the conversation's read marker.
+    pub unread: u64,
+}
+
+/// One page of a conversation, see [`crate::Storage::conversation_messages`].
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ConversationMessages {
+    /// The messages of the page, oldest first.
+    pub messages: Vec<StoredMessage>,
+    /// Whether older live messages exist before the first one of this page.
+    pub more_before: bool,
+}
+
+/// Unread incoming messages, split by kind of conversation.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct UnreadCounts {
+    /// Unread direct messages, over all peers.
+    pub direct: u64,
+    /// Unread announcements.
+    pub broadcasts: u64,
+}

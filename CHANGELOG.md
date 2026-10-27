@@ -1,3 +1,31 @@
+# Changes: core phase C7 (conversations: paging, unread, delivery state)
+
+Written without a Rust toolchain: **the Rust sources were not compiled or run here**. Run
+`cargo fmt --all`, `cargo clippy --workspace --all-targets -- -D warnings` and
+`cargo test --workspace`, then rebuild the Android bindings (`gen-bindings.sh`).
+
+* Storage schema **version 3** (migration is automatic, existing data is kept): indexes for
+  per-conversation queries, `message_notes` (removed together with its message by a foreign key)
+  and `read_marks` (one per conversation; the announcements use the single byte `0` as scope).
+* `storage`: `conversation_messages` (backward paging, oldest first within a page, `more_before`),
+  `conversations` (list with last position, message count, unread), `read_mark` / `mark_read`
+  (never moves backwards), `unread_counts`, `set_plaintext` / `mark_delivered` / `note`.
+* `engine`: `conversations`, `conversation`, `mark_read`, `unread_counts`. `HistoryEntry` gained
+  `delivered_at_ms`. `Engine::handle` records `Notification::Delivered` in the store.
+* **Behaviour change:** the text of a direct message the user sent is now kept next to the stored
+  (sealed) message, so the history and the chat show it. The copy lives in the same database,
+  under the same at-rest encryption, and is deleted with the message when it expires, is evicted
+  or is deleted. Messages sent before this version stay unreadable on the sender's side. A crash
+  between storing a message and storing its text leaves that one message without text.
+* `ffi`: new `conversations`, `conversation_history`, `mark_conversation_read`, `unread_counts`;
+  new types `ConversationRef` (`Announcements` / `Direct { peer }`), `ConversationInfo`,
+  `ConversationPageInfo`, `UnreadInfo`; `HistoryItem.delivered_at_ms`.
+  **`FFI_API_VERSION` is now 2** (the Android `EXPECTED_FFI_API_VERSION` follows).
+* Tests: `storage/tests/conversations.rs`, migration tests for version 3 (the old tests now build on
+  the real migration list), new engine and FFI end-to-end tests; the engine test that expected a
+  sealed outgoing body now expects the text.
+* Not changed: Kotlin wrappers for the new calls (phase A5), the CLI, the protocol and the wire format.
+
 # Changes: Android phase A4 (design system, shell, onboarding)
 
 Written without a Kotlin or Android toolchain: **the Android sources were not compiled or run

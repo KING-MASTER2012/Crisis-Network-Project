@@ -3,9 +3,13 @@
 //! Ids and keys are byte arrays (`ByteArray` in Kotlin, `Data` in Swift); neighbours are
 //! `u64` handles chosen by the platform's transport.
 
-use engine::{Contact, Direction, HistoryEntry, HistoryPage, Output, TransportAction};
+use engine::{
+    Contact, Conversation, ConversationPage, ConversationSummary, Direction, HistoryEntry,
+    HistoryPage, Output, TransportAction, UnreadCounts,
+};
 use mesh::{DisconnectReason, MeshStats, Notification, PublishError};
-use proto::Kind;
+use proto::limits::NODE_ID_LEN;
+use proto::{Kind, NodeId};
 use storage::TrustState;
 
 use crate::error::{CoreError, invalid_argument};
@@ -339,13 +343,19 @@ pub struct HistoryItem {
     /// The other party's node id: the sender of an incoming message, the recipient of an
     /// outgoing direct message. `None` for outgoing broadcasts.
     pub counterpart: Option<Vec<u8>>,
-    /// The readable content. `None` when it cannot be read (an outgoing direct message
-    /// is sealed to its recipient).
+    /// The readable content. For an outgoing direct message this is the text the user
+    /// wrote (the node keeps a local copy, since the message itself is sealed to its
+    /// recipient). `None` when it cannot be read: an incoming message that failed to
+    /// decrypt, or an outgoing direct message written before interface version 2.
     pub body: Option<Vec<u8>>,
     /// The sender's creation time (milliseconds; the sender's clock, untrusted).
     pub created_at_ms: u64,
     /// When this node stored the message (milliseconds, local clock).
     pub received_at_ms: u64,
+    /// For an outgoing direct message: when the recipient's acknowledgement arrived
+    /// (milliseconds, local clock). `None` until then and for every other message. A
+    /// message that is stored but not yet delivered counts as "published".
+    pub delivered_at_ms: Option<u64>,
 }
 
 impl From<HistoryEntry> for HistoryItem {
@@ -359,6 +369,7 @@ impl From<HistoryEntry> for HistoryItem {
             body: entry.body,
             created_at_ms: entry.created_at_ms,
             received_at_ms: entry.received_at_ms,
+            delivered_at_ms: entry.delivered_at_ms,
         }
     }
 }
@@ -377,6 +388,104 @@ impl From<HistoryPage> for HistoryPageInfo {
         Self {
             entries: page.entries.into_iter().map(Into::into).collect(),
             next_after_seq: page.next_after_seq,
+        }
+    }
+}
+
+/// Which conversation to read or mark as read.
+#[derive(Debug, Clone, PartialEq, Eq, uniffi::Enum)]
+pub enum ConversationRef {
+    /// The public announcements: every broadcast this node holds.
+    Announcements,
+    /// The direct messages exchanged with one node.
+    Direct {
+        /// The other node's id (32 bytes).
+        peer: Vec<u8>,
+    },
+}
+
+impl From<Conversation> for ConversationRef {
+    fn from(conversation: Conversation) -> Self {
+        match conversation {
+            Conversation::Broadcasts => Self::Announcements,
+            Conversation::Direct(peer) => Self::Direct {
+                peer: peer.as_bytes().to_vec(),
+            },
+        }
+    }
+}
+
+/// Checks a [`ConversationRef`] received from the platform and converts it.
+pub(crate) fn conversation_of(reference: ConversationRef) -> Result<Conversation, CoreError> {
+    match reference {
+        ConversationRef::Announcements => Ok(Conversation::Broadcasts),
+        ConversationRef::Direct { peer } => {
+            let bytes = fixed::<NODE_ID_LEN>("a node id", &peer)?;
+            Ok(Conversation::Direct(NodeId::new(bytes)))
+        }
+    }
+}
+
+/// One line of the list of conversations.
+#[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
+pub struct ConversationInfo {
+    /// Which conversation this is.
+    pub conversation: ConversationRef,
+    /// Its newest message, for a preview.
+    pub last: Option<HistoryItem>,
+    /// Live messages in the conversation.
+    pub message_count: u64,
+    /// Incoming messages after the conversation's read marker.
+    pub unread: u64,
+}
+
+impl From<ConversationSummary> for ConversationInfo {
+    fn from(summary: ConversationSummary) -> Self {
+        Self {
+            conversation: summary.conversation.into(),
+            last: summary.last.map(Into::into),
+            message_count: summary.message_count,
+            unread: summary.unread,
+        }
+    }
+}
+
+/// One page of a conversation, read backwards from its newest message.
+#[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
+pub struct ConversationPageInfo {
+    /// The entries of the page, oldest first.
+    pub entries: Vec<HistoryItem>,
+    /// Pass this as `before_seq` to read the next older page; `None` when there are no
+    /// older messages.
+    pub older_before_seq: Option<u64>,
+    /// The conversation's read marker: incoming entries with `seq` at or below it are read.
+    pub read_up_to_seq: u64,
+}
+
+impl From<ConversationPage> for ConversationPageInfo {
+    fn from(page: ConversationPage) -> Self {
+        Self {
+            entries: page.entries.into_iter().map(Into::into).collect(),
+            older_before_seq: page.older_before_seq,
+            read_up_to_seq: page.read_up_to_seq,
+        }
+    }
+}
+
+/// Unread incoming messages, split by kind of conversation.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, uniffi::Record)]
+pub struct UnreadInfo {
+    /// Unread direct messages, over all peers.
+    pub direct: u64,
+    /// Unread announcements.
+    pub announcements: u64,
+}
+
+impl From<UnreadCounts> for UnreadInfo {
+    fn from(counts: UnreadCounts) -> Self {
+        Self {
+            direct: counts.direct,
+            announcements: counts.broadcasts,
         }
     }
 }

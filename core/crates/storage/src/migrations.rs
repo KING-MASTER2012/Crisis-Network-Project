@@ -85,6 +85,33 @@ const V2: &str = "
 CREATE INDEX messages_pinned ON messages (priority, kind, sender, size);
 ";
 
+/// Version 3: conversations (phase C7).
+///
+/// * Two indexes for the per-conversation queries (`messages_conversation` serves one peer,
+///   `messages_kind_seq` serves the announcements).
+/// * `message_notes`: the plaintext of a direct message this node sent (its envelope is
+///   sealed to the recipient, so the user could never read it back) and the time its
+///   acknowledgement arrived. The foreign key removes a note together with its message,
+///   whichever way the message goes (expiry, eviction, deletion).
+/// * `read_marks`: how far the user has read each conversation. The scope is a peer's node
+///   id (32 bytes) or the single byte 0 for the announcements.
+const V3: &str = "
+CREATE INDEX messages_conversation ON messages (kind, sender, recipient, seq);
+CREATE INDEX messages_kind_seq ON messages (kind, seq);
+
+CREATE TABLE message_notes (
+    id              BLOB    PRIMARY KEY CHECK (length(id) = 32)
+                            REFERENCES messages (id) ON DELETE CASCADE,
+    plaintext       BLOB    CHECK (plaintext IS NULL OR length(plaintext) <= 1024),
+    delivered_at_ms INTEGER
+) WITHOUT ROWID;
+
+CREATE TABLE read_marks (
+    scope    BLOB    PRIMARY KEY CHECK (length(scope) IN (1, 32)),
+    read_seq INTEGER NOT NULL CHECK (read_seq >= 0)
+) WITHOUT ROWID;
+";
+
 /// All migrations, in order. Versions must be contiguous, starting at 1.
 pub(crate) const MIGRATIONS: &[Migration] = &[
     Migration {
@@ -94,6 +121,10 @@ pub(crate) const MIGRATIONS: &[Migration] = &[
     Migration {
         version: 2,
         sql: V2,
+    },
+    Migration {
+        version: 3,
+        sql: V3,
     },
 ];
 
@@ -138,7 +169,7 @@ pub(crate) fn current_version(conn: &Connection) -> Result<u32> {
 mod tests {
     use super::*;
 
-    const V3_TEST: &str = "ALTER TABLE peers ADD COLUMN note TEXT;";
+    const EXTRA_TEST: &str = "ALTER TABLE peers ADD COLUMN note TEXT;";
 
     fn mem() -> Connection {
         Connection::open_in_memory().unwrap()
@@ -147,6 +178,27 @@ mod tests {
     fn latest() -> u32 {
         MIGRATIONS.last().map_or(0, |m| m.version)
     }
+
+    /// The real migrations followed by one more step, as a newer build would ship.
+    fn with_extra(sql: &'static str) -> Vec<Migration> {
+        let mut all: Vec<Migration> = MIGRATIONS
+            .iter()
+            .map(|m| Migration {
+                version: m.version,
+                sql: m.sql,
+            })
+            .collect();
+        all.push(Migration {
+            version: latest() + 1,
+            sql,
+        });
+        all
+    }
+
+    const ONE_MESSAGE: &str =
+        "INSERT INTO messages (id, kind, sender, created_at_ms, received_at_ms,
+                                    expires_at_ms, size, priority, envelope)
+             VALUES (zeroblob(32), 1, zeroblob(32), 0, 0, 10, 100, 1, x'00')";
 
     #[test]
     fn fresh_database_gets_latest_schema() {
@@ -167,13 +219,7 @@ mod tests {
         let mut c = mem();
         migrate(&mut c, &MIGRATIONS[..1]).unwrap();
         assert_eq!(current_version(&c).unwrap(), 1);
-        c.execute(
-            "INSERT INTO messages (id, kind, sender, created_at_ms, received_at_ms, expires_at_ms,
-                                    size, priority, envelope)
-             VALUES (zeroblob(32), 1, zeroblob(32), 0, 0, 10, 100, 1, x'00')",
-            [],
-        )
-        .unwrap();
+        c.execute(ONE_MESSAGE, []).unwrap();
         migrate(&mut c, MIGRATIONS).unwrap();
         assert_eq!(current_version(&c).unwrap(), latest());
         let rows: i64 = c
@@ -191,6 +237,55 @@ mod tests {
     }
 
     #[test]
+    fn version_two_databases_gain_the_conversation_tables() {
+        let mut c = mem();
+        migrate(&mut c, &MIGRATIONS[..2]).unwrap();
+        assert_eq!(current_version(&c).unwrap(), 2);
+        c.execute(ONE_MESSAGE, []).unwrap();
+
+        migrate(&mut c, MIGRATIONS).unwrap();
+        assert_eq!(current_version(&c).unwrap(), latest());
+        let objects: i64 = c
+            .query_row(
+                "SELECT COUNT(*) FROM sqlite_master
+                  WHERE name IN ('message_notes', 'read_marks',
+                                 'messages_conversation', 'messages_kind_seq')",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(objects, 4);
+        let rows: i64 = c
+            .query_row("SELECT COUNT(*) FROM messages", [], |r| r.get(0))
+            .unwrap();
+        assert_eq!(rows, 1);
+    }
+
+    #[test]
+    fn a_note_goes_with_its_message() {
+        let mut c = mem();
+        c.execute_batch("PRAGMA foreign_keys = ON;").unwrap();
+        migrate(&mut c, MIGRATIONS).unwrap();
+        c.execute(ONE_MESSAGE, []).unwrap();
+        c.execute(
+            "INSERT INTO message_notes (id, plaintext) VALUES (zeroblob(32), x'01')",
+            [],
+        )
+        .unwrap();
+        // A note for a message that is not stored is refused.
+        assert!(
+            c.execute("INSERT INTO message_notes (id) VALUES (randomblob(32))", [])
+                .is_err()
+        );
+
+        c.execute("DELETE FROM messages", []).unwrap();
+        let notes: i64 = c
+            .query_row("SELECT COUNT(*) FROM message_notes", [], |r| r.get(0))
+            .unwrap();
+        assert_eq!(notes, 0);
+    }
+
+    #[test]
     fn upgrade_preserves_existing_data() {
         let mut c = mem();
         migrate(&mut c, MIGRATIONS).unwrap();
@@ -200,22 +295,9 @@ mod tests {
         )
         .unwrap();
 
-        let extended = [
-            Migration {
-                version: 1,
-                sql: V1,
-            },
-            Migration {
-                version: 2,
-                sql: V2,
-            },
-            Migration {
-                version: 3,
-                sql: V3_TEST,
-            },
-        ];
+        let extended = with_extra(EXTRA_TEST);
         migrate(&mut c, &extended).unwrap();
-        assert_eq!(current_version(&c).unwrap(), 3);
+        assert_eq!(current_version(&c).unwrap(), latest() + 1);
         let (n, note): (i64, Option<String>) = c
             .query_row("SELECT COUNT(*), MAX(note) FROM peers", [], |r| {
                 Ok((r.get(0)?, r.get(1)?))
@@ -227,25 +309,13 @@ mod tests {
     #[test]
     fn newer_database_is_rejected() {
         let mut c = mem();
-        let extended = [
-            Migration {
-                version: 1,
-                sql: V1,
-            },
-            Migration {
-                version: 2,
-                sql: V2,
-            },
-            Migration {
-                version: 3,
-                sql: V3_TEST,
-            },
-        ];
+        let extended = with_extra(EXTRA_TEST);
         migrate(&mut c, &extended).unwrap();
         let err = migrate(&mut c, MIGRATIONS).unwrap_err();
         assert!(matches!(
             err,
-            StorageError::SchemaTooNew { found: 3, supported } if supported == latest()
+            StorageError::SchemaTooNew { found, supported }
+                if found == latest() + 1 && supported == latest()
         ));
     }
 
@@ -271,20 +341,7 @@ mod tests {
     fn failed_migration_leaves_no_partial_state() {
         let mut c = mem();
         migrate(&mut c, MIGRATIONS).unwrap();
-        let broken = [
-            Migration {
-                version: 1,
-                sql: V1,
-            },
-            Migration {
-                version: 2,
-                sql: V2,
-            },
-            Migration {
-                version: 3,
-                sql: "ALTER TABLE peers ADD COLUMN ok_col TEXT; THIS IS NOT SQL;",
-            },
-        ];
+        let broken = with_extra("ALTER TABLE peers ADD COLUMN ok_col TEXT; THIS IS NOT SQL;");
         assert!(migrate(&mut c, &broken).is_err());
         assert_eq!(current_version(&c).unwrap(), latest());
         let has_col: i64 = c

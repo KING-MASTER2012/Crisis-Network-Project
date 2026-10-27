@@ -13,6 +13,10 @@
 //!   blocked or marked verified.
 //! * **History.** [`Engine::history`] reads the message log back as readable entries,
 //!   decrypting direct messages addressed to this node.
+//! * **Conversations.** [`Engine::conversations`] lists them with their unread counts,
+//!   [`Engine::conversation`] reads one backwards a page at a time, and
+//!   [`Engine::mark_read`] moves its read marker. Messages the user sent keep their text
+//!   and learn when they were delivered.
 //!
 //! Like the mesh below it, the engine is sans-IO and deterministic: it never reads the
 //! clock, so every call that depends on time takes `now_ms`.
@@ -28,5 +32,8 @@ mod output;
 pub use config::EngineConfig;
 pub use driver::Engine;
 pub use error::{EngineError, Result};
-pub use history::{Contact, Direction, HistoryEntry, HistoryPage};
+pub use history::{
+    Contact, ConversationPage, ConversationSummary, Direction, HistoryEntry, HistoryPage,
+};
 pub use output::{Output, TransportAction};
+pub use storage::{Conversation, UnreadCounts};

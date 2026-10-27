@@ -16,7 +16,11 @@
 use crate::error::CoreError;
 
 /// Version of the exported interface. Increase it on every incompatible change.
-pub const FFI_API_VERSION: u32 = 1;
+///
+/// * 2: conversations (phase C7): `HistoryItem` gained `delivered_at_ms` and carries the text
+///   of sent direct messages; new `conversations`, `conversation_history`,
+///   `mark_conversation_read` and `unread_counts`.
+pub const FFI_API_VERSION: u32 = 2;
 
 /// Which core this library contains.
 #[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
