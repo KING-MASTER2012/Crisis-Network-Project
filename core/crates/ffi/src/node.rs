@@ -13,8 +13,9 @@ use zeroize::Zeroizing;
 
 use crate::error::{CoreError, invalid_argument};
 use crate::types::{
-    CardDetails, ContactInfo, CoreOutput, HistoryPageInfo, NodeSettings, NodeStats, PublishOutcome,
-    TrustLevel, fixed,
+    CardDetails, ContactInfo, ConversationInfo, ConversationPageInfo, ConversationRef, CoreOutput,
+    HistoryPageInfo, NodeSettings, NodeStats, PublishOutcome, TrustLevel, UnreadInfo,
+    conversation_of, fixed,
 };
 
 /// The default settings. Change the fields you need and pass the result to
@@ -340,6 +341,55 @@ impl CrisisNode {
     ) -> Result<HistoryPageInfo, CoreError> {
         let limit = to_usize("the limit", limit)?;
         Ok(self.lock()?.history(after_seq, limit, now_ms)?.into())
+    }
+
+    /// The conversations that hold at least one live message, the one with the newest
+    /// message first, at most `limit` of them: the announcements (one conversation) and one
+    /// per node with direct messages in either direction. Each comes with a preview (its
+    /// newest message) and its unread count.
+    pub fn conversations(
+        &self,
+        limit: u32,
+        now_ms: u64,
+    ) -> Result<Vec<ConversationInfo>, CoreError> {
+        let limit = to_usize("the limit", limit)?;
+        let list = self.lock()?.conversations(limit, now_ms)?;
+        Ok(list.into_iter().map(Into::into).collect())
+    }
+
+    /// One page of a conversation, read backwards from its newest message: start with
+    /// `before_seq = None`, then pass `older_before_seq` of the previous page until it is
+    /// `None`. The entries of a page are ordered oldest first.
+    pub fn conversation_history(
+        &self,
+        conversation: ConversationRef,
+        before_seq: Option<u64>,
+        limit: u32,
+        now_ms: u64,
+    ) -> Result<ConversationPageInfo, CoreError> {
+        let conversation = conversation_of(conversation)?;
+        let limit = to_usize("the limit", limit)?;
+        Ok(self
+            .lock()?
+            .conversation(&conversation, before_seq, limit, now_ms)?
+            .into())
+    }
+
+    /// Marks a conversation as read up to log position `up_to_seq`, or up to the newest
+    /// stored message when it is `None`. The marker never moves backwards. Returns the
+    /// marker as it stands afterwards.
+    pub fn mark_conversation_read(
+        &self,
+        conversation: ConversationRef,
+        up_to_seq: Option<u64>,
+    ) -> Result<u64, CoreError> {
+        let conversation = conversation_of(conversation)?;
+        Ok(self.lock()?.mark_read(&conversation, up_to_seq)?)
+    }
+
+    /// Unread incoming messages over all conversations, for a badge.
+    pub fn unread_counts(&self, now_ms: u64) -> Result<UnreadInfo, CoreError> {
+        Ok(self.lock()?.unread_counts(now_ms)?.into())
     }
 
     /// The handles of the neighbours currently connected.

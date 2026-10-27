@@ -14,7 +14,7 @@ import uniffi.crisis_core.requireApiVersion
 import java.io.File
 
 /** The interface version of the core this module was written against (`FFI_API_VERSION`). */
-const val EXPECTED_FFI_API_VERSION: UInt = 1u
+const val EXPECTED_FFI_API_VERSION: UInt = 2u
 
 /** One check of the self-test. */
 data class SmokeStep(

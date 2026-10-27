@@ -1,7 +1,10 @@
 //! Engine behaviour: publishing, contacts, history and a two-node conversation.
 
 use crypto::Identity;
-use engine::{Direction, Engine, EngineConfig, EngineError, Output, TransportAction};
+use engine::{
+    Conversation, Direction, Engine, EngineConfig, EngineError, Output, TransportAction,
+    UnreadCounts,
+};
 use mesh::{Notification, PeerId};
 use proto::Kind;
 use storage::TrustState;
@@ -14,7 +17,7 @@ fn engine(seed: u8) -> Engine {
         Identity::from_seed(&[seed; 32]).unwrap(),
         T0,
     )
-    .unwrap()
+        .unwrap()
 }
 
 /// Two engines wired back to back with instant, in-order delivery.
@@ -157,12 +160,19 @@ fn a_direct_message_needs_a_contact_and_then_travels_encrypted() {
     assert_eq!(incoming[0].counterpart, Some(pair.a.node_id()));
     assert!(pair.notes_a.contains(&Notification::Delivered { id }));
 
-    // A's own history shows the message but cannot read it back: it is sealed to B.
+    // A's own history shows the message with the text A wrote (the envelope itself is
+    // sealed to B, so the engine keeps a local copy), and when B confirmed it.
     let mine = pair.a.history(0, 10, pair.now).unwrap();
     assert_eq!(mine.entries.len(), 1);
     assert_eq!(mine.entries[0].direction, Direction::Outgoing);
     assert_eq!(mine.entries[0].counterpart, Some(b_id));
-    assert_eq!(mine.entries[0].body, None);
+    assert_eq!(
+        mine.entries[0].body.as_deref(),
+        Some(&b"for your eyes only"[..])
+    );
+    assert!(mine.entries[0].delivered_at_ms.is_some());
+    // B never sent anything, so nothing of B's is "delivered".
+    assert_eq!(incoming[0].delivered_at_ms, None);
 }
 
 #[test]
@@ -240,7 +250,7 @@ fn a_file_backed_engine_keeps_its_history_across_restarts() {
             None,
             T0,
         )
-        .unwrap();
+            .unwrap();
         e.publish_broadcast(T0, b"remember me").unwrap().0
     };
     let e = Engine::open(
@@ -250,8 +260,204 @@ fn a_file_backed_engine_keeps_its_history_across_restarts() {
         None,
         T0 + 1,
     )
-    .unwrap();
+        .unwrap();
     let page = e.history(0, 10, T0 + 1).unwrap();
     assert_eq!(page.entries.len(), 1);
     assert_eq!(page.entries[0].id, id);
+}
+
+/// Two engines that know each other's card, with a message already sent from A to B.
+fn introduced_pair() -> Pair {
+    let mut pair = Pair::new();
+    let a_card = pair.a.contact_card().to_bytes();
+    let b_card = pair.b.contact_card().to_bytes();
+    pair.a.add_contact(pair.now, &b_card).unwrap();
+    pair.b.add_contact(pair.now, &a_card).unwrap();
+    pair
+}
+
+fn send_direct(pair: &mut Pair, from_a: bool, text: &str) -> proto::MessageId {
+    let (id, out) = if from_a {
+        let to = pair.b.node_id();
+        pair.a
+            .publish_direct(pair.now, &to, text.as_bytes())
+            .unwrap()
+    } else {
+        let to = pair.a.node_id();
+        pair.b
+            .publish_direct(pair.now, &to, text.as_bytes())
+            .unwrap()
+    };
+    pair.absorb(from_a, out);
+    pair.settle();
+    id
+}
+
+fn texts(page: &engine::ConversationPage) -> Vec<String> {
+    page.entries
+        .iter()
+        .map(|e| String::from_utf8(e.body.clone().unwrap()).unwrap())
+        .collect()
+}
+
+#[test]
+fn a_chat_reads_backwards_in_pages_and_both_sides_see_the_same_text() {
+    let mut pair = introduced_pair();
+    for i in 0..5 {
+        send_direct(&mut pair, i % 2 == 0, &format!("m{i}"));
+    }
+    let (a_id, b_id) = (pair.a.node_id(), pair.b.node_id());
+
+    for (engine, other) in [(&pair.a, b_id), (&pair.b, a_id)] {
+        let chat = Conversation::Direct(other);
+        let newest = engine.conversation(&chat, None, 2, pair.now).unwrap();
+        assert_eq!(texts(&newest), ["m3", "m4"]);
+        let middle = engine
+            .conversation(&chat, newest.older_before_seq, 2, pair.now)
+            .unwrap();
+        assert_eq!(texts(&middle), ["m1", "m2"]);
+        let oldest = engine
+            .conversation(&chat, middle.older_before_seq, 2, pair.now)
+            .unwrap();
+        assert_eq!(texts(&oldest), ["m0"]);
+        assert_eq!(oldest.older_before_seq, None);
+    }
+
+    // Directions are right on each side.
+    let page = pair
+        .a
+        .conversation(&Conversation::Direct(b_id), None, 10, pair.now)
+        .unwrap();
+    let directions: Vec<_> = page.entries.iter().map(|e| e.direction).collect();
+    assert_eq!(
+        directions,
+        [
+            Direction::Outgoing,
+            Direction::Incoming,
+            Direction::Outgoing,
+            Direction::Incoming,
+            Direction::Outgoing
+        ]
+    );
+    // limit 0 returns nothing and keeps the cursor.
+    let none = pair
+        .a
+        .conversation(&Conversation::Direct(b_id), Some(7), 0, pair.now)
+        .unwrap();
+    assert!(none.entries.is_empty());
+    assert_eq!(none.older_before_seq, Some(7));
+}
+
+#[test]
+fn delivery_is_remembered_in_the_store() {
+    let mut pair = introduced_pair();
+    let id = send_direct(&mut pair, true, "are you there?");
+    assert!(pair.notes_a.contains(&Notification::Delivered { id }));
+
+    let b_id = pair.b.node_id();
+    let page = pair
+        .a
+        .conversation(&Conversation::Direct(b_id), None, 10, pair.now)
+        .unwrap();
+    assert_eq!(page.entries.len(), 1);
+    let delivered = page.entries[0].delivered_at_ms.expect("delivered");
+    assert!(delivered >= T0);
+    assert_eq!(page.entries[0].id, id);
+}
+
+#[test]
+fn unread_counts_follow_the_read_marker() {
+    let mut pair = introduced_pair();
+    send_direct(&mut pair, true, "one");
+    send_direct(&mut pair, true, "two");
+    pair.publish_from_a_broadcast(b"announcement");
+    let a_id = pair.a.node_id();
+    let chat = Conversation::Direct(a_id);
+
+    // B received two direct messages and one announcement; nothing was read yet.
+    assert_eq!(
+        pair.b.unread_counts(pair.now).unwrap(),
+        UnreadCounts {
+            direct: 2,
+            broadcasts: 1
+        }
+    );
+    let list = pair.b.conversations(10, pair.now).unwrap();
+    assert_eq!(list.len(), 2);
+    assert_eq!(list[0].conversation, Conversation::Broadcasts);
+    assert_eq!(list[0].unread, 1);
+    assert_eq!(list[1].conversation, chat);
+    assert_eq!(list[1].unread, 2);
+    assert_eq!(list[1].message_count, 2);
+    assert_eq!(
+        list[1].last.as_ref().and_then(|e| e.body.as_deref()),
+        Some(&b"two"[..])
+    );
+
+    // Reading up to the newest message clears the chat, not the announcements.
+    let mark = pair.b.mark_read(&chat, None).unwrap();
+    let page = pair.b.conversation(&chat, None, 10, pair.now).unwrap();
+    assert_eq!(page.read_up_to_seq, mark);
+    assert!(page.entries.iter().all(|e| e.seq <= mark));
+    assert_eq!(
+        pair.b.unread_counts(pair.now).unwrap(),
+        UnreadCounts {
+            direct: 0,
+            broadcasts: 1
+        }
+    );
+
+    // Marking an older position later does not make anything unread again.
+    let first_seq = page.entries[0].seq;
+    assert_eq!(pair.b.mark_read(&chat, Some(first_seq)).unwrap(), mark);
+
+    // The announcements are a conversation of their own.
+    pair.b
+        .mark_read(&Conversation::Broadcasts, None)
+        .unwrap();
+    assert_eq!(
+        pair.b.unread_counts(pair.now).unwrap(),
+        UnreadCounts::default()
+    );
+}
+
+#[test]
+fn announcements_page_like_a_chat() {
+    let mut pair = introduced_pair();
+    for i in 0..3 {
+        pair.publish_from_a_broadcast(format!("news {i}").as_bytes());
+    }
+    let page = pair
+        .a
+        .conversation(&Conversation::Broadcasts, None, 2, pair.now)
+        .unwrap();
+    assert_eq!(texts(&page), ["news 1", "news 2"]);
+    let older = pair
+        .a
+        .conversation(&Conversation::Broadcasts, page.older_before_seq, 2, pair.now)
+        .unwrap();
+    assert_eq!(texts(&older), ["news 0"]);
+    assert_eq!(older.older_before_seq, None);
+}
+
+#[test]
+fn the_text_of_a_sent_message_expires_with_the_message() {
+    let config = EngineConfig {
+        default_lifetime_secs: 1,
+        ..EngineConfig::default()
+    };
+    let mut a = Engine::in_memory(config, Identity::from_seed(&[1; 32]).unwrap(), T0).unwrap();
+    let card = engine(2).contact_card().to_bytes();
+    let b = a.add_contact(T0, &card).unwrap().node_id();
+    a.publish_direct(T0, &b, b"short lived").unwrap();
+
+    let chat = Conversation::Direct(b);
+    assert_eq!(a.conversation(&chat, None, 10, T0).unwrap().entries.len(), 1);
+
+    let later = T0 + 5_000;
+    a.tick(later).unwrap();
+    assert!(a.conversation(&chat, None, 10, later).unwrap().entries.is_empty());
+    assert!(a.conversations(10, later).unwrap().is_empty());
+    // The local copy of the text went away with the message.
+    a.storage().check_integrity().unwrap();
 }

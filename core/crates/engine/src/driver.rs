@@ -3,13 +3,15 @@
 use std::path::Path;
 
 use crypto::{ContactCard, Identity};
-use mesh::{Event, Mesh, MeshStats, PeerId};
+use mesh::{Event, Mesh, MeshStats, Notification, PeerId};
 use proto::{Envelope, Kind, MessageId, NodeId};
-use storage::{DbKey, Storage, StoredMessage, TrustState};
+use storage::{Conversation, DbKey, Storage, StoredMessage, TrustState, UnreadCounts};
 
 use crate::config::EngineConfig;
 use crate::error::{EngineError, Result};
-use crate::history::{Contact, Direction, HistoryEntry, HistoryPage};
+use crate::history::{
+    Contact, ConversationPage, ConversationSummary, Direction, HistoryEntry, HistoryPage,
+};
 use crate::output::Output;
 
 /// How many log entries are examined per storage query while building a history page.
@@ -87,9 +89,18 @@ impl Engine {
     // ----- event loop ------------------------------------------------------------
 
     /// Processes one event at time `now_ms`.
+    ///
+    /// A delivery confirmation (`Notification::Delivered`) is also written to the store, so
+    /// that the history can still show the message as delivered after a restart.
     pub fn handle(&mut self, now_ms: u64, event: Event) -> Result<Output> {
         let actions = self.mesh.handle(now_ms, event)?;
-        Ok(Output::from_actions(actions))
+        let output = Output::from_actions(actions);
+        for notification in &output.notifications {
+            if let Notification::Delivered { id } = notification {
+                self.mesh.storage_mut().mark_delivered(id, now_ms)?;
+            }
+        }
+        Ok(output)
     }
 
     /// Shorthand for handling [`Event::Tick`].
@@ -171,6 +182,11 @@ impl Engine {
     }
 
     /// Publishes a message encrypted for the owner of `card`.
+    ///
+    /// The envelope is sealed to the recipient, so the sender could never read it back.
+    /// The engine therefore keeps the text next to the stored message (for as long as the
+    /// message lives) and returns it in the history. This local copy lives in the same
+    /// database as the message and is protected by the same at-rest encryption.
     pub fn publish_direct_to_card(
         &mut self,
         now_ms: u64,
@@ -182,7 +198,9 @@ impl Engine {
             .mesh
             .identity()
             .direct(card, plaintext, now_ms, lifetime)?;
-        self.publish_envelope(now_ms, envelope)
+        let (id, output) = self.publish_envelope(now_ms, envelope)?;
+        self.remember_text(&id, plaintext)?;
+        Ok((id, output))
     }
 
     /// Like [`Engine::publish_direct_to_card`], but with a caller-supplied ephemeral key
@@ -200,7 +218,16 @@ impl Engine {
             .mesh
             .identity()
             .direct_with_ephemeral(card, plaintext, now_ms, lifetime, ephemeral)?;
-        self.publish_envelope(now_ms, envelope)
+        let (id, output) = self.publish_envelope(now_ms, envelope)?;
+        self.remember_text(&id, plaintext)?;
+        Ok((id, output))
+    }
+
+    /// Keeps the text of a direct message that was just published. Does nothing when the
+    /// mesh refused the message (it is not stored then).
+    fn remember_text(&mut self, id: &MessageId, plaintext: &[u8]) -> Result<()> {
+        self.mesh.storage_mut().set_plaintext(id, plaintext)?;
+        Ok(())
     }
 
     fn publish_envelope(&mut self, now_ms: u64, envelope: Envelope) -> Result<(MessageId, Output)> {
@@ -270,7 +297,12 @@ impl Engine {
 
     /// Reads the conversation history after log position `after_seq`: broadcasts,
     /// direct messages addressed to this node (decrypted) and everything this node
-    /// sent. Messages that only pass through this node are skipped.
+    /// sent (a direct message this node sent shows the text the user wrote, see
+    /// [`Engine::publish_direct_to_card`]). Messages that only pass through this node are
+    /// skipped.
+    ///
+    /// This is the whole log in order, forwards. For a chat screen use
+    /// [`Engine::conversation`], which pages one conversation backwards.
     ///
     /// At most `limit` entries are returned. Continue with
     /// [`HistoryPage::next_after_seq`].
@@ -291,7 +323,7 @@ impl Engine {
             }
             for stored in page {
                 cursor = stored.seq;
-                if let Some(entry) = self.history_entry(&me, &stored) {
+                if let Some(entry) = self.history_entry(&me, &stored)? {
                     entries.push(entry);
                     if entries.len() >= limit {
                         break 'scan;
@@ -305,10 +337,15 @@ impl Engine {
         })
     }
 
-    fn history_entry(&self, me: &NodeId, stored: &StoredMessage) -> Option<HistoryEntry> {
+    fn history_entry(
+        &self,
+        me: &NodeId,
+        stored: &StoredMessage,
+    ) -> Result<Option<HistoryEntry>> {
         let body = &stored.envelope.body;
+        let mut delivered_at_ms = None;
         let (direction, counterpart, text) = match body.kind {
-            Kind::Ack => return None,
+            Kind::Ack => return Ok(None),
             Kind::Broadcast if body.sender == *me => {
                 (Direction::Outgoing, None, Some(body.payload.clone()))
             }
@@ -317,7 +354,12 @@ impl Engine {
                 Some(body.sender),
                 Some(body.payload.clone()),
             ),
-            Kind::Direct if body.sender == *me => (Direction::Outgoing, body.recipient, None),
+            Kind::Direct if body.sender == *me => {
+                // Sealed to the recipient: the text comes from the local copy.
+                let note = self.mesh.storage().note(&stored.id)?;
+                delivered_at_ms = note.delivered_at_ms;
+                (Direction::Outgoing, body.recipient, note.plaintext)
+            }
             Kind::Direct if body.recipient == Some(*me) => {
                 let plain = self
                     .mesh
@@ -327,9 +369,9 @@ impl Engine {
                     .map(|p| p.to_vec());
                 (Direction::Incoming, Some(body.sender), plain)
             }
-            Kind::Direct => return None,
+            Kind::Direct => return Ok(None),
         };
-        Some(HistoryEntry {
+        Ok(Some(HistoryEntry {
             seq: stored.seq,
             id: stored.id,
             direction,
@@ -338,6 +380,94 @@ impl Engine {
             body: text,
             created_at_ms: body.created_at_ms,
             received_at_ms: stored.received_at_ms,
+            delivered_at_ms,
+        }))
+    }
+
+    // ----- conversations ----------------------------------------------------------------
+
+    /// The conversations that hold at least one live message, the one with the newest
+    /// message first, at most `limit` of them: the public announcements (one conversation)
+    /// and one per peer with direct messages in either direction.
+    pub fn conversations(&self, limit: usize, now_ms: u64) -> Result<Vec<ConversationSummary>> {
+        let rows = self.mesh.storage().conversations(limit, now_ms)?;
+        let mut summaries = Vec::with_capacity(rows.len());
+        for row in rows {
+            let last = self
+                .conversation(&row.conversation, None, 1, now_ms)?
+                .entries
+                .pop();
+            summaries.push(ConversationSummary {
+                conversation: row.conversation,
+                last,
+                message_count: row.message_count,
+                unread: row.unread,
+            });
+        }
+        Ok(summaries)
+    }
+
+    /// One page of a conversation, read **backwards** from its newest message.
+    ///
+    /// `before_seq` is `None` for the newest page; to go further back pass the
+    /// [`ConversationPage::older_before_seq`] of the previous page. The entries of a page
+    /// are ordered oldest first, ready to be shown. Unlike [`Engine::history`], a page is
+    /// restricted to one conversation, so a busy announcement feed cannot push a chat out
+    /// of reach.
+    pub fn conversation(
+        &self,
+        conversation: &Conversation,
+        before_seq: Option<u64>,
+        limit: usize,
+        now_ms: u64,
+    ) -> Result<ConversationPage> {
+        let storage = self.mesh.storage();
+        let read_up_to_seq = storage.read_mark(conversation)?;
+        if limit == 0 {
+            return Ok(ConversationPage {
+                entries: Vec::new(),
+                older_before_seq: before_seq,
+                read_up_to_seq,
+            });
+        }
+        let me = self.node_id();
+        let page = storage.conversation_messages(conversation, before_seq, limit, now_ms)?;
+        let mut entries = Vec::with_capacity(page.messages.len());
+        for stored in &page.messages {
+            if let Some(entry) = self.history_entry(&me, stored)? {
+                entries.push(entry);
+            }
+        }
+        let older_before_seq = if page.more_before {
+            page.messages.first().map(|stored| stored.seq)
+        } else {
+            None
+        };
+        Ok(ConversationPage {
+            entries,
+            older_before_seq,
+            read_up_to_seq,
         })
+    }
+
+    /// Marks a conversation as read up to log position `up_to_seq`, or up to the newest
+    /// message stored now when it is `None`. The marker never moves backwards. Returns the
+    /// marker as it stands afterwards.
+    pub fn mark_read(
+        &mut self,
+        conversation: &Conversation,
+        up_to_seq: Option<u64>,
+    ) -> Result<u64> {
+        let seq = match up_to_seq {
+            Some(seq) => seq,
+            None => self.mesh.storage().head_seq()?,
+        };
+        self.mesh.storage_mut().mark_read(conversation, seq)?;
+        Ok(self.mesh.storage().read_mark(conversation)?)
+    }
+
+    /// Unread incoming messages over all conversations, for a badge.
+    pub fn unread_counts(&self, now_ms: u64) -> Result<UnreadCounts> {
+        Ok(self.mesh.storage().unread_counts(now_ms)?)
     }
 }

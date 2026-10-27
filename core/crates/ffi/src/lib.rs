@@ -35,9 +35,10 @@ pub use node::{
     CrisisNode, default_settings, generate_database_key, generate_seed, inspect_contact_card,
 };
 pub use types::{
-    CardDetails, ContactInfo, CoreNotification, CoreOutput, DisconnectCause, HistoryItem,
-    HistoryPageInfo, MessageDirection, MessageKind, NodeSettings, NodeStats, PublishFailure,
-    PublishOutcome, TransportCommand, TrustLevel,
+    CardDetails, ContactInfo, ConversationInfo, ConversationPageInfo, ConversationRef,
+    CoreNotification, CoreOutput, DisconnectCause, HistoryItem, HistoryPageInfo, MessageDirection,
+    MessageKind, NodeSettings, NodeStats, PublishFailure, PublishOutcome, TransportCommand,
+    TrustLevel, UnreadInfo,
 };
 pub use version::{CoreInfo, FFI_API_VERSION, core_info, ffi_api_version, require_api_version};
 

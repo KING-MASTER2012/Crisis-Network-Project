@@ -10,11 +10,11 @@ use crate::error::{Result, StorageError};
 use crate::store::{Storage, counters, from_i64, to_i64};
 use crate::types::{InsertOutcome, Priority, PurgeReport, StoredMessage};
 
-const MSG_COLS: &str = "seq, id, envelope, received_at_ms, expires_at_ms, uploaded_at_ms";
+pub(crate) const MSG_COLS: &str = "seq, id, envelope, received_at_ms, expires_at_ms, uploaded_at_ms";
 const MAX_LIFETIME_MS: u64 = MAX_LIFETIME_SECS as u64 * 1000;
 
 /// A row as read from SQLite, before the envelope is decoded.
-struct RawRow {
+pub(crate) struct RawRow {
     seq: i64,
     id: Vec<u8>,
     envelope: Vec<u8>,
@@ -23,7 +23,7 @@ struct RawRow {
     uploaded_at_ms: Option<i64>,
 }
 
-fn raw_from_row(r: &Row<'_>) -> rusqlite::Result<RawRow> {
+pub(crate) fn raw_from_row(r: &Row<'_>) -> rusqlite::Result<RawRow> {
     Ok(RawRow {
         seq: r.get(0)?,
         id: r.get(1)?,
@@ -43,7 +43,7 @@ fn message_id_from_blob(blob: &[u8]) -> Result<MessageId> {
 
 impl RawRow {
     /// Decodes the envelope and checks that it still hashes to the recorded id.
-    fn into_stored(self) -> Result<StoredMessage> {
+    pub(crate) fn into_stored(self) -> Result<StoredMessage> {
         let id = message_id_from_blob(&self.id)?;
         let envelope = Envelope::decode(&self.envelope)?;
         if envelope.message_id()? != id {
