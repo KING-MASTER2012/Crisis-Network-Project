@@ -12,6 +12,12 @@
          service runs without it, Android only hides the notification. -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
+    <!-- Phase A5: the camera reads the QR code of a contact card. Nothing is recorded or sent. The
+         camera is optional: a card can also be entered as text. -->
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
+    <uses-feature android:name="android.hardware.camera.autofocus" android:required="false" />
+
     <application
         android:allowBackup="false"
         android:dataExtractionRules="@xml/data_extraction_rules"

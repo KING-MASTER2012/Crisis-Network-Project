@@ -82,6 +82,20 @@ object MeshController {
 
     val state: StateFlow<State> = mutableState.asStateFlow()
 
+    private val mutableDataVersion = MutableStateFlow(0L)
+
+    /**
+     * Changes whenever something happened to the messages (one arrived, was published, refused or
+     * confirmed as delivered). Unlike [notifications] it is a state: a screen that appears later
+     * still sees that something changed, and reads the messages from the core.
+     */
+    val dataVersion: StateFlow<Long> = mutableDataVersion.asStateFlow()
+
+    /** Tells the observers of [dataVersion] that messages changed (also used after the user's own actions). */
+    fun notifyDataChanged() {
+        mutableDataVersion.update { it + 1 }
+    }
+
     /** The core's notifications, forwarded while the node runs. */
     val notifications: SharedFlow<CoreNotification> = notificationFlow.asSharedFlow()
 
@@ -291,10 +305,17 @@ object MeshController {
                     node.notifications.collect { note ->
                         notificationFlow.tryEmit(note)
                         when (note) {
+                            is CoreNotification.MessageReceived,
+                            is CoreNotification.Delivered,
+                            is CoreNotification.Published,
+                            -> notifyDataChanged()
                             is CoreNotification.PeerConnected -> log("core: peer ${note.peer} accepted")
                             is CoreNotification.PeerDisconnected -> log("core: peer ${note.peer} gone")
                             is CoreNotification.PeerBanned -> log("core: peer ${note.peer} BANNED")
-                            is CoreNotification.PublishRejected -> log("core: publish rejected (${note.reason})")
+                            is CoreNotification.PublishRejected -> {
+                                log("core: publish rejected (${note.reason})")
+                                notifyDataChanged()
+                            }
                             else -> Unit
                         }
                     }

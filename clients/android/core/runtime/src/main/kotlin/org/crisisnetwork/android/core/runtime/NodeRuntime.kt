@@ -28,6 +28,9 @@ import org.crisisnetwork.android.core.runtime.transport.Transport
 import org.crisisnetwork.android.core.runtime.transport.TransportEvent
 import uniffi.crisis_core.CardDetails
 import uniffi.crisis_core.ContactInfo
+import uniffi.crisis_core.ConversationInfo
+import uniffi.crisis_core.ConversationPageInfo
+import uniffi.crisis_core.ConversationRef
 import uniffi.crisis_core.CoreNotification
 import uniffi.crisis_core.CoreOutput
 import uniffi.crisis_core.CrisisNode
@@ -36,6 +39,7 @@ import uniffi.crisis_core.NodeStats
 import uniffi.crisis_core.PublishOutcome
 import uniffi.crisis_core.TransportCommand
 import uniffi.crisis_core.TrustLevel
+import uniffi.crisis_core.UnreadInfo
 
 /** Lifecycle of a [NodeRuntime]. */
 sealed interface RuntimeState {
@@ -183,6 +187,30 @@ class NodeRuntime(
 
     suspend fun history(afterSeq: ULong, limit: UInt): HistoryPageInfo =
         query { n, now -> n.history(afterSeq, limit, now) }
+
+    /**
+     * The conversations that hold at least one live message, the newest first: the announcements
+     * (one conversation) and one per node with direct messages. Each has a preview and an unread count.
+     */
+    suspend fun conversations(limit: UInt): List<ConversationInfo> = query { n, now -> n.conversations(limit, now) }
+
+    /**
+     * One page of a conversation, read backwards from its newest message: start with
+     * [beforeSeq] `null`, then pass the page's `olderBeforeSeq` until it is `null`. The entries of
+     * a page are oldest first.
+     */
+    suspend fun conversationHistory(conversation: ConversationRef, beforeSeq: ULong?, limit: UInt): ConversationPageInfo =
+        query { n, now -> n.conversationHistory(conversation, beforeSeq, limit, now) }
+
+    /**
+     * Marks a conversation as read up to [upToSeq], or up to its newest message when `null`. The
+     * marker never moves backwards. Returns the marker as it stands afterwards.
+     */
+    suspend fun markConversationRead(conversation: ConversationRef, upToSeq: ULong? = null): ULong =
+        query { n, _ -> n.markConversationRead(conversation, upToSeq) }
+
+    /** Unread incoming messages over all conversations, for a badge. */
+    suspend fun unreadCounts(): UnreadInfo = query { n, now -> n.unreadCounts(now) }
 
     suspend fun connectedPeers(): List<ULong> = query { n, _ -> n.connectedPeers() }
 

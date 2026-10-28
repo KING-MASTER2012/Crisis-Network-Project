@@ -24,6 +24,8 @@ object UiPreferences {
         val identityCreated: Boolean = false,
         val safetyNumber: String? = null,
         val nodeIdHex: String? = null,
+        /** The contact card as text (public): what the QR code of this phone holds. Known once the identity exists. */
+        val cardText: String? = null,
     )
 
     private const val PREFS = "ui"
@@ -35,6 +37,7 @@ object UiPreferences {
     private const val KEY_IDENTITY = "identity_created"
     private const val KEY_SAFETY = "identity_safety_number"
     private const val KEY_NODE = "identity_node_id"
+    private const val KEY_CARD = "identity_card"
 
     private val mutableState = MutableStateFlow(State())
     val state: StateFlow<State> = mutableState.asStateFlow()
@@ -63,6 +66,7 @@ object UiPreferences {
                 identityCreated = p.getBoolean(KEY_IDENTITY, false),
                 safetyNumber = p.getString(KEY_SAFETY, null),
                 nodeIdHex = p.getString(KEY_NODE, null),
+                cardText = p.getString(KEY_CARD, null),
             )
     }
 
@@ -88,15 +92,23 @@ object UiPreferences {
     }
 
     /** Remembers that the identity exists, with the public values the screens show. */
-    fun saveIdentity(context: Context, safetyNumber: String, nodeIdHex: String) {
-        prefs(context).edit().putBoolean(KEY_IDENTITY, true).putString(KEY_SAFETY, safetyNumber).putString(KEY_NODE, nodeIdHex).apply()
-        mutableState.update { it.copy(identityCreated = true, safetyNumber = safetyNumber, nodeIdHex = nodeIdHex) }
+    fun saveIdentity(context: Context, safetyNumber: String, nodeIdHex: String, cardText: String? = null) {
+        val edit = prefs(context).edit().putBoolean(KEY_IDENTITY, true).putString(KEY_SAFETY, safetyNumber).putString(KEY_NODE, nodeIdHex)
+        if (cardText != null) edit.putString(KEY_CARD, cardText)
+        edit.apply()
+        mutableState.update { it.copy(identityCreated = true, safetyNumber = safetyNumber, nodeIdHex = nodeIdHex, cardText = cardText ?: it.cardText) }
+    }
+
+    /** Remembers the card of an identity that was created before the card was stored (phase A5). */
+    fun saveCard(context: Context, cardText: String) {
+        prefs(context).edit().putString(KEY_CARD, cardText).apply()
+        mutableState.update { it.copy(cardText = cardText) }
     }
 
     /** The identity was deleted (explicit reset): forget what was shown of it. */
     fun clearIdentity(context: Context) {
-        prefs(context).edit().remove(KEY_IDENTITY).remove(KEY_SAFETY).remove(KEY_NODE).apply()
-        mutableState.update { it.copy(identityCreated = false, safetyNumber = null, nodeIdHex = null) }
+        prefs(context).edit().remove(KEY_IDENTITY).remove(KEY_SAFETY).remove(KEY_NODE).remove(KEY_CARD).apply()
+        mutableState.update { it.copy(identityCreated = false, safetyNumber = null, nodeIdHex = null, cardText = null) }
     }
 
     fun completeOnboarding(context: Context) {

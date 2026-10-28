@@ -196,7 +196,7 @@ private fun IdentityStep(
                         failure = null
                         scope.launch {
                             when (val result = IdentityCreator.create(context)) {
-                                is IdentityResult.Created -> UiPreferences.saveIdentity(context, result.safetyNumber, result.nodeIdHex)
+                                is IdentityResult.Created -> UiPreferences.saveIdentity(context, result.safetyNumber, result.nodeIdHex, result.cardText)
                                 is IdentityResult.Failed -> failure = result.failure
                             }
                             creating = false

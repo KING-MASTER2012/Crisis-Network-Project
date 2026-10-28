@@ -10,6 +10,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.only
+import androidx.compose.material3.Badge
+import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
@@ -21,7 +23,10 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import org.crisisnetwork.android.R
 
 /** The top-level places of the app. Phones show them in a bar at the bottom, larger screens in a rail at the side. */
@@ -57,6 +62,20 @@ enum class WidthClass {
     }
 }
 
+/** The icon of a destination with a badge for unread items; the count is also read out by screen readers. */
+@Composable
+private fun NavIcon(destination: Destination, count: Int) {
+    val description = if (count > 0) pluralStringResource(R.plurals.nav_unread_count, count, count) else null
+    BadgedBox(
+        badge = {
+            if (count > 0) Badge { Text(if (count > 99) "99+" else count.toString()) }
+        },
+        modifier = Modifier.semantics { if (description != null) contentDescription = description },
+    ) {
+        Icon(painter = painterResource(destination.iconRes), contentDescription = null)
+    }
+}
+
 /**
  * The frame around the screens: a navigation bar at the bottom on compact windows, a navigation
  * rail at the start on wider ones (with labels on expanded ones). Insets are handled here, so the
@@ -66,6 +85,7 @@ enum class WidthClass {
 fun AdaptiveShell(
     current: Destination,
     onNavigate: (Destination) -> Unit,
+    badges: Map<Destination, Int> = emptyMap(),
     content: @Composable () -> Unit,
 ) {
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
@@ -79,7 +99,7 @@ fun AdaptiveShell(
                                 NavigationBarItem(
                                     selected = destination == current,
                                     onClick = { onNavigate(destination) },
-                                    icon = { Icon(painter = painterResource(destination.iconRes), contentDescription = null) },
+                                    icon = { NavIcon(destination, badges[destination] ?: 0) },
                                     label = { Text(stringResource(destination.titleRes), maxLines = 1) },
                                     alwaysShowLabel = true,
                                 )
@@ -97,7 +117,7 @@ fun AdaptiveShell(
                             NavigationRailItem(
                                 selected = destination == current,
                                 onClick = { onNavigate(destination) },
-                                icon = { Icon(painter = painterResource(destination.iconRes), contentDescription = null) },
+                                icon = { NavIcon(destination, badges[destination] ?: 0) },
                                 label = { Text(stringResource(destination.titleRes), maxLines = 1) },
                                 alwaysShowLabel = true,
                             )

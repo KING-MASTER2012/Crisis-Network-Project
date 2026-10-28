@@ -1,3 +1,39 @@
+# Changes: Android phase A5 (contacts, chats, announcements)
+
+Written without an Android toolchain: **nothing here was compiled, run or tested on a device**. Build
+(`./gradlew :app:assembleDebug :app:testDebugUnitTest`), then try it with two phones. Needs the C7
+change below (core API version 2 and regenerated bindings).
+
+* **Contacts.** Show your own card as a QR code (and copy or share it as text), scan another phone's
+  QR code, or enter a card as text. Adding a card shows the safety number to compare and asks for a
+  nickname. A contact detail screen compares safety numbers, marks a contact verified (or removes it)
+  and blocks or unblocks. A card scanned while the mesh is off is kept and added when the node runs.
+* **Chats.** List of conversations (preview, time, unread count), the chat screen with backward
+  paging, a "new messages" line, "Published" / "Delivered" under sent messages, a UTF-8 byte counter
+  against the 976-byte limit of a private message, and a choice of contact for a new message.
+* **Announcements.** Feed (newest first, backward paging, unread line), composer with a byte counter,
+  importance (normal / important / emergency, shown with a word and a colour), and a lifetime from
+  1 second to 7 days (presets and a custom value). Important and emergency ones ask for confirmation.
+* **Unread badges** on the Chats and Announcements destinations; read state lives in the core (C7).
+* **Convention to share with the other clients:** an important or emergency announcement starts its
+  payload with the bytes `0x1E` and the ASCII digit `1` or `2`, then the UTF-8 text; a normal one is
+  plain text (see `AnnouncementCodec`). Text from other phones is cleaned of control characters and
+  bidirectional override characters before it is shown.
+* **QR without Google Play services:** ZXing (plain Java) draws and reads the codes, CameraX delivers
+  the frames. This replaces the bundled ML Kit model of the plan: no native library is added, so
+  nothing new needs the 16 KB alignment check. A contact card is tiny (QR version 8, 49 modules).
+  Dependencies added: `com.google.zxing:core:3.5.3` and `androidx.camera:*:1.4.2`; check for newer versions.
+* New permission `CAMERA` (and optional camera features in the manifest); the camera is asked for
+  only on the scan screen, with the reason first.
+* `NodeRuntime` gained `conversations`, `conversationHistory`, `markConversationRead`, `unreadCounts`;
+  `MeshController.dataVersion` tells screens that messages changed; the contact card text is stored
+  with the identity (`UiPreferences`) so that the QR code is shown without opening the node.
+* Known limits, left for A6/A7: messages can only be read and sent while the mesh runs (the node is
+  opened by the foreground service only); nicknames are plain app-private preferences (not encrypted);
+  no notifications for incoming messages yet (A6); the card is shown as text and QR only.
+* Tests (JVM): card codec and QR round trip, announcement codec and sanitizing, limits and lifetimes,
+  nicknames, hex, overlay stack.
+
 # Changes: core phase C7 (conversations: paging, unread, delivery state)
 
 Written without a Rust toolchain: **the Rust sources were not compiled or run here**. Run

@@ -10,6 +10,7 @@ import org.crisisnetwork.android.core.runtime.OpenResult
 import org.crisisnetwork.android.core.runtime.failure.CoreFailure
 import org.crisisnetwork.android.core.runtime.transport.Transport
 import org.crisisnetwork.android.core.runtime.transport.TransportEvent
+import org.crisisnetwork.android.messaging.CardCodec
 
 /** A transport that does nothing: opens the node for what needs only the node (the identity) and no radio. */
 internal object NullTransport : Transport {
@@ -26,7 +27,7 @@ internal object NullTransport : Transport {
 
 sealed interface IdentityResult {
     /** The identity exists. Both values are public: they are what a contact card shows. */
-    data class Created(val safetyNumber: String, val nodeIdHex: String) : IdentityResult
+    data class Created(val safetyNumber: String, val nodeIdHex: String, val cardText: String? = null) : IdentityResult
 
     data class Failed(val failure: CoreFailure) : IdentityResult
 }
@@ -47,7 +48,7 @@ object IdentityCreator {
         if (MeshController.state.value.status != MeshController.Status.Stopped) {
             val running = MeshController.runtime
             return if (running != null) {
-                IdentityResult.Created(running.safetyNumber, running.nodeId.toHex())
+                IdentityResult.Created(running.safetyNumber, running.nodeId.toHex(), CardCodec.encode(running.contactCard))
             } else {
                 IdentityResult.Failed(CoreFailure.RuntimeStopped)
             }
@@ -56,7 +57,7 @@ object IdentityCreator {
             is OpenResult.Failed -> IdentityResult.Failed(opened.failure)
             is OpenResult.Ready -> {
                 val node = opened.runtime
-                val result = IdentityResult.Created(node.safetyNumber, node.nodeId.toHex())
+                val result = IdentityResult.Created(node.safetyNumber, node.nodeId.toHex(), CardCodec.encode(node.contactCard))
                 node.stop()
                 result
             }
