@@ -40,6 +40,8 @@ fun MyCardScreen(onBack: () -> Unit) {
     val context = LocalContext.current
     var copied by remember { mutableStateOf(false) }
     val card = ui.cardText
+    val cardTitle = stringResource(R.string.mycard_title)
+    val shareTitle = stringResource(R.string.mycard_share)
 
     Column {
         ScreenTopBar(title = stringResource(R.string.mycard_title), onBack = onBack)
@@ -69,7 +71,7 @@ fun MyCardScreen(onBack: () -> Unit) {
                     text = stringResource(R.string.mycard_copy),
                     onClick = {
                         val clipboard = context.getSystemService(ClipboardManager::class.java)
-                        clipboard?.setPrimaryClip(ClipData.newPlainText(context.getString(R.string.mycard_title), card))
+                        clipboard?.setPrimaryClip(ClipData.newPlainText(cardTitle, card))
                         copied = true
                     },
                 )
@@ -82,7 +84,7 @@ fun MyCardScreen(onBack: () -> Unit) {
                                 type = "text/plain"
                                 putExtra(Intent.EXTRA_TEXT, card)
                             }
-                        context.startActivity(Intent.createChooser(send, context.getString(R.string.mycard_share)))
+                        context.startActivity(Intent.createChooser(send, shareTitle))
                     },
                 )
             }
