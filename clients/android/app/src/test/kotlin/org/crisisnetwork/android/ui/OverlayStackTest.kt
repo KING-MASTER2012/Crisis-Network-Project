@@ -12,7 +12,7 @@ class OverlayStackTest {
 
     @Test
     fun everyOverlayRoundTripsThroughItsCode() {
-        val all = listOf(Overlay.Chat(alice), Overlay.Contact(bob), Overlay.MyCard, Overlay.Scan, Overlay.Paste, Overlay.NewChat, Overlay.Compose)
+        val all = listOf(Overlay.Chat(alice), Overlay.Contact(bob), Overlay.MyCard, Overlay.Scan, Overlay.Paste, Overlay.NewChat, Overlay.Compose, Overlay.Network)
         for (overlay in all) assertEquals(overlay, Overlay.parse(overlay.encode()))
         assertEquals(all, OverlayStack.decode(OverlayStack.encode(all)))
         assertEquals(emptyList<Overlay>(), OverlayStack.decode(""))

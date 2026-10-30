@@ -25,6 +25,9 @@ sealed interface Overlay {
     /** Writing an announcement. */
     data object Compose : Overlay
 
+    /** The network status: neighbours, storage, radio and the core's counters (phase A6). */
+    data object Network : Overlay
+
     fun encode(): String =
         when (this) {
             is Chat -> "chat:$peerHex"
@@ -34,6 +37,7 @@ sealed interface Overlay {
             Paste -> "paste"
             NewChat -> "newchat"
             Compose -> "compose"
+            Network -> "network"
         }
 
     companion object {
@@ -47,6 +51,7 @@ sealed interface Overlay {
                 code == "paste" -> Paste
                 code == "newchat" -> NewChat
                 code == "compose" -> Compose
+                code == "network" -> Network
                 else -> null
             }
 

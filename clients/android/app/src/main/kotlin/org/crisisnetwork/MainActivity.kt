@@ -1,5 +1,6 @@
 package org.crisisnetwork.android
 
+import android.content.Intent
 import android.graphics.Color
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -25,6 +26,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import org.crisisnetwork.android.messaging.Messaging
+import org.crisisnetwork.android.notifications.AppNotifications
 import org.crisisnetwork.android.ui.UiPreferences
 import org.crisisnetwork.android.ui.announcements.AnnouncementsScreen
 import org.crisisnetwork.android.ui.announcements.ComposeAnnouncementScreen
@@ -36,11 +38,14 @@ import org.crisisnetwork.android.ui.contacts.ContactsScreen
 import org.crisisnetwork.android.ui.contacts.MyCardScreen
 import org.crisisnetwork.android.ui.contacts.PasteCardScreen
 import org.crisisnetwork.android.ui.contacts.ScanCardScreen
+import org.crisisnetwork.android.ui.network.NetworkScreen
 import org.crisisnetwork.android.ui.onboarding.OnboardingScreen
 import org.crisisnetwork.android.ui.screens.HomeScreen
 import org.crisisnetwork.android.ui.screens.SettingsScreen
 import org.crisisnetwork.android.ui.shell.AdaptiveShell
 import org.crisisnetwork.android.ui.shell.Destination
+import org.crisisnetwork.android.ui.shell.LaunchRequests
+import org.crisisnetwork.android.ui.shell.LaunchTarget
 import org.crisisnetwork.android.ui.shell.Overlay
 import org.crisisnetwork.android.ui.shell.OverlayStack
 import org.crisisnetwork.android.ui.theme.CrisisTheme
@@ -49,6 +54,9 @@ import org.crisisnetwork.android.ui.theme.CrisisTheme
  * The single activity of the app (phase A4): the theme, then either the introduction (first
  * launch) or the shell with its destinations. The A0 self-test that used to live here is now in
  * the settings, under the developer tools of debug builds.
+ *
+ * Phase A6: it tells [AppVisibility] when it is on screen, creates the notification channels and
+ * turns a tap on a message notification into a [LaunchRequests] entry that the shell opens.
  */
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -57,6 +65,9 @@ class MainActivity : ComponentActivity() {
         UiPreferences.load(this)
         MeshController.load(this)
         Messaging.start(this)
+        AppNotifications.createChannels(this)
+        // A rotation or a restart after process death delivers the same intent again: only a fresh start acts on it.
+        if (savedInstanceState == null) handleLaunchIntent(intent)
         enableEdgeToEdge()
         setContent {
             val ui by UiPreferences.state.collectAsState()
@@ -85,6 +96,32 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
+
+    /** The activity was running already and a notification was tapped. */
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        handleLaunchIntent(intent)
+    }
+
+    override fun onStart() {
+        super.onStart()
+        AppVisibility.onStart()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        AppVisibility.onResume()
+    }
+
+    override fun onStop() {
+        AppVisibility.onStop()
+        super.onStop()
+    }
+
+    private fun handleLaunchIntent(intent: Intent?) {
+        LaunchTarget.of(intent?.action, intent?.getStringExtra(LaunchTarget.EXTRA_PEER))?.let(LaunchRequests::post)
+    }
 }
 
 /**
@@ -98,6 +135,7 @@ private fun MainShell() {
     var savedStack by rememberSaveable { mutableStateOf("") }
     val stack = OverlayStack.decode(savedStack)
     val unread by Messaging.unread.collectAsState()
+    val launch by LaunchRequests.pending.collectAsState()
     val top = stack.lastOrNull()
 
     fun navigate(next: List<Overlay>) {
@@ -108,6 +146,22 @@ private fun MainShell() {
 
     BackHandler(enabled = top != null) { navigate(OverlayStack.pop(stack)) }
     BackHandler(enabled = top == null && destination != Destination.Home) { destination = Destination.Home }
+
+    // A tap on a notification: open that chat (or the announcements) from a clean start of the shell.
+    LaunchedEffect(launch) {
+        val target = launch ?: return@LaunchedEffect
+        when (target) {
+            is LaunchTarget.Chat -> {
+                destination = Destination.Chats
+                savedStack = OverlayStack.encode(OverlayStack.toChat(emptyList(), target.peerHex))
+            }
+            LaunchTarget.Announcements -> {
+                destination = Destination.Announcements
+                savedStack = ""
+            }
+        }
+        LaunchRequests.consume(target)
+    }
 
     if (top != null) {
         Box(modifier = Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing)) {
@@ -122,7 +176,7 @@ private fun MainShell() {
         badges = mapOf(Destination.Chats to unread.chats, Destination.Announcements to unread.announcements),
     ) {
         when (destination) {
-            Destination.Home -> HomeScreen()
+            Destination.Home -> HomeScreen(onOpenNetwork = { open(Overlay.Network) })
             Destination.Chats -> ChatsScreen(onOpenChat = { open(Overlay.Chat(it)) }, onNewChat = { open(Overlay.NewChat) })
             Destination.Announcements -> AnnouncementsScreen(onWrite = { open(Overlay.Compose) })
             Destination.Contacts ->
@@ -132,7 +186,7 @@ private fun MainShell() {
                     onScan = { open(Overlay.Scan) },
                     onEnterText = { open(Overlay.Paste) },
                 )
-            Destination.Settings -> SettingsScreen()
+            Destination.Settings -> SettingsScreen(onOpenNetwork = { open(Overlay.Network) })
         }
     }
 }
@@ -168,5 +222,6 @@ private fun OverlayScreen(
         Overlay.Paste -> PasteCardScreen(onBack = back, onDone = back)
         Overlay.NewChat -> NewChatScreen(onBack = back, onPick = { navigate(OverlayStack.toChat(OverlayStack.pop(stack), it)) })
         Overlay.Compose -> ComposeAnnouncementScreen(onBack = back, onDone = back)
+        Overlay.Network -> NetworkScreen(onBack = back)
     }
 }

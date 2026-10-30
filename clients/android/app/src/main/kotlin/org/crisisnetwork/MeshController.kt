@@ -32,8 +32,13 @@ import org.crisisnetwork.android.core.runtime.EncryptionPolicy
 import org.crisisnetwork.android.core.runtime.NodeBootstrap
 import org.crisisnetwork.android.core.runtime.NodeRuntime
 import org.crisisnetwork.android.core.runtime.OpenResult
+import org.crisisnetwork.android.messaging.Lifetimes
+import org.crisisnetwork.android.settings.DefaultLifetimes
+import org.crisisnetwork.android.settings.StorageLimits
 import uniffi.crisis_core.CoreNotification
+import uniffi.crisis_core.NodeSettings
 import uniffi.crisis_core.coreInfo
+import uniffi.crisis_core.defaultSettings
 
 /**
  * Owns the one node of the app process and its BLE transport (phase A3). [MeshService] keeps the
@@ -43,8 +48,10 @@ import uniffi.crisis_core.coreInfo
  * Lifecycle: [start] opens the node, starts the transport and the observers; [stop] ends them.
  * Neither blocks. A failure while starting leaves the state `Stopped` with [State.error] set.
  *
- * The power profile and the role are remembered across launches (`SharedPreferences`, no
- * secrets). The screen state is tracked with a receiver that exists only while the node runs, and
+ * The power profile, the role, the size of the message store and the default lifetime are
+ * remembered across launches (`SharedPreferences`, no secrets). The core takes the store size and
+ * the lifetime when the node is opened, so a new choice applies the next time the mesh starts
+ * ([State.settingsPending] says that a running node still has the old values). The screen state is tracked with a receiver that exists only while the node runs, and
  * is handed to the transport, which scans less aggressively while the screen is off.
  */
 object MeshController {
@@ -60,15 +67,30 @@ object MeshController {
         val links: List<LinkInfo> = emptyList(),
         val stats: BleStats? = null,
         val log: List<String> = emptyList(),
+        /** Size of the message store the user chose, in megabytes (applies when the node is opened). */
+        val storeLimitMb: Int = StorageLimits.DEFAULT_MB,
+        /** Lifetime of announcements unless another one is chosen, in seconds (applies when the node is opened). */
+        val defaultLifetimeSecs: Long = Lifetimes.DEFAULT_SECS,
+        /** What the running node was opened with, `null` while it does not run. */
+        val openedWith: OpenedSettings? = null,
     ) {
         /** Neighbours that are connected and usable. */
         val activeLinks: Int get() = links.count { it.active }
+
+        /** `true` while the node runs with values that differ from the ones chosen since. */
+        val settingsPending: Boolean
+            get() = openedWith != null && openedWith != OpenedSettings(storeLimitMb, defaultLifetimeSecs)
     }
+
+    /** The settings the core only reads when the node is opened. */
+    data class OpenedSettings(val storeLimitMb: Int, val defaultLifetimeSecs: Long)
 
     private const val PREFS = "mesh"
     private const val KEY_PROFILE = "profile"
     private const val KEY_ROLE = "role"
     private const val KEY_WANTED = "wanted"
+    private const val KEY_STORE_MB = "store_mb"
+    private const val KEY_LIFETIME = "default_lifetime_secs"
 
     /** Pause between connection attempts: Android stacks fail (status 133) when they are started in a burst. */
     private const val CONNECT_SPACING_MS = 300L
@@ -132,7 +154,11 @@ object MeshController {
         val prefs = context.applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
         val profile = prefs.getString(KEY_PROFILE, null)?.let { name -> PowerProfile.entries.firstOrNull { it.name == name } }
         val role = prefs.getString(KEY_ROLE, null)?.let { name -> BleRole.entries.firstOrNull { it.name == name } }
-        mutableState.update { it.copy(profile = profile ?: it.profile, role = role ?: it.role) }
+        val storeMb = StorageLimits.coerce(prefs.getInt(KEY_STORE_MB, StorageLimits.DEFAULT_MB))
+        val lifetime = DefaultLifetimes.coerce(prefs.getLong(KEY_LIFETIME, Lifetimes.DEFAULT_SECS))
+        mutableState.update {
+            it.copy(profile = profile ?: it.profile, role = role ?: it.role, storeLimitMb = storeMb, defaultLifetimeSecs = lifetime)
+        }
     }
 
     /** Takes effect at once, also while the node runs. */
@@ -149,6 +175,22 @@ object MeshController {
         if (mutableState.value.status != Status.Stopped) return
         context.applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putString(KEY_ROLE, role.name).apply()
         mutableState.update { it.copy(role = role) }
+    }
+
+    /** Remembers the size of the message store. The core reads it when the node is opened: it applies from the next start. */
+    fun setStorageLimit(context: Context, megabytes: Int) {
+        load(context)
+        val value = StorageLimits.coerce(megabytes)
+        context.applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putInt(KEY_STORE_MB, value).apply()
+        mutableState.update { it.copy(storeLimitMb = value) }
+    }
+
+    /** Remembers the lifetime of new announcements. Used by the composer at once and by the core from the next start. */
+    fun setDefaultLifetime(context: Context, seconds: Long) {
+        load(context)
+        val value = DefaultLifetimes.coerce(seconds)
+        context.applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putLong(KEY_LIFETIME, value).apply()
+        mutableState.update { it.copy(defaultLifetimeSecs = value) }
     }
 
     /** Whether the user wants the mesh running; the service uses it to decide about a restart by the system. */
@@ -207,7 +249,7 @@ object MeshController {
             )
         val ble = BleSupport.createTransport(app, config)
         val node =
-            when (val opened = NodeBootstrap.open(NodeBootstrap.defaultRoot(app), ble, EncryptionPolicy.forApp(app))) {
+            when (val opened = NodeBootstrap.open(NodeBootstrap.defaultRoot(app), ble, EncryptionPolicy.forApp(app), nodeSettings(snapshot))) {
                 is OpenResult.Ready -> opened.runtime
                 is OpenResult.Failed -> {
                     fail("Could not open the node: ${opened.failure}")
@@ -236,10 +278,25 @@ object MeshController {
                 status = Status.Running,
                 screenOn = screenOn,
                 safetyNumber = node.safetyNumber,
+                openedWith = OpenedSettings(snapshot.storeLimitMb, snapshot.defaultLifetimeSecs),
                 log = listOf("started as ${it.role}, ${it.profile}"),
             )
         }
         observe(node, ble)
+    }
+
+    /**
+     * The core's settings for this start: the defaults of the core with the store size and the
+     * lifetime the user chose. The part of the store that others may pin keeps its share.
+     */
+    private fun nodeSettings(snapshot: State): NodeSettings {
+        val base = defaultSettings()
+        return NodeSettings(
+            defaultLifetimeSecs = snapshot.defaultLifetimeSecs.toUInt(),
+            maxStoreBytes = StorageLimits.bytesOf(snapshot.storeLimitMb).toULong(),
+            maxInboundPinnedBytes = StorageLimits.inboundPinnedBytes(snapshot.storeLimitMb).toULong(),
+            maxPeers = base.maxPeers,
+        )
     }
 
     /** Stops the node and the transport. Idempotent; also cancels a start that is still under way. */
@@ -267,7 +324,13 @@ object MeshController {
             runtime = null
             transport = null
             mutableState.update {
-                it.copy(status = Status.Stopped, links = emptyList(), stats = null, log = (listOf("stopped") + it.log).take(MAX_LOG))
+                it.copy(
+                    status = Status.Stopped,
+                    links = emptyList(),
+                    stats = null,
+                    openedWith = null,
+                    log = (listOf("stopped") + it.log).take(MAX_LOG),
+                )
             }
         }
     }
@@ -276,7 +339,7 @@ object MeshController {
         runtime = null
         transport = null
         appContext?.let { unregisterScreenReceiver(it) }
-        mutableState.update { it.copy(status = Status.Stopped, error = message) }
+        mutableState.update { it.copy(status = Status.Stopped, error = message, openedWith = null) }
     }
 
     private fun registerScreenReceiver(app: Context) {

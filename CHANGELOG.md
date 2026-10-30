@@ -1,3 +1,36 @@
+# Changes: Android phase A6 (network status, settings, notifications)
+
+Written without an Android toolchain: **nothing here was compiled, run or tested on a device**. Build
+(`./gradlew :app:assembleDebug :app:lintDebug :app:testDebugUnitTest`), then try it with two phones
+with the app in the background. No change in the core or in the Rust workspace.
+
+* **Network status screen** (Home: "Network details", Settings: "Network status and counters").
+  Connected neighbours with direction, traffic, packet size, queue and drops; devices in range that
+  are not connected; message storage used against the limit; the Bluetooth radio (`BleStats`); and
+  all counters of the core (`NodeStats`), grouped as traffic / refused or dropped / delivery trouble.
+  Counters are read every 2 s, only while the node runs and the app is on screen.
+* **Settings.** Size of the message store (8 to 256 MB) and the default lifetime of announcements.
+  The core reads both only when the node is opened (`NodeSettings`), so a change is remembered at
+  once and applies the next time the mesh starts; the screen says so while a running node still has
+  the old values. The composer preselects the chosen lifetime. New "About" section: app version and
+  `core_info()` (core version, FFI API, protocol, database schema).
+* **Notifications.** Three channels: `direct_messages`, `announcements` and the unchanged
+  `mesh_service`. New messages produce a notification only while the app is not on screen: one per
+  person in messaging style, one for all announcements (count, emergency title). The lock screen
+  shows only that something arrived. Only the first notification of a burst makes a sound. A tap
+  opens that chat or the announcements; opening them removes the notification.
+* **POST_NOTIFICATIONS flow.** Settings shows whether notifications work, with a button that shows
+  the system dialog while the system still does and opens the notification settings otherwise
+  (also when the switch is off although the permission is held). Home warns while the mesh runs
+  with notifications off.
+
+Files: new `ui/network/*`, `ui/screens/NotificationsSettings.kt`, `notifications/*`, `settings/NodeLimits.kt`,
+`AppVisibility.kt`, `ui/shell/LaunchTarget.kt`, three test classes; changed `MeshController`, `MeshService`,
+`MainActivity`, `Overlay`, `HomeScreen`, `SettingsScreen`, `ComposeAnnouncementScreen`, `Messaging`,
+`MeshStartFlow`, both `strings.xml`, `OverlayStackTest`, `clients/android/README.md`.
+
+---
+
 # Changes: Android phase A5 (contacts, chats, announcements)
 
 Written without an Android toolchain: **nothing here was compiled, run or tested on a device**. Build

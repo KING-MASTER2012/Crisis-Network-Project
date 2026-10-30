@@ -1,8 +1,6 @@
 package org.crisisnetwork.android
 
 import android.app.Notification
-import android.app.NotificationChannel
-import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.Service
 import android.content.Context
@@ -20,6 +18,8 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import org.crisisnetwork.android.core.ble.PowerProfile
+import org.crisisnetwork.android.notifications.AppNotifications
+import org.crisisnetwork.android.notifications.MessageNotifier
 
 /**
  * The foreground service that keeps the mesh alive while the app is in the background
@@ -27,8 +27,9 @@ import org.crisisnetwork.android.core.ble.PowerProfile
  * requires the persistent notification; its **Stop** action and the app's switch end the service.
  *
  * The service does no networking itself: it starts and stops [MeshController], mirrors the
- * controller's state in the notification (neighbours, power profile) and ends itself when the
- * controller stops, for whatever reason (the user, a failure, Bluetooth gone).
+ * controller's state in the notification (neighbours, power profile), turns arriving messages into
+ * notifications while the app is not on screen ([MessageNotifier], phase A6) and ends itself when
+ * the controller stops, for whatever reason (the user, a failure, Bluetooth gone).
  *
  * Start it from the UI with [start] (the app must be visible: Android 12 and newer refuse to start
  * a foreground service from the background). If the system kills and restarts the process, the
@@ -38,22 +39,14 @@ import org.crisisnetwork.android.core.ble.PowerProfile
 class MeshService : Service() {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private var observer: Job? = null
+    private var notifier: Job? = null
     private var lastText: String? = null
 
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onCreate() {
         super.onCreate()
-        val channel =
-            NotificationChannel(
-                CHANNEL_ID,
-                getString(R.string.mesh_channel_name),
-                NotificationManager.IMPORTANCE_LOW,
-            ).apply {
-                description = getString(R.string.mesh_channel_description)
-                setShowBadge(false)
-            }
-        getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
+        AppNotifications.createChannels(this)
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -87,6 +80,10 @@ class MeshService : Service() {
         }
         if (observer != null) return
         MeshController.start(this) // the state is Starting when this returns
+        notifier =
+            scope.launch {
+                MeshController.notifications.collect { MessageNotifier.onNotification(applicationContext, it) }
+            }
         observer =
             scope.launch {
                 MeshController.state.collect { state ->
@@ -102,12 +99,15 @@ class MeshService : Service() {
     private fun shutDown() {
         observer?.cancel()
         observer = null
+        notifier?.cancel()
+        notifier = null
         ServiceCompat.stopForeground(this, ServiceCompat.STOP_FOREGROUND_REMOVE)
         stopSelf()
     }
 
     override fun onDestroy() {
         observer = null
+        notifier = null
         scope.cancel()
         super.onDestroy()
     }
@@ -175,7 +175,7 @@ class MeshService : Service() {
                 Intent(this, MeshService::class.java).setAction(ACTION_STOP),
                 PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
             )
-        return NotificationCompat.Builder(this, CHANNEL_ID)
+        return NotificationCompat.Builder(this, AppNotifications.CHANNEL_SERVICE)
             .setSmallIcon(R.drawable.ic_stat_mesh)
             .setContentTitle(getString(R.string.mesh_notification_title))
             .setContentText(text)
@@ -193,7 +193,6 @@ class MeshService : Service() {
     companion object {
         const val ACTION_START = "org.crisisnetwork.android.action.MESH_START"
         const val ACTION_STOP = "org.crisisnetwork.android.action.MESH_STOP"
-        private const val CHANNEL_ID = "mesh_service"
         private const val NOTIFICATION_ID = 1
 
         /** Switches the mesh on. Call it while the app is visible (a button), after the permissions were granted. */

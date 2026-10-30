@@ -4,23 +4,24 @@ Kotlin and Jetpack Compose client of the Crisis Network core. The core is the Ru
 `ffi` (library `crisis_core`); this project builds it for Android with cargo-ndk and calls it
 through the UniFFI-generated Kotlin bindings.
 
-Status: **phase A4** (design system, adaptive shell, onboarding; BLE and the foreground service from
-A2/A3). Chats, announcements and contacts are placeholders until A5; phases A5 to A7 follow.
+Status: **phase A6** (network status, storage and lifetime settings, notifications; contacts, chats and
+announcements from A5, design system and shell from A4, BLE and the foreground service from A2/A3).
+Phase A7 (hardening and release) follows.
 
 ## Toolchain (versions checked on 2026-10-18)
 
-| Component | Version | Why |
-| --- | --- | --- |
-| Android Gradle plugin | 9.4.0 | Latest stable. Built-in Kotlin: there is no `org.jetbrains.kotlin.android` plugin. |
-| Gradle (wrapper) | 9.6.0 | AGP 9.4 requires 9.6.0 or newer. |
-| Kotlin | 2.4.10 | Latest stable; also the Compose compiler plugin version. |
-| JDK | 17 or newer | AGP 9.4 minimum. Android Studio's bundled JDK is fine. |
-| compileSdk / targetSdk / minSdk | 37 / 36 / 26 | androidx.core 1.19 needs compileSdk 37; targetSdk is raised deliberately later. |
-| SDK Build Tools | 36.0.0 | AGP 9.4 default (Android Studio installs it). |
-| NDK | 28.2.13676358 (r28c) | AGP 9.4 default; 16 KB page aligned. |
-| Compose BOM / activity-compose / core-ktx | 2026.09.00 / 1.13.0 / 1.19.1 | Latest stable. |
-| kotlinx-coroutines / JNA | 1.11.0 / 5.19.1 | Latest stable. |
-| Rust | stable, 1.93 or newer | Workspace `rust-version`. |
+| Component                                 | Version                      | Why                                                                                |
+|-------------------------------------------|------------------------------|------------------------------------------------------------------------------------|
+| Android Gradle plugin                     | 9.4.0                        | Latest stable. Built-in Kotlin: there is no `org.jetbrains.kotlin.android` plugin. |
+| Gradle (wrapper)                          | 9.6.0                        | AGP 9.4 requires 9.6.0 or newer.                                                   |
+| Kotlin                                    | 2.4.10                       | Latest stable; also the Compose compiler plugin version.                           |
+| JDK                                       | 17 or newer                  | AGP 9.4 minimum. Android Studio's bundled JDK is fine.                             |
+| compileSdk / targetSdk / minSdk           | 37 / 36 / 26                 | androidx.core 1.19 needs compileSdk 37; targetSdk is raised deliberately later.    |
+| SDK Build Tools                           | 36.0.0                       | AGP 9.4 default (Android Studio installs it).                                      |
+| NDK                                       | 28.2.13676358 (r28c)         | AGP 9.4 default; 16 KB page aligned.                                               |
+| Compose BOM / activity-compose / core-ktx | 2026.09.00 / 1.13.0 / 1.19.1 | Latest stable.                                                                     |
+| kotlinx-coroutines / JNA                  | 1.11.0 / 5.19.1              | Latest stable.                                                                     |
+| Rust                                      | stable, 1.93 or newer        | Workspace `rust-version`.                                                          |
 
 All versions live in `gradle/libs.versions.toml` (plugins and libraries) and
 `gradle/wrapper/gradle-wrapper.properties` (Gradle).
@@ -70,12 +71,12 @@ the generated Kotlin as unresolved until the first build has run.
 
 ### Options (`gradle.properties` or `-P` on the command line)
 
-| Property | Default | Meaning |
-| --- | --- | --- |
-| `crisis.rustProfile` (alias `crisisRustProfile`) | `release` | `release` (LTO, small) or `dev` (much faster Rust builds while iterating). |
-| `crisis.sqlcipher` (alias `crisisSqlcipher`) | `false` | Builds the core with SQLCipher so the database can be encrypted. The instrumented test then asserts that encryption is really active. |
-| `crisis.skipRust` (alias `crisisSkipRust`) | `false` | Skips cargo and reuses libraries and bindings that are already built. |
-| `crisis.abis` (alias `crisisAbis`) | all three | Comma separated subset of `arm64-v8a,armeabi-v7a,x86_64`, e.g. `-Pcrisis.abis=x86_64` for emulator-only builds (CI smoke job). |
+| Property                                         | Default   | Meaning                                                                                                                               |
+|--------------------------------------------------|-----------|---------------------------------------------------------------------------------------------------------------------------------------|
+| `crisis.rustProfile` (alias `crisisRustProfile`) | `release` | `release` (LTO, small) or `dev` (much faster Rust builds while iterating).                                                            |
+| `crisis.sqlcipher` (alias `crisisSqlcipher`)     | `false`   | Builds the core with SQLCipher so the database can be encrypted. The instrumented test then asserts that encryption is really active. |
+| `crisis.skipRust` (alias `crisisSkipRust`)       | `false`   | Skips cargo and reuses libraries and bindings that are already built.                                                                 |
+| `crisis.abis` (alias `crisisAbis`)               | all three | Comma separated subset of `arm64-v8a,armeabi-v7a,x86_64`, e.g. `-Pcrisis.abis=x86_64` for emulator-only builds (CI smoke job).        |
 
 The dot-free alias wins over the dotted name when both are set (for example when `gradle.properties` sets the dotted one).
 
@@ -113,14 +114,14 @@ Further modules (`:core:data`, `:core:designsystem`, `:feature:*`) are added by 
 
 Package `org.crisisnetwork.android.core.runtime`. No UI, no Bluetooth.
 
-| Part | What it does |
-| --- | --- |
-| `NodeRuntime` | Owns one `CrisisNode` as a **single-threaded actor**. Transport events, publish calls, queries and timer ticks all go through one mailbox and run one after another on the IO dispatcher (every core call blocks on SQLite). It ticks when the core's `next_timer_ms` is reached (and at least every 30 s), sends transport commands to the `Transport`, and publishes `CoreNotification`s on a `SharedFlow`. |
-| `NodeBootstrap` | Checks the interface version, unwraps seed and database key from the vault, opens the database under `noBackupFilesDir/crisis` and returns a `NodeRuntime` (not started). |
-| `MonotonicWallClock` | The only time source the core sees (see below). |
-| `SecretVault`, `AesGcmSecretCipher`, `KeystoreAesKey` | Seed and database key sealed with a non-extractable Android Keystore AES-256-GCM key (StrongBox when available). |
-| `CoreFailure` | Stable mapping of `CoreException` (`DatabaseUnreadable` for `WrongKeyOrNotADatabase`, `SchemaTooNew`, `EncryptionUnavailable`, ...). `InternalError` and `Unexpected` are fatal and stop the runtime. |
-| `Transport`, `LoopbackNetwork` | What A2/A3 implement for BLE; the loopback connects two nodes in memory (with a real MTU limit) for tests and previews. |
+| Part                                                  | What it does                                                                                                                                                                                                                                                                                                                                                                                                  |
+|-------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `NodeRuntime`                                         | Owns one `CrisisNode` as a **single-threaded actor**. Transport events, publish calls, queries and timer ticks all go through one mailbox and run one after another on the IO dispatcher (every core call blocks on SQLite). It ticks when the core's `next_timer_ms` is reached (and at least every 30 s), sends transport commands to the `Transport`, and publishes `CoreNotification`s on a `SharedFlow`. |
+| `NodeBootstrap`                                       | Checks the interface version, unwraps seed and database key from the vault, opens the database under `noBackupFilesDir/crisis` and returns a `NodeRuntime` (not started).                                                                                                                                                                                                                                     |
+| `MonotonicWallClock`                                  | The only time source the core sees (see below).                                                                                                                                                                                                                                                                                                                                                               |
+| `SecretVault`, `AesGcmSecretCipher`, `KeystoreAesKey` | Seed and database key sealed with a non-extractable Android Keystore AES-256-GCM key (StrongBox when available).                                                                                                                                                                                                                                                                                              |
+| `CoreFailure`                                         | Stable mapping of `CoreException` (`DatabaseUnreadable` for `WrongKeyOrNotADatabase`, `SchemaTooNew`, `EncryptionUnavailable`, ...). `InternalError` and `Unexpected` are fatal and stop the runtime.                                                                                                                                                                                                         |
+| `Transport`, `LoopbackNetwork`                        | What A2/A3 implement for BLE; the loopback connects two nodes in memory (with a real MTU limit) for tests and previews.                                                                                                                                                                                                                                                                                       |
 
 ### Clock policy
 
@@ -165,12 +166,12 @@ actor is tested there (the A1 exit criterion).
 Package `org.crisisnetwork.android.core.ble`. Implements `Transport` over Bluetooth Low Energy; the
 radio profile (UUIDs, setup order, packet mapping) is in `docs/src/protocol/ble-link.md`.
 
-| Part | What it does |
-| --- | --- |
-| `BleScanner`, `BleAdvertiser`, `GattServerPort`, `GattConnector`, `GattLink` | Ports: everything that touches the Bluetooth stack sits behind them, so the state machine is tested with fakes. |
-| `BleTransport` | The state machine, one actor like `NodeRuntime`. Reports a link to the core (`PeerSeen`) only when it is usable and its MTU carries the core's minimum; assigns handles that are never reused; one bounded send queue and one send in flight per link; `PeerLost` exactly once; counters and `linkInfo()` snapshots for diagnostics. |
-| `android/*` | Thin adapters over `BluetoothLeScanner`, `BluetoothLeAdvertiser`, `BluetoothGattServer` and `BluetoothGatt`, with the API 33 / older API split for reads, writes and notifications. `BleSupport` builds the transport and answers "which permissions, is Bluetooth on". |
-| `BleConfig` | Role (`Central`, `Peripheral`, `Both`), minimum MTU (pass `core_info().min_link_mtu`), requested ATT MTU, link limit, timeouts, queue size. |
+| Part                                                                         | What it does                                                                                                                                                                                                                                                                                                                         |
+|------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `BleScanner`, `BleAdvertiser`, `GattServerPort`, `GattConnector`, `GattLink` | Ports: everything that touches the Bluetooth stack sits behind them, so the state machine is tested with fakes.                                                                                                                                                                                                                      |
+| `BleTransport`                                                               | The state machine, one actor like `NodeRuntime`. Reports a link to the core (`PeerSeen`) only when it is usable and its MTU carries the core's minimum; assigns handles that are never reused; one bounded send queue and one send in flight per link; `PeerLost` exactly once; counters and `linkInfo()` snapshots for diagnostics. |
+| `android/*`                                                                  | Thin adapters over `BluetoothLeScanner`, `BluetoothLeAdvertiser`, `BluetoothGattServer` and `BluetoothGatt`, with the API 33 / older API split for reads, writes and notifications. `BleSupport` builds the transport and answers "which permissions, is Bluetooth on".                                                              |
+| `BleConfig`                                                                  | Role (`Central`, `Peripheral`, `Both`), minimum MTU (pass `core_info().min_link_mtu`), requested ATT MTU, link limit, timeouts, queue size.                                                                                                                                                                                          |
 
 Decisions:
 
@@ -212,22 +213,22 @@ Not run here (no devices). Procedure:
 Results (fill in):
 
 | Phones (model, Android) | Packet size / ATT MTU | Burst payload B/s | Link tx B/s | Notes |
-| --- | --- | --- | --- | --- |
-| | | | | |
+|-------------------------|-----------------------|-------------------|-------------|-------|
+|                         |                       |                   |             |       |
 
 ## Design system, shell and onboarding (phase A4)
 
 Package layout of `:app` (`ui/`):
 
-| Package | Content |
-| --- | --- |
-| `ui.theme` | `ThemeSettings` (mode, dynamic colour, high contrast, text scale), brand colour schemes, `CrisisTheme`, `StatusColors` for the announcement styles of A5. |
-| `ui.components` | `ScreenColumn`, `ScreenTitle`, `InfoCard` (with `Tone`), `PrimaryButton` / `SecondaryButton` / `QuietButton`, `StatusPill`, `EmptyState`, `SwitchRow`, `ChoiceGroup`. |
-| `ui.shell` | `Destination` (Home, Chats, Announcements, Contacts, Settings) and `AdaptiveShell`. |
-| `ui.permissions` | `rememberMeshStartFlow` + `BlockerCard`: the permission / Bluetooth / location flow of the A3 bench, reusable. |
-| `ui.onboarding` | `OnboardingFlow` (rules, tested), `IdentityCreator`, `OnboardingScreen`. |
-| `ui.screens` | Home, Settings, Diagnostics (the A0 self-test), placeholders. |
-| `ui.UiPreferences` | Appearance choices, introduction completed, public identity values. |
+| Package            | Content                                                                                                                                                               |
+|--------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `ui.theme`         | `ThemeSettings` (mode, dynamic colour, high contrast, text scale), brand colour schemes, `CrisisTheme`, `StatusColors` for the announcement styles of A5.             |
+| `ui.components`    | `ScreenColumn`, `ScreenTitle`, `InfoCard` (with `Tone`), `PrimaryButton` / `SecondaryButton` / `QuietButton`, `StatusPill`, `EmptyState`, `SwitchRow`, `ChoiceGroup`. |
+| `ui.shell`         | `Destination` (Home, Chats, Announcements, Contacts, Settings) and `AdaptiveShell`.                                                                                   |
+| `ui.permissions`   | `rememberMeshStartFlow` + `BlockerCard`: the permission / Bluetooth / location flow of the A3 bench, reusable.                                                        |
+| `ui.onboarding`    | `OnboardingFlow` (rules, tested), `IdentityCreator`, `OnboardingScreen`.                                                                                              |
+| `ui.screens`       | Home, Settings, Diagnostics (the A0 self-test), placeholders.                                                                                                         |
+| `ui.UiPreferences` | Appearance choices, introduction completed, public identity values.                                                                                                   |
 
 **Theme.** Colour: wallpaper colours on Android 12+ (switch), else the brand palette; light, dark,
 AMOLED (true black surfaces) or system; *high contrast* (black/white, strong outlines) replaces the
@@ -264,22 +265,38 @@ with its reasons, background and battery, done (join now or open the app).
 Tests: `app/src/test` (`OnboardingFlowTest`, `ThemeSettingsTest`: step rules, safety number format,
 theme decisions, width classes); CI runs `:app:testDebugUnitTest`.
 
-Not in A4: the real screens behind Chats, Announcements and Contacts (A5), the network diagnostics
-screen and the storage / lifetime settings (A6), a fake repository for previews (the
-Compose tooling dependency is not in the project).
+Not in A4: a fake repository for previews (the Compose tooling dependency is not in the project).
+
+### Phase A6: network status, settings, notifications
+
+* **Network screen** (`ui.network.NetworkScreen`, overlay `network`): neighbours from
+  `MeshController.State.links`, the radio from `BleStats`, storage and counters from
+  `NodeRuntime.stats()` (polled every 2 s while the node runs and `AppVisibility.visible` is true).
+  A Bluetooth link says nothing about who is on the other side, so neighbours are numbered and shown
+  with the end of their (usually random) address.
+* **Core settings.** `settings.StorageLimits` / `DefaultLifetimes` hold the choices; `MeshController`
+  stores them in `SharedPreferences` and builds `NodeSettings` in `open()`. The core takes them only
+  at open, hence "applies the next time the mesh starts" (`State.settingsPending`). The share of the
+  store that others may pin stays a quarter, as in the core's defaults.
+* **Notifications.** `notifications.AppNotifications` (channels, permission state),
+  `MessageNotifier` (fed by `MeshService` from `MeshController.notifications`), `AlertGate` (one
+  sound per burst), `NotificationAccessPlan` (dialog or settings). Taps become a `LaunchTarget` in
+  `LaunchRequests`, which the shell consumes. Channel ids: `mesh_service` (unchanged),
+  `direct_messages`, `announcements`.
+* Tests: `NetworkSettingsTest`, `NotificationLogicTest`, `OverlayStackTest`.
 
 ## Discovery, topology and the foreground service (phase A3)
 
 ### Radio behaviour (`:core:ble`)
 
-| Topic | Behaviour |
-| --- | --- |
-| Advertisement | Service UUID plus manufacturer data (company id `0xFFFF`): 1 flag byte (`can initiate`) and a **random 32-bit token**, replaced every 10 minutes. 30 of 31 bytes. Format: `BleAdvertisement`. |
-| Tie-break | Of two phones that both scan and advertise, the one with the **smaller token initiates**; the other waits. A peer without a token, or one that cannot initiate (`Peripheral`), is always connected to; a device that advertises no token always initiates. If we have no link at all for 30 s we also connect to devices we were leaving alone. |
-| Connecting | One attempt at a time (`maxConcurrentConnects`), optional spacing (the app uses 300 ms), strongest signal first. One slot of the link limit is kept free for incoming connections (limit 3 or more). |
-| Back-off | Per address: 5 s, doubled for every failure in a row, up to 60 s (GATT 133, timeouts). A device that lacks our service waits at least 30 s. A link that lived 20 s starts clean; a link that flaps counts as a failure. Three failures in a row (any address) pause all new connections for 5 s. |
-| Scan budget | Android allows 5 scan starts per 30 s: the transport stays at 4 and delays restarts. `ScanFailed(6)` (too frequent) waits 30 s, other codes back off from 5 s. A scan is refreshed every 25 minutes (Android demotes long scans). |
-| Link rotation | Only when the limit is reached **and** a neighbour is waiting: once per rotation interval the oldest *outgoing* link (older than 1 min) is closed and its address left alone for 1 min. Incoming links are never dropped from this side. |
+| Topic          | Behaviour                                                                                                                                                                                                                                                                                                                                                               |
+|----------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Advertisement  | Service UUID plus manufacturer data (company id `0xFFFF`): 1 flag byte (`can initiate`) and a **random 32-bit token**, replaced every 10 minutes. 30 of 31 bytes. Format: `BleAdvertisement`.                                                                                                                                                                           |
+| Tie-break      | Of two phones that both scan and advertise, the one with the **smaller token initiates**; the other waits. A peer without a token, or one that cannot initiate (`Peripheral`), is always connected to; a device that advertises no token always initiates. If we have no link at all for 30 s we also connect to devices we were leaving alone.                         |
+| Connecting     | One attempt at a time (`maxConcurrentConnects`), optional spacing (the app uses 300 ms), strongest signal first. One slot of the link limit is kept free for incoming connections (limit 3 or more).                                                                                                                                                                    |
+| Back-off       | Per address: 5 s, doubled for every failure in a row, up to 60 s (GATT 133, timeouts). A device that lacks our service waits at least 30 s. A link that lived 20 s starts clean; a link that flaps counts as a failure. Three failures in a row (any address) pause all new connections for 5 s.                                                                        |
+| Scan budget    | Android allows 5 scan starts per 30 s: the transport stays at 4 and delays restarts. `ScanFailed(6)` (too frequent) waits 30 s, other codes back off from 5 s. A scan is refreshed every 25 minutes (Android demotes long scans).                                                                                                                                       |
+| Link rotation  | Only when the limit is reached **and** a neighbour is waiting: once per rotation interval the oldest *outgoing* link (older than 1 min) is closed and its address left alone for 1 min. Incoming links are never dropped from this side.                                                                                                                                |
 | Power profiles | `PowerProfile.Saver` / `Balanced` / `Aggressive` set scan mode (screen on, screen off), advertise mode, link limit (3 / 5 / 7), connection interval class and rotation interval. They change at run time (`setPowerProfile`), as does the screen state (`setScreenOn`). The scan is always filtered on the service UUID, which is what lets it run with the screen off. |
 
 `BleTransport.stats()` returns a `BleStats` snapshot (profile, scan mode, token, candidates, held by
@@ -337,8 +354,8 @@ adb shell dumpsys bluetooth_manager | grep -i -E "scan|advert"
 Results (fill in):
 
 | Phones | Profile | Screen | Neighbours | Drain %/h | BLE scan time | Notes |
-| --- | --- | --- | --- | --- | --- | --- |
-| | | | | | | |
+|--------|---------|--------|------------|-----------|---------------|-------|
+|        |         |        |            |           |               |       |
 
 ## Troubleshooting
 

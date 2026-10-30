@@ -18,6 +18,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import org.crisisnetwork.android.MeshController
+import org.crisisnetwork.android.notifications.MessageNotifier
 import org.crisisnetwork.android.core.runtime.NodeRuntime
 import org.crisisnetwork.android.core.runtime.failure.CoreFailure
 import org.crisisnetwork.android.core.runtime.failure.toCoreFailure
@@ -234,6 +235,7 @@ object Messaging {
     fun openChat(peerHex: String) {
         val peer = Hex.decode(peerHex) ?: return
         chatWindow = Window(ConversationRef.Direct(peer), peerHex)
+        MessageNotifier.cancelChat(appContext, peerHex)
         chatFlow.value = ChatState(peerHex = peerHex, loading = true)
         scope.launch { refresh() }
     }
@@ -246,6 +248,7 @@ object Messaging {
     /** The announcements screen appeared. */
     fun openFeed() {
         feedWindow = Window(ConversationRef.Announcements)
+        MessageNotifier.cancelAnnouncements(appContext)
         feedFlow.value = FeedState(loading = true)
         scope.launch { refresh() }
     }

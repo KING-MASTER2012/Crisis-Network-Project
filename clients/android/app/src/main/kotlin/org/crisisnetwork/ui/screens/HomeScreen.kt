@@ -41,11 +41,12 @@ fun profileLabel(profile: PowerProfile): String =
  * join or leave. Joining goes through the permission flow, then starts the foreground service.
  */
 @Composable
-fun HomeScreen() {
+fun HomeScreen(onOpenNetwork: () -> Unit) {
     val context = LocalContext.current
     val mesh by MeshController.state.collectAsState()
     val ui by UiPreferences.state.collectAsState()
     val startFlow = rememberMeshStartFlow(onReady = { MeshService.start(context) })
+    val notifications = rememberNotificationAccess()
 
     ScreenColumn {
         ScreenTitle(stringResource(R.string.app_name))
@@ -76,6 +77,9 @@ fun HomeScreen() {
             } else if (!busy) {
                 Text(stringResource(R.string.home_offline_hint), style = MaterialTheme.typography.bodyMedium)
             }
+            if (running) {
+                SecondaryButton(text = stringResource(R.string.home_network_details), onClick = onOpenNetwork)
+            }
             if (running || mesh.status == MeshController.Status.Stopping) {
                 SecondaryButton(
                     text = stringResource(R.string.home_leave),
@@ -92,6 +96,14 @@ fun HomeScreen() {
         }
 
         BlockerCard(startFlow)
+
+        // Without notifications a message that arrives while the app is closed goes unnoticed.
+        if (running && !notifications.enabled) {
+            InfoCard(title = stringResource(R.string.home_notifications_off_title), tone = Tone.Warning) {
+                Text(stringResource(R.string.home_notifications_off_body), style = MaterialTheme.typography.bodyMedium)
+                PrimaryButton(text = stringResource(R.string.notif_allow), onClick = notifications.request)
+            }
+        }
 
         mesh.error?.let { error ->
             InfoCard(title = stringResource(R.string.home_error_title), tone = Tone.Error) {

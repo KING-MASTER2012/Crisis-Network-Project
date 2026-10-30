@@ -21,6 +21,7 @@ import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import kotlinx.coroutines.launch
+import org.crisisnetwork.android.MeshController
 import org.crisisnetwork.android.R
 import org.crisisnetwork.android.messaging.AnnouncementCodec
 import org.crisisnetwork.android.messaging.ByteBudget
@@ -59,7 +60,8 @@ fun ComposeAnnouncementScreen(
 
     var text by rememberSaveable { mutableStateOf("") }
     var severity by rememberSaveable { mutableStateOf(Severity.Normal) }
-    var choice by rememberSaveable { mutableStateOf(Lifetimes.DEFAULT_SECS) }
+    // The lifetime the person chose in the settings is the one that is preselected.
+    var choice by rememberSaveable { mutableStateOf(MeshController.state.value.defaultLifetimeSecs) }
     var customValue by rememberSaveable { mutableStateOf("1") }
     var customUnit by rememberSaveable { mutableStateOf(LifetimeUnit.Hours) }
     var error by remember { mutableStateOf<Int?>(null) }
@@ -172,7 +174,7 @@ fun ComposeAnnouncementScreen(
 
 /** "15 minutes", "1 day": a lifetime in the largest unit that divides it evenly. */
 @Composable
-private fun durationLabel(secs: Long): String {
+fun durationLabel(secs: Long): String {
     val (amount, unit) = Lifetimes.split(secs)
     val n = amount.coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
     val plural =

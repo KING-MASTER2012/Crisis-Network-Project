@@ -28,6 +28,7 @@ import org.crisisnetwork.android.MeshController
 import org.crisisnetwork.android.R
 import org.crisisnetwork.android.core.ble.android.BleReadiness
 import org.crisisnetwork.android.core.ble.android.BleSupport
+import org.crisisnetwork.android.notifications.NotificationPrefs
 import org.crisisnetwork.android.ui.components.InfoCard
 import org.crisisnetwork.android.ui.components.PrimaryButton
 import org.crisisnetwork.android.ui.components.Tone
@@ -68,7 +69,8 @@ fun rememberMeshStartFlow(onReady: () -> Unit): MeshStartFlow {
 
     val notificationLauncher =
         rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {
-            // Optional permission: whatever the answer, go on.
+            // Optional permission: whatever the answer, go on. The settings remember that the dialog was shown.
+            NotificationPrefs.markAsked(context)
             autoStart = true
         }
 
