@@ -27,6 +27,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import org.crisisnetwork.android.messaging.Messaging
 import org.crisisnetwork.android.notifications.AppNotifications
+import org.crisisnetwork.android.ui.ScreenProtection
 import org.crisisnetwork.android.ui.UiPreferences
 import org.crisisnetwork.android.ui.announcements.AnnouncementsScreen
 import org.crisisnetwork.android.ui.announcements.ComposeAnnouncementScreen
@@ -63,6 +64,8 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         // Before the first frame: the theme must not flash from the default to the stored choice.
         UiPreferences.load(this)
+        // Before the first frame as well: nothing of the first screen may reach a screenshot.
+        ScreenProtection.apply(this, UiPreferences.state.value.screenProtection)
         MeshController.load(this)
         Messaging.start(this)
         AppNotifications.createChannels(this)
@@ -72,6 +75,8 @@ class MainActivity : ComponentActivity() {
         setContent {
             val ui by UiPreferences.state.collectAsState()
             val dark = ui.theme.isDark(isSystemInDarkTheme())
+
+            LaunchedEffect(ui.screenProtection) { ScreenProtection.apply(this@MainActivity, ui.screenProtection) }
 
             // The status and navigation bar icons follow the app's own day/night choice, not only the system's.
             LaunchedEffect(dark) {

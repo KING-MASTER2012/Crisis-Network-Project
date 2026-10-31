@@ -99,7 +99,8 @@ fun AnnouncementsScreen(onWrite: () -> Unit) {
 
 @Composable
 private fun AnnouncementCard(message: MessageRow, sender: String?) {
-    InfoCard(tone = severityTone(message.severity)) {
+    // One item for a screen reader: the severity, the sender, the time, the text and the state are read together.
+    InfoCard(modifier = Modifier.semantics(mergeDescendants = true) {}, tone = severityTone(message.severity)) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             if (message.severity != Severity.Normal) {
                 StatusPill(text = severityLabel(message.severity), tone = severityTone(message.severity))

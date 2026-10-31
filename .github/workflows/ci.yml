@@ -158,6 +158,18 @@ jobs:
               working-directory: clients/android
               timeout-minutes: 15
               run: ./gradlew :core:runtime:testDebugUnitTest :core:ble:testDebugUnitTest :app:testDebugUnitTest -Pcrisis.rustProfile=dev --console=plain --stacktrace
+            # Phase A7: the release variant runs R8 (shrinking and the JNA / UniFFI keep rules) and the release lint,
+            # which the debug build does not. `releaseCheckOnly` allows the fast native core and no SQLCipher: this
+            # APK is never shipped (a real release refuses those settings, see app/build.gradle.kts).
+            - name: Release build check (R8, release lint, unsigned)
+              working-directory: clients/android
+              timeout-minutes: 25
+              run: ./gradlew :app:assembleRelease -Pcrisis.rustProfile=dev -Pcrisis.releaseCheckOnly=true --console=plain --stacktrace
+            # Play requires 16 KB page alignment of native libraries (JNA's and ours) on new devices.
+            - name: Check 16 KB alignment of the release APK
+              run: |
+                  apk=$(ls clients/android/app/build/outputs/apk/release/*.apk | head -n 1)
+                  "$ANDROID_HOME/build-tools/36.0.0/zipalign" -c -P 16 -v 4 "$apk"
             - uses: actions/upload-artifact@v4
               with:
                   name: android-debug-apk
@@ -169,6 +181,7 @@ jobs:
                   path: |
                       clients/android/**/build/reports
                       clients/android/**/build/test-results
+                      clients/android/app/build/outputs/mapping
                   if-no-files-found: ignore
 
     # Runs the native core on an emulator (needs KVM, slow), so only on the main branch.

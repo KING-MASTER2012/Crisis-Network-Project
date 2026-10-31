@@ -1,3 +1,32 @@
+# Changes: Android phase A7 (hardening and release)
+
+Written without an Android toolchain: **nothing here was compiled, run or tested on a device**. Run
+`./gradlew :app:lintDebug :app:testDebugUnitTest :app:assembleRelease -Pcrisis.rustProfile=dev -Pcrisis.releaseCheckOnly=true`
+first (CI now does the last one too). No change in the core or in the Rust workspace.
+
+* **Security.** New switch "Hide the app in screenshots" (on by default): `FLAG_SECURE` and no recents thumbnail.
+  `BackupAndManifestTest` locks the backup exclusion, "no INTERNET permission" and "only MainActivity exported".
+  Explicit `usesCleartextTraffic=false`. The risk of the seed's copies in the JVM is documented in the README
+  ("Security notes") together with what is and is not protected.
+* **Release.** Signing and version from properties or environment; a real release refuses the `dev` native core, a core
+  without SQLCipher and missing signing values before the long build starts. R8 rules (readable traces, `Log.v/d`
+  stripped), `androidx.profileinstaller` and a start-up baseline profile, `localeFilters` en/tr, uncompressed
+  aligned native libraries. CI builds the release variant (R8, release lint) and checks the 16 KB alignment;
+  new `release-android.yml` builds the signed APK and bundle from a tag. `RELEASING.md`.
+* **Background.** Settings, "Keeping the mesh running": battery state with the button, and the advice for the phone
+  maker (Xiaomi, Samsung, Huawei/Honor, OPPO group, others). `DEVICE_MATRIX.md` is the test plan; no result yet.
+* **Accessibility.** Status pills announce changes; chat bubble, announcement card and neighbour are single items;
+  radio groups are groups; a failed send is announced.
+* **Localization.** `LocalizationTest` (same strings, plurals, placeholders in en and tr); pseudo-locales in debug builds.
+
+Files: new `ui/ScreenProtection.kt`, `ui/screens/ProtectionSettings.kt`, `settings/BackgroundHelp.kt`,
+`app/src/main/baseline-prof.txt`, `release-android.yml`, `RELEASING.md`, `DEVICE_MATRIX.md`, three test classes
+and `ResourceFiles`; changed `build.gradle.kts`, `libs.versions.toml`, `proguard-rules.pro`, `AndroidManifest.xml`,
+`MainActivity`, `UiPreferences`, `SettingsScreen`, `Components`, `MessagingComponents`, `AnnouncementsScreen`,
+`ChatScreen`, both `strings.xml`, `ci.yml`, `README.md`.
+
+---
+
 # Changes: Android phase A6 (network status, settings, notifications)
 
 Written without an Android toolchain: **nothing here was compiled, run or tested on a device**. Build

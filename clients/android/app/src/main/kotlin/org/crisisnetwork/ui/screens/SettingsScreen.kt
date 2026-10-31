@@ -142,6 +142,12 @@ private fun SettingsMain(onOpenDiagnostics: () -> Unit, onOpenNetwork: () -> Uni
         SectionTitle(stringResource(R.string.settings_notifications))
         NotificationsSettings(notifications)
 
+        SectionTitle(stringResource(R.string.settings_privacy))
+        PrivacySettings()
+
+        SectionTitle(stringResource(R.string.settings_background))
+        BackgroundSettings()
+
         SectionTitle(stringResource(R.string.settings_identity))
         InfoCard {
             val number = ui.safetyNumber

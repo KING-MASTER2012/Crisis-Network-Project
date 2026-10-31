@@ -379,4 +379,20 @@
     <string name="settings_about_app">Uygulama sürümü %1$s</string>
     <string name="settings_about_schema">Veritabanı şeması %1$d</string>
     <string name="settings_about_unavailable">Çekirdek bilgisi alınamadı.</string>
+
+    <!-- Phase A7: privacy, background reliability, accessibility -->
+    <string name="a11y_message_outgoing">Sizin gönderdiğiniz</string>
+    <string name="a11y_message_incoming">Gelen mesaj</string>
+    <string name="settings_privacy">Gizlilik</string>
+    <string name="settings_screen_protection">Uygulamayı ekran görüntülerinde gizle</string>
+    <string name="settings_screen_protection_hint">Ekran görüntüsü ve ekran kaydını engeller, son uygulamalar listesinde uygulamayı gizler. Ekran görüntüsü almak istiyorsanız kapatın.</string>
+    <string name="settings_background">Ağı çalışır tutmak</string>
+    <string name="settings_background_hint">Ekran kapalıyken telefon güç tasarrufu için uygulamayı durdurabilir. O zaman uygulamayı yeniden açana kadar mesaj gelmez.</string>
+    <string name="settings_background_maker_title">Telefonunuzda</string>
+    <string name="settings_background_app_settings">Uygulama ayarlarını aç</string>
+    <string name="bg_maker_xiaomi">Xiaomi, Redmi ve POCO telefonların kendi listesi var. Uygulama ayarlarında veya Güvenlik bölümünde bu uygulama için Otomatik başlatmaya izin verin, pil tasarrufunu Kısıtlama yok yapın ve uygulamayı son uygulamalar listesinde kilitleyin. Adlar sürüme göre değişir.</string>
+    <string name="bg_maker_samsung">Samsung telefonlarda uyuyan uygulamalar listesi vardır. Ayarlar, Pil, Arka plan kullanım sınırları bölümünde bu uygulamanın Uyuyan uygulamalar veya Derin uyuyan uygulamalar içinde olmadığından emin olun ve Asla uyumayan uygulamalar listesine ekleyin. Adlar sürüme göre değişir.</string>
+    <string name="bg_maker_huawei">Huawei ve Honor telefonlar uygulama başlatmayı kendileri yönetir. Uygulama başlatma ayarlarında bu uygulama için otomatik yönetimi kapatın ve Otomatik başlatma, İkincil başlatma ve Arka planda çalışma izinlerini verin. Adlar sürüme göre değişir.</string>
+    <string name="bg_maker_oppo">OPPO, OnePlus, realme ve vivo telefonlar arka plandaki uygulamaları kendileri kısıtlar. Pil veya uygulama ayarlarında bu uygulama için arka plan etkinliğine ve otomatik başlatmaya izin verin, pil kullanımını kısıtlamasız yapın. Adlar sürüme göre değişir.</string>
+    <string name="bg_maker_other">Bu uygulamanın pil kullanımını kısıtlamasız yapın ve son uygulamalar listesinden kapatmayın. Bazı telefonlarda arka planda çalışabilen uygulamalar için ayrı listeler bulunur: ayarlarda otomatik başlatma veya korumalı uygulamalar gibi sözcükleri arayın.</string>
 </resources>

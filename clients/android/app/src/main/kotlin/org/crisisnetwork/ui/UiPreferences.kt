@@ -26,6 +26,8 @@ object UiPreferences {
         val nodeIdHex: String? = null,
         /** The contact card as text (public): what the QR code of this phone holds. Known once the identity exists. */
         val cardText: String? = null,
+        /** Keep the app out of screenshots and the recent-apps preview (phase A7). On unless the person turns it off. */
+        val screenProtection: Boolean = true,
     )
 
     private const val PREFS = "ui"
@@ -38,6 +40,7 @@ object UiPreferences {
     private const val KEY_SAFETY = "identity_safety_number"
     private const val KEY_NODE = "identity_node_id"
     private const val KEY_CARD = "identity_card"
+    private const val KEY_SCREEN_PROTECTION = "screen_protection"
 
     private val mutableState = MutableStateFlow(State())
     val state: StateFlow<State> = mutableState.asStateFlow()
@@ -67,6 +70,7 @@ object UiPreferences {
                 safetyNumber = p.getString(KEY_SAFETY, null),
                 nodeIdHex = p.getString(KEY_NODE, null),
                 cardText = p.getString(KEY_CARD, null),
+                screenProtection = p.getBoolean(KEY_SCREEN_PROTECTION, true),
             )
     }
 
@@ -89,6 +93,11 @@ object UiPreferences {
         val value = ThemeSettings.nearestTextScale(scale)
         prefs(context).edit().putFloat(KEY_TEXT, value).apply()
         mutableState.update { it.copy(theme = it.theme.copy(textScale = value)) }
+    }
+
+    fun setScreenProtection(context: Context, enabled: Boolean) {
+        prefs(context).edit().putBoolean(KEY_SCREEN_PROTECTION, enabled).apply()
+        mutableState.update { it.copy(screenProtection = enabled) }
     }
 
     /** Remembers that the identity exists, with the public values the screens show. */

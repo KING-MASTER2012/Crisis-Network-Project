@@ -1,0 +1,16 @@
+# Baseline profile of the app (phase A7): the start-up path, so that the first launch is not run by the interpreter.
+# Hand-written for the classes every start passes through; a profile generated on a device covers the screens as well
+# (see RELEASING.md). An entry that does not match a method is ignored by the tool. The libraries (Compose, AndroidX)
+# bring their own profiles, which androidx.profileinstaller installs.
+Lorg/crisisnetwork/android/MainActivity;
+HSPLorg/crisisnetwork/android/MainActivity;-><init>()V
+HSPLorg/crisisnetwork/android/MainActivity;->onCreate(Landroid/os/Bundle;)V
+HSPLorg/crisisnetwork/android/MainActivity;->onStart()V
+HSPLorg/crisisnetwork/android/MainActivity;->onResume()V
+Lorg/crisisnetwork/android/AppVisibility;
+HSPLorg/crisisnetwork/android/AppVisibility;->onStart()V
+HSPLorg/crisisnetwork/android/AppVisibility;->onResume()V
+Lorg/crisisnetwork/android/ui/UiPreferences;
+HSPLorg/crisisnetwork/android/ui/UiPreferences;->load(Landroid/content/Context;)V
+Lorg/crisisnetwork/android/ui/ScreenProtection;
+HSPLorg/crisisnetwork/android/ui/ScreenProtection;->apply(Landroid/app/Activity;Z)V

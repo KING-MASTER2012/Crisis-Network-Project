@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -28,8 +29,10 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -169,7 +172,10 @@ fun QuietButton(
     }
 }
 
-/** A small label with a state in words ("Connected"), tinted by [tone]. */
+/**
+ * A small label with a state in words ("Connected"), tinted by [tone]. A change of the text is
+ * announced by screen readers (a polite live region), so that "Searching" becoming "Connected" is heard.
+ */
 @Composable
 fun StatusPill(
     text: String,
@@ -177,7 +183,7 @@ fun StatusPill(
     tone: Tone = Tone.Neutral,
 ) {
     Surface(
-        modifier = modifier,
+        modifier = modifier.semantics { liveRegion = LiveRegionMode.Polite },
         shape = RoundedCornerShape(50),
         color = toneContainer(tone),
         contentColor = toneContent(tone),
@@ -255,7 +261,8 @@ fun <T> ChoiceGroup(
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
 ) {
-    Column(modifier = modifier.fillMaxWidth()) {
+    // selectableGroup(): a screen reader says that the rows belong together ("radio group") and how many there are.
+    Column(modifier = modifier.fillMaxWidth().selectableGroup()) {
         for (option in options) {
             Row(
                 modifier =
