@@ -39,8 +39,8 @@ pub use conventions::{
     LifetimeParts, LifetimeUnit, announcement_byte_limit, announcement_overhead, budget_status,
     convention_info, count_bytes, decode_announcement, decode_card_text, direct_byte_limit,
     encode_announcement, encode_card_text, lifetime_is_valid, lifetime_presets,
-    lifetime_to_seconds, message_delivery_status, normalize_nickname, sanitize_text,
-    short_node_id, split_lifetime,
+    lifetime_to_seconds, message_delivery_status, normalize_nickname, sanitize_text, short_node_id,
+    split_lifetime,
 };
 pub use error::CoreError;
 pub use node::{

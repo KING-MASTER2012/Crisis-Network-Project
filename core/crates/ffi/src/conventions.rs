@@ -257,7 +257,10 @@ pub fn lifetime_presets(max_secs: i64) -> Vec<i64> {
 /// overflowing.
 #[uniffi::export]
 pub fn lifetime_to_seconds(value: i64, unit: LifetimeUnit) -> i64 {
-    seconds_out(appcodec::lifetime_to_seconds(seconds_in(value), unit.into()))
+    seconds_out(appcodec::lifetime_to_seconds(
+        seconds_in(value),
+        unit.into(),
+    ))
 }
 
 /// Whether `secs` is between one second and `max_secs` (`CoreInfo.max_lifetime_secs`).
@@ -354,10 +357,18 @@ mod tests {
         let info = convention_info();
         let core = crate::core_info();
         assert_eq!(info.direct_seal_overhead, 48);
-        assert_eq!(direct_byte_limit(core.max_payload_bytes), core.max_payload_bytes - 48);
-        assert!(lifetime_is_valid(info.default_lifetime_secs, i64::from(core.max_lifetime_secs)));
         assert_eq!(
-            lifetime_presets(i64::from(core.max_lifetime_secs)).last().copied(),
+            direct_byte_limit(core.max_payload_bytes),
+            core.max_payload_bytes - 48
+        );
+        assert!(lifetime_is_valid(
+            info.default_lifetime_secs,
+            i64::from(core.max_lifetime_secs)
+        ));
+        assert_eq!(
+            lifetime_presets(i64::from(core.max_lifetime_secs))
+                .last()
+                .copied(),
             Some(i64::from(core.max_lifetime_secs))
         );
     }
