@@ -25,6 +25,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "330a5ed07fa54e4702c9d6c4174f74427fc0ef6e214bbd677ae50a5099946470"
 
 [[package]]
+name = "appcodec"
+version = "0.1.0"
+dependencies = [
+ "proptest",
+ "proto",
+ "serde_json",
+]
+
+[[package]]
 name = "askama"
 version = "0.16.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -487,6 +496,7 @@ checksum = "da7c62ceae207dd37ea5b845da6a0696c799f85e97da1ab5b7910be3c1c80223"
 name = "ffi"
 version = "0.1.0"
 dependencies = [
+ "appcodec",
  "crypto",
  "engine",
  "getrandom",

@@ -52,6 +52,7 @@ mesh = { path = "core/crates/mesh" }
 engine = { path = "core/crates/engine" }
 sim = { path = "core/crates/sim" }
 storage = { path = "core/crates/storage" }
+appcodec = { path = "core/crates/appcodec" }
 
 [workspace.lints.rust]
 # The `ffi` crate defines its own [lints] table (UniFFI's generated code needs unsafe); everywhere else unsafe is denied.

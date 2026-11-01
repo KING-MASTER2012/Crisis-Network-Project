@@ -1,3 +1,48 @@
+# Changes: Core phase C8 (app conventions in Rust)
+
+Written without a Rust toolchain: **nothing here was compiled or run**. Run
+`cargo test --workspace` and `cargo fmt --all && cargo clippy --workspace --all-targets -- -D warnings`
+first (I could not run rustfmt, so formatting may need a pass). The Android client is untouched and keeps working: the interface version stays 2 because
+the change is purely additive.
+
+The small rules that every client must apply identically, until now written in Kotlin only
+(`AnnouncementCodec`, `CardCodec`, `TextSanitizer`, `ByteBudget`, `Lifetimes`, `NicknameStore.normalize`,
+`MessageStatus`, `Names.shortId`), now live in one new crate, so the Apple and Desktop clients
+cannot drift from Android.
+
+* **New crate `appcodec`** (pure functions, no I/O, depends only on `proto` for the limits):
+  `clean` (control characters and bidirectional overrides), announcement payload with severity
+  (`0x1E` + digit), contact-card text (`crisis:` + URL-safe base64, forgiving decoder with its own small
+  base64), byte budgets (direct text limit = payload limit - 48), lifetime presets and units, nickname
+  normalisation, delivery status, short node id.
+* **FFI**: `conventions.rs` exports them (`sanitize_text`, `encode_announcement`, `decode_announcement`,
+  `announcement_overhead`, `encode_card_text`, `decode_card_text`, `direct_byte_limit`,
+  `announcement_byte_limit`, `count_bytes`, `lifetime_presets`, `lifetime_to_seconds`,
+  `lifetime_is_valid`, `split_lifetime`, `normalize_nickname`, `short_node_id`,
+  `message_delivery_status`, `convention_info`) with the types `AnnouncementSeverity`, `LifetimeUnit`,
+  `DeliveryStatus`, `DecodedAnnouncement`, `ByteCount`, `LifetimeParts` and `ConventionInfo`.
+  Lifetimes are `i64` seconds; a negative value counts as zero.
+* **Shared test vectors**: `core/testdata/appcodec.json`, produced by an independent implementation of
+  the Android rules (not by the Rust code). The Rust tests read it; a client with its own copy of a rule
+  can run the same file.
+* **Tests**: unit tests in every module, `tests/vectors.rs`, property tests (`tests/properties.rs`:
+  round trips, idempotence, no panics) and a fuzz target `appcodec_inputs`.
+
+Known differences from the Kotlin code (none changes what is sent on the wire or what another phone
+shows): nicknames are cut at 40 Unicode scalar values (Kotlin cuts at 40 UTF-16 units, which can split an
+emoji); byte limits saturate at zero instead of going negative; invalid UTF-8 is replaced the way
+Rust's `from_utf8_lossy` does, which can differ from Java for some malformed sequences.
+
+Files: new `core/crates/appcodec/` (`Cargo.toml`, `src/{lib,sanitize,announcement,card,base64,budget,lifetime,names,nickname,status}.rs`,
+`tests/{vectors,properties}.rs`), `core/crates/ffi/src/conventions.rs`, `core/testdata/{appcodec.json,README.md}`,
+`core/fuzz/fuzz_targets/appcodec_inputs.rs`; changed `Cargo.toml`, `Cargo.lock` (by hand: one new package),
+`core/crates/ffi/{Cargo.toml,src/lib.rs,src/version.rs}`, `core/fuzz/Cargo.toml`, `README.md`.
+
+Next: Android can switch to the Rust functions later (optional, it would be a small A8 change);
+the Apple client (I5) uses them from the start.
+
+---
+
 # Changes: Android phase A7 (hardening and release)
 
 Written without an Android toolchain: **nothing here was compiled, run or tested on a device**. Run

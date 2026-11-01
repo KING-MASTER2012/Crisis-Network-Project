@@ -1,0 +1,593 @@
+{
+    "sanitize": [
+        {
+            "input": "hello",
+            "output": "hello"
+        },
+        {
+            "input": "",
+            "output": ""
+        },
+        {
+            "input": "a\nb\tc",
+            "output": "a\nb\tc"
+        },
+        {
+            "input": "a\u0000b\u0007c\rd\u007fe",
+            "output": "abcde"
+        },
+        {
+            "input": "\u202eevil\u2066x\u2069",
+            "output": "evilx"
+        },
+        {
+            "input": "\u0085 kept",
+            "output": "\u0085 kept"
+        },
+        {
+            "input": "smile \ud83d\ude00",
+            "output": "smile \ud83d\ude00"
+        },
+        {
+            "input": "merhaba d\u00fcnya \u011f\u015f\u0131",
+            "output": "merhaba d\u00fcnya \u011f\u015f\u0131"
+        },
+        {
+            "input": "\u202a\u202b\u202c\u202d\u202e",
+            "output": ""
+        },
+        {
+            "input": "line1\r\nline2",
+            "output": "line1\nline2"
+        }
+    ],
+    "announcement_encode": [
+        {
+            "text": "hello",
+            "severity": 0,
+            "hex": "68656c6c6f"
+        },
+        {
+            "text": "hello",
+            "severity": 1,
+            "hex": "1e3168656c6c6f"
+        },
+        {
+            "text": "hello",
+            "severity": 2,
+            "hex": "1e3268656c6c6f"
+        },
+        {
+            "text": "",
+            "severity": 0,
+            "hex": ""
+        },
+        {
+            "text": "",
+            "severity": 2,
+            "hex": "1e32"
+        },
+        {
+            "text": "a\u0007b",
+            "severity": 1,
+            "hex": "1e316162"
+        },
+        {
+            "text": "\u00e7ay haz\u0131r",
+            "severity": 2,
+            "hex": "1e32c3a761792068617ac4b172"
+        },
+        {
+            "text": "\ud83d\udea8 alarm",
+            "severity": 1,
+            "hex": "1e31f09f9aa820616c61726d"
+        },
+        {
+            "text": "\u202etxt",
+            "severity": 0,
+            "hex": "747874"
+        }
+    ],
+    "announcement_decode": [
+        {
+            "hex": "",
+            "text": "",
+            "severity": 0
+        },
+        {
+            "hex": "1e",
+            "text": "",
+            "severity": 0
+        },
+        {
+            "hex": "68656c6c6f",
+            "text": "hello",
+            "severity": 0
+        },
+        {
+            "hex": "1e3148",
+            "text": "H",
+            "severity": 1
+        },
+        {
+            "hex": "1e3248",
+            "text": "H",
+            "severity": 2
+        },
+        {
+            "hex": "1e3948",
+            "text": "H",
+            "severity": 2
+        },
+        {
+            "hex": "1e3048",
+            "text": "H",
+            "severity": 0
+        },
+        {
+            "hex": "1e41",
+            "text": "A",
+            "severity": 0
+        },
+        {
+            "hex": "1e4142",
+            "text": "AB",
+            "severity": 0
+        },
+        {
+            "hex": "ff",
+            "text": "\ufffd",
+            "severity": 0
+        },
+        {
+            "hex": "1e31ff",
+            "text": "\ufffd",
+            "severity": 1
+        },
+        {
+            "hex": "1e320741",
+            "text": "A",
+            "severity": 2
+        }
+    ],
+    "card_encode": [
+        {
+            "hex": "00070e151c232a31383f464d545b626970777e858c939aa1a8afb6bdc4cbd2d9e0e7eef5fc030a11181f262d343b424950575e656c737a81888f969da4abb2b9c0c7ced5dce3eaf1f8ff060d141b222930373e454c535a61686f767d848b9299a0a7aeb5bcc3cad1d8dfe6edf4fb020910171e252c333a41484f565d646b7279",
+            "text": "crisis:AAcOFRwjKjE4P0ZNVFtiaXB3foWMk5qhqK-2vcTL0tng5-71_AMKERgfJi00O0JJUFdeZWxzeoGIj5adpKuyucDHztXc4-rx-P8GDRQbIikwNz5FTFNaYWhvdn2Ei5KZoKeutbzDytHY3-bt9PsCCRAXHiUsMzpBSE9WXWRrcnk"
+        },
+        {
+            "hex": "0b30557a9fc4e90e33587da2c7ec11365b80a5caef14395e83a8cdf2173c6186abd0f51a3f6489aed3f81d42678cb1d6fb20456a8fb4d9fe23486d92b7dc01264b7095badf04294e7398bde2072c51769bc0e50a2f54799ec3e80d32577ca1c6eb10355a7fa4c9ee13385d82a7ccf1163b6085aacff4193e6388add2f71c4166",
+            "text": "crisis:CzBVep_E6Q4zWH2ix-wRNluApcrvFDleg6jN8hc8YYar0PUaP2SJrtP4HUJnjLHW-yBFao-02f4jSG2St9wBJktwlbrfBClOc5i94gcsUXabwOUKL1R5nsPoDTJXfKHG6xA1Wn-kye4TOF2Cp8zxFjtgharP9Bk-Y4it0vccQWY"
+        },
+        {
+            "hex": "fbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbff",
+            "text": "crisis:-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_8"
+        }
+    ],
+    "card_decode": [
+        {
+            "input": "crisis:AAcOFRwjKjE4P0ZNVFtiaXB3foWMk5qhqK-2vcTL0tng5-71_AMKERgfJi00O0JJUFdeZWxzeoGIj5adpKuyucDHztXc4-rx-P8GDRQbIikwNz5FTFNaYWhvdn2Ei5KZoKeutbzDytHY3-bt9PsCCRAXHiUsMzpBSE9WXWRrcnk",
+            "hex": "00070e151c232a31383f464d545b626970777e858c939aa1a8afb6bdc4cbd2d9e0e7eef5fc030a11181f262d343b424950575e656c737a81888f969da4abb2b9c0c7ced5dce3eaf1f8ff060d141b222930373e454c535a61686f767d848b9299a0a7aeb5bcc3cad1d8dfe6edf4fb020910171e252c333a41484f565d646b7279"
+        },
+        {
+            "input": "CRISIS:AAcOFRwjKjE4P0ZNVFtiaXB3foWMk5qhqK-2vcTL0tng5-71_AMKERgfJi00O0JJUFdeZWxzeoGIj5adpKuyucDHztXc4-rx-P8GDRQbIikwNz5FTFNaYWhvdn2Ei5KZoKeutbzDytHY3-bt9PsCCRAXHiUsMzpBSE9WXWRrcnk",
+            "hex": "00070e151c232a31383f464d545b626970777e858c939aa1a8afb6bdc4cbd2d9e0e7eef5fc030a11181f262d343b424950575e656c737a81888f969da4abb2b9c0c7ced5dce3eaf1f8ff060d141b222930373e454c535a61686f767d848b9299a0a7aeb5bcc3cad1d8dfe6edf4fb020910171e252c333a41484f565d646b7279"
+        },
+        {
+            "input": "AAcOFRwjKjE4P0ZNVFtiaXB3foWMk5qhqK-2vcTL0tng5-71_AMKERgfJi00O0JJUFdeZWxzeoGIj5adpKuyucDHztXc4-rx-P8GDRQbIikwNz5FTFNaYWhvdn2Ei5KZoKeutbzDytHY3-bt9PsCCRAXHiUsMzpBSE9WXWRrcnk",
+            "hex": "00070e151c232a31383f464d545b626970777e858c939aa1a8afb6bdc4cbd2d9e0e7eef5fc030a11181f262d343b424950575e656c737a81888f969da4abb2b9c0c7ced5dce3eaf1f8ff060d141b222930373e454c535a61686f767d848b9299a0a7aeb5bcc3cad1d8dfe6edf4fb020910171e252c333a41484f565d646b7279"
+        },
+        {
+            "input": " crisis: AAcOFRwjKjE4P0ZNVFtiaXB3foWMk5qhqK-2vcTL0tng5-71_A\nMKERgfJi00O0JJUFdeZWxzeoGIj5adpKuyucDHztXc4-rx-P8GDRQbIikwNz5FTFNaYWhvdn2Ei5KZoKeutbzDytHY3-bt9PsCCRAXHiUsMzpBSE9WXWRrcnk \t",
+            "hex": "00070e151c232a31383f464d545b626970777e858c939aa1a8afb6bdc4cbd2d9e0e7eef5fc030a11181f262d343b424950575e656c737a81888f969da4abb2b9c0c7ced5dce3eaf1f8ff060d141b222930373e454c535a61686f767d848b9299a0a7aeb5bcc3cad1d8dfe6edf4fb020910171e252c333a41484f565d646b7279"
+        },
+        {
+            "input": "crisis:AAcOFRwjKjE4P0ZNVFtiaXB3foWMk5qhqK-2vcTL0tng5-71_AMKERgfJi00O0JJUFdeZWxzeoGIj5adpKuyucDHztXc4-rx-P8GDRQbIikwNz5FTFNaYWhvdn2Ei5KZoKeutbzDytHY3-bt9PsCCRAXHiUsMzpBSE9WXWRrcnk=",
+            "hex": "00070e151c232a31383f464d545b626970777e858c939aa1a8afb6bdc4cbd2d9e0e7eef5fc030a11181f262d343b424950575e656c737a81888f969da4abb2b9c0c7ced5dce3eaf1f8ff060d141b222930373e454c535a61686f767d848b9299a0a7aeb5bcc3cad1d8dfe6edf4fb020910171e252c333a41484f565d646b7279"
+        },
+        {
+            "input": "crisis:CzBVep_E6Q4zWH2ix-wRNluApcrvFDleg6jN8hc8YYar0PUaP2SJrtP4HUJnjLHW-yBFao-02f4jSG2St9wBJktwlbrfBClOc5i94gcsUXabwOUKL1R5nsPoDTJXfKHG6xA1Wn-kye4TOF2Cp8zxFjtgharP9Bk-Y4it0vccQWY",
+            "hex": "0b30557a9fc4e90e33587da2c7ec11365b80a5caef14395e83a8cdf2173c6186abd0f51a3f6489aed3f81d42678cb1d6fb20456a8fb4d9fe23486d92b7dc01264b7095badf04294e7398bde2072c51769bc0e50a2f54799ec3e80d32577ca1c6eb10355a7fa4c9ee13385d82a7ccf1163b6085aacff4193e6388add2f71c4166"
+        },
+        {
+            "input": "crisis:+/+/+/+/+/+/+/+/+/+/+/+/+/+/+/+/+/+/+/+/+/+/+/+/+/+/+/+/+/+/+/+/+/+/+/+/+/+/+/+/+/+/+/+/+/+/+/+/+/+/+/+/+/+/+/+/+/+/+/+/+/+/+/+/+/+/+/+/+/+/+/+/+/+/+/+/+/+/+/+/+/+/+/+/+/8=",
+            "hex": "fbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbff"
+        },
+        {
+            "input": "crisis:-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_8",
+            "hex": "fbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbffbff"
+        },
+        {
+            "input": "",
+            "hex": null
+        },
+        {
+            "input": "crisis:",
+            "hex": null
+        },
+        {
+            "input": "crisis:!!!",
+            "hex": null
+        },
+        {
+            "input": "crisis:AAcOFRwjKjE4P0ZNVFtiaXB3foWMk5qhqK-2vcTL0tng5-71_AMKERgfJi00O0JJUFdeZWxzeoGIj5adpKuyucDHztXc4-rx-P8GDRQbIikwNz5FTFNaYWhvdn2Ei5KZoKeutbzDytHY3-bt9PsCCRAXHiUsMzpBSE9WXWRrcg",
+            "hex": null
+        },
+        {
+            "input": "crisis:AAcOFRwjKjE4P0ZNVFtiaXB3foWMk5qhqK-2vcTL0tng5-71_AMKERgfJi00O0JJUFdeZWxzeoGIj5adpKuyucDHztXc4-rx-P8GDRQbIikwNz5FTFNaYWhvdn2Ei5KZoKeutbzDytHY3-bt9PsCCRAXHiUsMzpBSE9WXWRrcnl4",
+            "hex": null
+        },
+        {
+            "input": "crisis:AAcOFRwjKjE4P0ZNVFtiaXB3foWMk5qhqK-2vcTL0tng5-71_AMKERgfJi00O0JJUFdeZWxzeoGIj5adpKuyucDHztXc4-rx-P8GDRQbIikwNz5FTFNaYWhvdn2Ei5KZoKeutbzDytHY3-bt9PsCCRAXHiUsMzpBSE9WXWRrcnk==",
+            "hex": null
+        },
+        {
+            "input": "crisis:AAcOFRwjKjE4P0ZNVFtiaXB3foWMk5qhqK-2vcTL0tng5-71_AMKERgfJi00O0JJUFdeZWxzeoGIj5adpKuyucDHztXc4-rx-P8GDRQbIikwNz5FTFNaYWhvdn2Ei5KZoKeutbzDytHY3-bt9PsCCRAXHiUsMzpBSE9WXWRrcn",
+            "hex": null
+        },
+        {
+            "input": "crisis:AAcOFRwjKjE4P0ZNVFtiaXB3foWMk5qhqK-2vcTL0tng5-71_AMKERgfJi00O0JJUFdeZWxzeoGIj5adpKuyucDHztXc4-rx-P8GDRQbIikwNz5FTFNaYWhvdn2Ei5KZoKeutbzDytHY3-bt9PsCCRAXHiUsMzpBSE9WXWRrcnkAA==",
+            "hex": null
+        },
+        {
+            "input": "not a card",
+            "hex": null
+        }
+    ],
+    "nickname": [
+        {
+            "input": "  Ali  ",
+            "output": "Ali"
+        },
+        {
+            "input": "",
+            "output": null
+        },
+        {
+            "input": "   ",
+            "output": null
+        },
+        {
+            "input": "a\tb\nc",
+            "output": "a b c"
+        },
+        {
+            "input": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+            "output": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+        },
+        {
+            "input": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx yyyyy",
+            "output": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+        },
+        {
+            "input": "a\u0007b",
+            "output": "ab"
+        },
+        {
+            "input": "\u202eevil",
+            "output": "evil"
+        },
+        {
+            "input": "Ay\u015fe Y\u0131lmaz",
+            "output": "Ay\u015fe Y\u0131lmaz"
+        },
+        {
+            "input": "  \t\n",
+            "output": null
+        }
+    ],
+    "lifetime_split": [
+        {
+            "secs": 0,
+            "value": 0,
+            "unit": "seconds"
+        },
+        {
+            "secs": 1,
+            "value": 1,
+            "unit": "seconds"
+        },
+        {
+            "secs": 7,
+            "value": 7,
+            "unit": "seconds"
+        },
+        {
+            "secs": 59,
+            "value": 59,
+            "unit": "seconds"
+        },
+        {
+            "secs": 60,
+            "value": 1,
+            "unit": "minutes"
+        },
+        {
+            "secs": 90,
+            "value": 90,
+            "unit": "seconds"
+        },
+        {
+            "secs": 900,
+            "value": 15,
+            "unit": "minutes"
+        },
+        {
+            "secs": 3600,
+            "value": 1,
+            "unit": "hours"
+        },
+        {
+            "secs": 5400,
+            "value": 90,
+            "unit": "minutes"
+        },
+        {
+            "secs": 86400,
+            "value": 1,
+            "unit": "days"
+        },
+        {
+            "secs": 172800,
+            "value": 2,
+            "unit": "days"
+        },
+        {
+            "secs": 259200,
+            "value": 3,
+            "unit": "days"
+        },
+        {
+            "secs": 604800,
+            "value": 7,
+            "unit": "days"
+        }
+    ],
+    "lifetime_to_seconds": [
+        {
+            "value": 0,
+            "unit": "hours",
+            "secs": 0
+        },
+        {
+            "value": 1,
+            "unit": "seconds",
+            "secs": 1
+        },
+        {
+            "value": 15,
+            "unit": "minutes",
+            "secs": 900
+        },
+        {
+            "value": 2,
+            "unit": "hours",
+            "secs": 7200
+        },
+        {
+            "value": 3,
+            "unit": "days",
+            "secs": 259200
+        },
+        {
+            "value": 7,
+            "unit": "days",
+            "secs": 604800
+        }
+    ],
+    "lifetime_presets": [
+        {
+            "max_secs": 0,
+            "presets": []
+        },
+        {
+            "max_secs": 100,
+            "presets": []
+        },
+        {
+            "max_secs": 900,
+            "presets": [
+                900
+            ]
+        },
+        {
+            "max_secs": 86400,
+            "presets": [
+                900,
+                3600,
+                21600,
+                86400
+            ]
+        },
+        {
+            "max_secs": 604800,
+            "presets": [
+                900,
+                3600,
+                21600,
+                86400,
+                259200,
+                604800
+            ]
+        },
+        {
+            "max_secs": 1000000000,
+            "presets": [
+                900,
+                3600,
+                21600,
+                86400,
+                259200,
+                604800
+            ]
+        }
+    ],
+    "byte_budget": [
+        {
+            "kind": "direct_limit",
+            "max_payload": 1024,
+            "limit": 976
+        },
+        {
+            "kind": "direct_limit",
+            "max_payload": 48,
+            "limit": 0
+        },
+        {
+            "kind": "announcement_limit",
+            "max_payload": 1024,
+            "severity": 0,
+            "limit": 1024
+        },
+        {
+            "kind": "announcement_limit",
+            "max_payload": 1024,
+            "severity": 1,
+            "limit": 1022
+        },
+        {
+            "kind": "announcement_limit",
+            "max_payload": 1024,
+            "severity": 2,
+            "limit": 1022
+        }
+    ],
+    "byte_count": [
+        {
+            "text": "",
+            "limit": 100,
+            "used": 0,
+            "remaining": 100,
+            "over": false,
+            "near_limit": false
+        },
+        {
+            "text": "h\u00e9llo",
+            "limit": 10,
+            "used": 6,
+            "remaining": 4,
+            "over": false,
+            "near_limit": false
+        },
+        {
+            "text": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+            "limit": 100,
+            "used": 89,
+            "remaining": 11,
+            "over": false,
+            "near_limit": false
+        },
+        {
+            "text": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+            "limit": 100,
+            "used": 90,
+            "remaining": 10,
+            "over": false,
+            "near_limit": true
+        },
+        {
+            "text": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+            "limit": 100,
+            "used": 100,
+            "remaining": 0,
+            "over": false,
+            "near_limit": true
+        },
+        {
+            "text": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+            "limit": 100,
+            "used": 101,
+            "remaining": 0,
+            "over": true,
+            "near_limit": false
+        },
+        {
+            "text": "\ud83d\ude00",
+            "limit": 4,
+            "used": 4,
+            "remaining": 0,
+            "over": false,
+            "near_limit": true
+        },
+        {
+            "text": "\ud83d\ude00",
+            "limit": 3,
+            "used": 4,
+            "remaining": 0,
+            "over": true,
+            "near_limit": false
+        }
+    ],
+    "message_status": [
+        {
+            "outgoing": false,
+            "direct": false,
+            "delivered": false,
+            "status": null
+        },
+        {
+            "outgoing": false,
+            "direct": false,
+            "delivered": true,
+            "status": null
+        },
+        {
+            "outgoing": false,
+            "direct": true,
+            "delivered": false,
+            "status": null
+        },
+        {
+            "outgoing": false,
+            "direct": true,
+            "delivered": true,
+            "status": null
+        },
+        {
+            "outgoing": true,
+            "direct": false,
+            "delivered": false,
+            "status": "published"
+        },
+        {
+            "outgoing": true,
+            "direct": false,
+            "delivered": true,
+            "status": "published"
+        },
+        {
+            "outgoing": true,
+            "direct": true,
+            "delivered": false,
+            "status": "published"
+        },
+        {
+            "outgoing": true,
+            "direct": true,
+            "delivered": true,
+            "status": "delivered"
+        }
+    ],
+    "short_id": [
+        {
+            "input": "",
+            "output": ""
+        },
+        {
+            "input": "abc",
+            "output": "abc"
+        },
+        {
+            "input": "0123456789abcdef",
+            "output": "01234567"
+        },
+        {
+            "input": "12345678",
+            "output": "12345678"
+        },
+        {
+            "input": "123456789",
+            "output": "12345678"
+        }
+    ]
+}

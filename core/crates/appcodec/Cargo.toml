@@ -1,0 +1,17 @@
+[package]
+name = "appcodec"
+description = "Crisis Network app conventions: announcement severity, contact-card text, text sanitising, byte budgets, lifetimes, nicknames. Pure functions shared by every client."
+edition.workspace = true
+version.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[dependencies]
+proto.workspace = true
+
+[dev-dependencies]
+proptest.workspace = true
+serde_json.workspace = true
+
+[lints]
+workspace = true

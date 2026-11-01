@@ -20,6 +20,10 @@ use crate::error::CoreError;
 /// * 2: conversations (phase C7): `HistoryItem` gained `delivered_at_ms` and carries the text
 ///   of sent direct messages; new `conversations`, `conversation_history`,
 ///   `mark_conversation_read` and `unread_counts`.
+///
+/// Purely additive changes do not increase it. Phase C8 added the app-convention functions
+/// (`sanitize_text`, `encode_announcement`, ... `convention_info`) without a bump: a client
+/// written for version 2 keeps working.
 pub const FFI_API_VERSION: u32 = 2;
 
 /// Which core this library contains.

@@ -17,6 +17,7 @@ decision records.
 | `core/crates/storage` | On-device SQLite message store |
 | `core/crates/mesh` | Sans-IO propagation, synchronisation, reassembly and abuse protection |
 | `core/crates/engine` | High-level API: identity, contacts, publishing, history |
+| `core/crates/appcodec` | App conventions shared by every client: text cleaning, announcement severity, contact-card text, byte budgets, lifetimes, nicknames (`core/testdata/appcodec.json` pins them) |
 | `core/crates/sim` | Deterministic network simulator (many engines, one virtual clock) |
 | `core/crates/cli` | Command-line tools, binary `crisis`: `simulate`, `identity`, `node` (UDP test node) |
 | `doc/` | mdBook documentation |
