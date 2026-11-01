@@ -19,6 +19,7 @@ import org.crisisnetwork.android.core.ble.CloseReason
 import org.crisisnetwork.android.core.ble.GattConnector
 import org.crisisnetwork.android.core.ble.GattLink
 import org.crisisnetwork.android.core.ble.GattLinkEvent
+import org.crisisnetwork.android.core.ble.HelloValue
 import org.crisisnetwork.android.core.ble.LinkPriority
 import org.crisisnetwork.android.core.ble.LinkRole
 
@@ -30,11 +31,18 @@ internal class AndroidGattConnector(
     private val cache: ScanDeviceCache,
     private val requestedAttMtu: Int,
 ) : GattConnector {
+    @Volatile
+    private var helloId: Long? = null
+
+    override fun setHello(id: Long) {
+        helloId = id
+    }
+
     private val context: Context = context.applicationContext
 
     override fun connect(address: String): GattLink {
         val device = cache.get(address) ?: adapter.getRemoteDevice(address)
-        val link = AndroidGattClientLink(context, device, requestedAttMtu)
+        val link = AndroidGattClientLink(context, device, requestedAttMtu, helloId)
         link.start()
         return link
     }
@@ -64,6 +72,7 @@ internal class AndroidGattClientLink(
     private val context: Context,
     private val device: BluetoothDevice,
     private val requestedAttMtu: Int,
+    private val ownHello: Long?,
 ) : GattLink {
     override val role: LinkRole = LinkRole.Client
     override val address: String = device.address
@@ -71,12 +80,13 @@ internal class AndroidGattClientLink(
     private val channel = Channel<GattLinkEvent>(Channel.UNLIMITED)
     override val events: Flow<GattLinkEvent> = channel.receiveAsFlow()
 
-    private enum class Step { Connecting, Discovering, NegotiatingMtu, Subscribing, Ready }
+    private enum class Step { Connecting, Discovering, NegotiatingMtu, Subscribing, Hello, Ready }
 
     private val lock = Any()
     private var gatt: BluetoothGatt? = null
     private var rx: BluetoothGattCharacteristic? = null
     private var tx: BluetoothGattCharacteristic? = null
+    private var hello: BluetoothGattCharacteristic? = null
     private var step = Step.Connecting
     private var attMtu = DEFAULT_ATT_MTU
     private var mtuKnown = false
@@ -175,6 +185,8 @@ internal class AndroidGattClientLink(
                     }
                     rx = rxCharacteristic
                     tx = txCharacteristic
+                    // Profile 1.1: an older neighbour has no HELLO characteristic, which is fine.
+                    hello = service?.getCharacteristic(BleUuids.HELLO)
                     if (mtuKnown) {
                         subscribeLocked(g)
                     } else {
@@ -204,8 +216,7 @@ internal class AndroidGattClientLink(
                 synchronized(lock) {
                     if (closed || step != Step.Subscribing || descriptor.uuid != BleUuids.CCCD) return
                     if (status == BluetoothGatt.GATT_SUCCESS) {
-                        step = Step.Ready
-                        channel.trySend(GattLinkEvent.Ready(attMtu))
+                        startHelloLocked(g)
                     } else {
                         endLocked(CloseReason.SetupFailed, status, reportClosed = true)
                     }
@@ -214,12 +225,28 @@ internal class AndroidGattClientLink(
 
             override fun onCharacteristicWrite(g: BluetoothGatt, characteristic: BluetoothGattCharacteristic, status: Int) {
                 synchronized(lock) {
-                    if (closed || step != Step.Ready || characteristic.uuid != BleUuids.RX) return
-                    channel.trySend(GattLinkEvent.SendCompleted(status == BluetoothGatt.GATT_SUCCESS))
+                    if (closed) return
+                    when {
+                        // The hello is best effort: whatever the outcome, the link is usable now.
+                        step == Step.Hello && characteristic.uuid == BleUuids.HELLO -> readyLocked()
+                        step == Step.Ready && characteristic.uuid == BleUuids.RX ->
+                            channel.trySend(GattLinkEvent.SendCompleted(status == BluetoothGatt.GATT_SUCCESS))
+                        else -> Unit
+                    }
                 }
             }
 
             // Android 13 and newer.
+            override fun onCharacteristicRead(g: BluetoothGatt, characteristic: BluetoothGattCharacteristic, value: ByteArray, status: Int) {
+                helloRead(g, characteristic, if (status == BluetoothGatt.GATT_SUCCESS) value else null)
+            }
+
+            @Deprecated("Deprecated in Java")
+            override fun onCharacteristicRead(g: BluetoothGatt, characteristic: BluetoothGattCharacteristic, status: Int) {
+                @Suppress("DEPRECATION")
+                helloRead(g, characteristic, if (status == BluetoothGatt.GATT_SUCCESS) characteristic.value else null)
+            }
+
             override fun onCharacteristicChanged(g: BluetoothGatt, characteristic: BluetoothGattCharacteristic, value: ByteArray) {
                 received(characteristic, value)
             }
@@ -241,6 +268,58 @@ internal class AndroidGattClientLink(
     }
 
     // ----- helpers (call with the lock held) -----------------------------------------------------
+
+    private fun readyLocked() {
+        step = Step.Ready
+        channel.trySend(GattLinkEvent.Ready(attMtu))
+    }
+
+    /**
+     * Profile 1.1: after the notifications are on, read the neighbour's HELLO and write ours, one operation at
+     * a time. A neighbour without the characteristic, or any failure, simply skips this step.
+     */
+    private fun startHelloLocked(g: BluetoothGatt) {
+        val characteristic = hello
+        if (characteristic == null || ownHello == null) {
+            readyLocked()
+            return
+        }
+        step = Step.Hello
+        val started =
+            try {
+                g.readCharacteristic(characteristic)
+            } catch (_: SecurityException) {
+                false
+            }
+        if (!started) readyLocked()
+    }
+
+    private fun helloRead(g: BluetoothGatt, characteristic: BluetoothGattCharacteristic, value: ByteArray?) {
+        synchronized(lock) {
+            if (closed || step != Step.Hello || characteristic.uuid != BleUuids.HELLO) return
+            HelloValue.decode(value)?.let { channel.trySend(GattLinkEvent.PeerHello(it)) }
+            if (!writeHelloLocked(g, characteristic)) readyLocked()
+        }
+    }
+
+    @Suppress("DEPRECATION")
+    private fun writeHelloLocked(g: BluetoothGatt, characteristic: BluetoothGattCharacteristic): Boolean {
+        val id = ownHello ?: return false
+        val bytes = HelloValue.encode(id)
+        return try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                g.writeCharacteristic(characteristic, bytes, BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT) == BluetoothStatusCodes.SUCCESS
+            } else {
+                characteristic.writeType = BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT
+                characteristic.value = bytes
+                g.writeCharacteristic(characteristic)
+            }
+        } catch (_: SecurityException) {
+            false
+        } catch (_: IllegalStateException) {
+            false
+        }
+    }
 
     @Suppress("DEPRECATION")
     private fun subscribeLocked(g: BluetoothGatt) {

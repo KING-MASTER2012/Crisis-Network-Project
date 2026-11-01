@@ -25,9 +25,8 @@ import org.crisisnetwork.android.R
 import org.crisisnetwork.android.core.ffi.SmokeReport
 import org.crisisnetwork.android.core.ffi.runCoreSmoke
 import org.crisisnetwork.android.ui.components.PrimaryButton
-import org.crisisnetwork.android.ui.components.QuietButton
 import org.crisisnetwork.android.ui.components.ScreenColumn
-import org.crisisnetwork.android.ui.components.ScreenTitle
+import org.crisisnetwork.android.ui.components.ScreenTopBar
 import java.io.File
 
 /**
@@ -49,17 +48,17 @@ fun DiagnosticsScreen(onBack: () -> Unit) {
             }
     }
 
-    ScreenColumn {
-        QuietButton(text = stringResource(R.string.diag_back), onClick = onBack)
-        ScreenTitle(stringResource(R.string.selftest_title))
-
-        val current = report
-        if (current == null) {
-            CircularProgressIndicator()
-            Text(stringResource(R.string.selftest_running))
-        } else {
-            ReportView(current)
-            PrimaryButton(text = stringResource(R.string.selftest_run_again), onClick = { runCount += 1 })
+    Column {
+        ScreenTopBar(title = stringResource(R.string.selftest_title), onBack = onBack)
+        ScreenColumn {
+            val current = report
+            if (current == null) {
+                CircularProgressIndicator()
+                Text(stringResource(R.string.selftest_running))
+            } else {
+                ReportView(current)
+                PrimaryButton(text = stringResource(R.string.selftest_run_again), onClick = { runCount += 1 })
+            }
         }
     }
 }

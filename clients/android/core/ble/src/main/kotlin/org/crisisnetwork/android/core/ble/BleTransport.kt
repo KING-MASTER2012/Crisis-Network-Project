@@ -79,6 +79,7 @@ class BleTransport(
     dispatcher: CoroutineDispatcher = Dispatchers.Default,
     private val clockMs: () -> Long = { System.nanoTime() / 1_000_000L },
     private val tokenSource: () -> Long = TokenSources::secure,
+    private val helloSource: () -> Long = HelloSources::secure,
 ) : Transport {
     private val scope = CoroutineScope(SupervisorJob() + dispatcher)
     private val mailbox = Channel<Msg>(Channel.UNLIMITED)
@@ -136,6 +137,8 @@ class BleTransport(
     private var advertiseRetryAtMs = 0L
     private var advertiseFailures = 0
     private var ownToken = tokenSource()
+    private var ownHello = helloSource()
+    private var duplicateTotal = 0L
     private var tokenAdvertised = true
     private var nextTokenRotationMs = 0L
 
@@ -175,7 +178,9 @@ class BleTransport(
             nextTokenRotationMs = now + config.tokenRotationMs
             nextRotationMs = now + profile.tuning.rotationIntervalMs
             // The GATT service must exist before anybody can connect to the advertisement.
+            if (role.central) connector.setHello(ownHello)
             if (role.peripheral) {
+                server.setHello(ownHello)
                 server.open()
                 val mode = profile.tuning.advertiseMode
                 advertiser.start(mode, currentAdvertisement())
@@ -312,6 +317,12 @@ class BleTransport(
 
     private class Session(val id: Int, val link: GattLink, val queue: SendQueue) {
         var handle: ULong? = null
+
+        /** The identifier this device showed when the link was opened (profile 1.1). */
+        var ownHello = 0L
+
+        /** The identifier the neighbour told, once it did; `null` for a neighbour without profile 1.1. */
+        var peerHello: Long? = null
         var active = false
         var attReady = false
         var payloadMtu = 0
@@ -508,6 +519,9 @@ class BleTransport(
 
     private fun rotateToken(now: Long) {
         ownToken = tokenSource()
+        ownHello = helloSource()
+        if (config.role.central) runCatching { connector.setHello(ownHello) }
+        if (config.role.peripheral) runCatching { server.setHello(ownHello) }
         tokenRotations += 1
         nextTokenRotationMs = now + config.tokenRotationMs
         report(BleDiagnostic.TokenRotated)
@@ -655,6 +669,7 @@ class BleTransport(
     private fun register(link: GattLink) {
         val id = nextSessionId++
         val session = Session(id, link, SendQueue(config.maxQueuedBytes))
+        session.ownHello = ownHello
         sessions[id] = session
         if (link.role == LinkRole.Client) clientAddresses += link.address
         session.collector = scope.launch { link.events.collect { mailbox.trySend(Msg.FromLink(id, it)) } }
@@ -699,6 +714,7 @@ class BleTransport(
                 session.payloadMtu = BleConfig.payloadForAttMtu(event.attMtu)
                 tryActivate(session)
             }
+            is GattLinkEvent.PeerHello -> onPeerHello(session, event.id)
             is GattLinkEvent.MtuChanged -> onMtuChanged(session, BleConfig.payloadForAttMtu(event.attMtu))
             is GattLinkEvent.Received -> onReceived(session, event.bytes)
             is GattLinkEvent.SendCompleted -> onSendCompleted(session, event.success)
@@ -714,6 +730,44 @@ class BleTransport(
     }
 
     /** The link becomes visible to the core once it is ready and its MTU carries the smallest packet. */
+    /**
+     * Profile 1.1: both ends of a link know each other's identifier. Two links that lead to the same neighbour
+     * (we connected to it and it connected to us) are one too many: the link whose client has the lower
+     * identifier stays. Both phones reach the same verdict from the same two numbers.
+     */
+    private fun onPeerHello(session: Session, id: Long) {
+        if (session.peerHello != null) return
+        session.peerHello = id
+        val twins = sessions.values.filter { it.peerHello == id }
+        if (twins.size < 2) return
+        val keep = twins.minWith(Comparator { a, b -> compareLinks(a, b) })
+        for (twin in twins) {
+            if (twin === keep) continue
+            // The same client opened both: it closes the extra one itself, and the server side must not
+            // close the other link by mistake.
+            if (twin.link.role == LinkRole.Server && clientHello(twin) == clientHello(keep)) continue
+            closeDuplicate(twin)
+        }
+    }
+
+    private fun clientHello(session: Session): Long =
+        if (session.link.role == LinkRole.Client) session.ownHello else checkNotNull(session.peerHello)
+
+    private fun compareLinks(a: Session, b: Session): Int {
+        val byClient = HelloValue.compare(clientHello(a), clientHello(b))
+        return if (byClient != 0) byClient else a.id.compareTo(b.id)
+    }
+
+    private fun closeDuplicate(session: Session) {
+        val address = session.link.address
+        val role = session.link.role
+        duplicateTotal += 1
+        report(BleDiagnostic.DuplicateLink(address, role))
+        closeSession(session, "duplicate link to a neighbour that is already connected", fault = false)
+        // Without a long pause the next scan would open the same link again, and it would be closed again.
+        if (role == LinkRole.Client) startCooldown(address, config.duplicateCooldownMs)
+    }
+
     private fun tryActivate(session: Session) {
         if (session.active || !session.attReady || session.payloadMtu < config.minLinkMtu) return
         session.handshakeTimer?.cancel()
@@ -977,6 +1031,7 @@ class BleTransport(
             linkRotations = linkRotations,
             tokenRotations = tokenRotations,
             scanStarts = scanStartTotal,
+            duplicateLinks = duplicateTotal,
         )
     }
 

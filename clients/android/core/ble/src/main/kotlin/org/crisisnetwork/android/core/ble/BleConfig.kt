@@ -53,6 +53,8 @@ enum class BleRole(val central: Boolean, val peripheral: Boolean) {
  *   starts from a clean slate when it ends.
  * @property minLinkAgeForRotationMs Only links older than this are rotated away.
  * @property rotationPauseMs After a link was rotated away its address is left alone for this long.
+ * @property duplicateCooldownMs After a link to a neighbour that was already connected the other way round was
+ *   closed, its address is left alone for this long (profile 1.1).
  * @property tickMs Period of the housekeeping tick (candidates, rotation, token, scan refresh).
  */
 data class BleConfig(
@@ -89,6 +91,7 @@ data class BleConfig(
     val stableLinkMs: Long = 20_000L,
     val minLinkAgeForRotationMs: Long = 60_000L,
     val rotationPauseMs: Long = 60_000L,
+    val duplicateCooldownMs: Long = 5 * 60_000L,
     val tickMs: Long = 2_000L,
 ) {
     init {
@@ -100,6 +103,7 @@ data class BleConfig(
         require(maxConcurrentConnects >= 1) { "maxConcurrentConnects must be positive" }
         require(stackRecoveryThreshold >= 1) { "stackRecoveryThreshold must be positive" }
         require(maxScanStartsPer30s in 1..5) { "maxScanStartsPer30s must be within 1..5 (the platform allows 5)" }
+        require(duplicateCooldownMs >= 0L) { "duplicateCooldownMs must not be negative" }
         require(tickMs >= 1L) { "tickMs must be positive" }
         require(tokenRotationMs >= 1L) { "tokenRotationMs must be positive" }
     }

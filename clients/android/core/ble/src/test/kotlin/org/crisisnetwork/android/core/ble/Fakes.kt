@@ -114,6 +114,11 @@ internal class FakeServer : GattServerPort {
 
     var openCount = 0
     var closeCount = 0
+    val helloIds = mutableListOf<Long>()
+
+    override fun setHello(id: Long) {
+        helloIds += id
+    }
 
     override fun open() {
         openCount += 1
@@ -131,6 +136,11 @@ internal class FakeConnector : GattConnector {
     val connects = mutableListOf<String>()
     val created = mutableListOf<FakeGattLink>()
     var failNext: Throwable? = null
+    val helloIds = mutableListOf<Long>()
+
+    override fun setHello(id: Long) {
+        helloIds += id
+    }
 
     override fun connect(address: String): GattLink {
         connects += address
@@ -147,9 +157,12 @@ internal class Harness(
     testScope: TestScope,
     config: BleConfig = BleConfig(),
     tokens: List<Long> = listOf(1_000L),
+    hellos: List<Long> = listOf(0x1111L),
 ) {
     private val tokenQueue = ArrayDeque(tokens)
     private var lastToken = tokens.last()
+    private val helloQueue = ArrayDeque(hellos)
+    private var lastHello = hellos.last()
 
     val scanner = FakeScanner()
     val advertiser = FakeAdvertiser()
@@ -165,6 +178,7 @@ internal class Harness(
             dispatcher = StandardTestDispatcher(testScope.testScheduler),
             clockMs = { testScope.currentTime },
             tokenSource = { tokenQueue.removeFirstOrNull()?.also { lastToken = it } ?: lastToken },
+            helloSource = { helloQueue.removeFirstOrNull()?.also { lastHello = it } ?: lastHello },
         )
 
     val events = mutableListOf<TransportEvent>()

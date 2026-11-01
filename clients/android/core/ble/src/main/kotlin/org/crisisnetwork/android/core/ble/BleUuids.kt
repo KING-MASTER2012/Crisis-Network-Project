@@ -21,5 +21,11 @@ object BleUuids {
     val TX: UUID = UUID.fromString("6f1d5a32-7c2e-4b8a-9d41-c3b5e0a7f2d6")
 
     /** Client Characteristic Configuration Descriptor (Bluetooth SIG, 0x2902). */
+    /**
+     * HELLO (profile 1.1): read and write. A device shows its current identifier here and the connecting
+     * device writes its own, so that both ends of a link know who is on the other side. See [HelloValue].
+     */
+    val HELLO: UUID = UUID.fromString("6f1d5a33-7c2e-4b8a-9d41-c3b5e0a7f2d6")
+
     val CCCD: UUID = UUID.fromString("00002902-0000-1000-8000-00805f9b34fb")
 }

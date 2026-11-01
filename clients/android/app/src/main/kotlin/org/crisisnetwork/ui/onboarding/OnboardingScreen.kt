@@ -11,10 +11,12 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
@@ -47,6 +49,7 @@ import org.crisisnetwork.android.core.ble.android.BleReadiness
 import org.crisisnetwork.android.core.ble.android.BleSupport
 import org.crisisnetwork.android.core.runtime.failure.CoreFailure
 import org.crisisnetwork.android.ui.UiPreferences
+import org.crisisnetwork.android.ui.components.BackButton
 import org.crisisnetwork.android.ui.components.InfoCard
 import org.crisisnetwork.android.ui.components.PrimaryButton
 import org.crisisnetwork.android.ui.components.QuietButton
@@ -82,16 +85,28 @@ fun OnboardingScreen(onFinished: (joinNow: Boolean) -> Unit) {
 
     Column(modifier = Modifier.fillMaxSize().safeDrawingPadding()) {
         Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.TopCenter) {
-            Column(
-                modifier = Modifier.widthIn(max = 640.dp).fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
+            // The arrow keeps its place from the second step on; on the first step an empty space of the
+            // same size keeps the progress bar from jumping sideways.
+            Row(
+                modifier = Modifier.widthIn(max = 640.dp).fillMaxWidth().padding(start = 4.dp, end = 16.dp, top = 4.dp, bottom = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
             ) {
-                val label = stringResource(R.string.onb_step_of, OnboardingFlow.position(step), OnboardingFlow.total)
-                Text(label, style = MaterialTheme.typography.labelLarge)
-                LinearProgressIndicator(
-                    progress = { OnboardingFlow.position(step).toFloat() / OnboardingFlow.total },
-                    modifier = Modifier.fillMaxWidth().semantics { stateDescription = label },
-                )
+                if (OnboardingFlow.canGoBack(step)) {
+                    BackButton(onClick = { step = OnboardingFlow.previous(step) })
+                } else {
+                    Spacer(modifier = Modifier.size(48.dp))
+                }
+                Column(
+                    modifier = Modifier.weight(1f).padding(start = 4.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    val label = stringResource(R.string.onb_step_of, OnboardingFlow.position(step), OnboardingFlow.total)
+                    Text(label, style = MaterialTheme.typography.labelLarge)
+                    LinearProgressIndicator(
+                        progress = { OnboardingFlow.position(step).toFloat() / OnboardingFlow.total },
+                        modifier = Modifier.fillMaxWidth().semantics { stateDescription = label },
+                    )
+                }
             }
         }
         Box(modifier = Modifier.weight(1f)) {
@@ -102,19 +117,16 @@ fun OnboardingScreen(onFinished: (joinNow: Boolean) -> Unit) {
                         identityCreated = ui.identityCreated,
                         safetyNumber = ui.safetyNumber,
                         onNext = { step = OnboardingFlow.next(step) },
-                        onBack = { step = OnboardingFlow.previous(step) },
                     )
                 OnboardingStep.Nearby ->
                     NearbyStep(
                         ready = nearbyReady,
                         flow = nearbyFlow,
                         onNext = { step = OnboardingFlow.next(step) },
-                        onBack = { step = OnboardingFlow.previous(step) },
                     )
                 OnboardingStep.Background ->
                     BackgroundStep(
                         onNext = { step = OnboardingFlow.next(step) },
-                        onBack = { step = OnboardingFlow.previous(step) },
                     )
                 OnboardingStep.Done ->
                     DoneStep(
@@ -122,7 +134,6 @@ fun OnboardingScreen(onFinished: (joinNow: Boolean) -> Unit) {
                         nearbyReady = nearbyReady,
                         joinFlow = joinFlow,
                         onOpenApp = { onFinished(false) },
-                        onBack = { step = OnboardingFlow.previous(step) },
                     )
             }
         }
@@ -175,7 +186,6 @@ private fun IdentityStep(
     identityCreated: Boolean,
     safetyNumber: String?,
     onNext: () -> Unit,
-    onBack: () -> Unit,
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -204,7 +214,6 @@ private fun IdentityStep(
                     },
                 )
             }
-            QuietButton(text = stringResource(R.string.onb_back), onClick = onBack)
         },
     ) {
         ScreenTitle(stringResource(R.string.onb_identity_title))
@@ -277,7 +286,6 @@ private fun NearbyStep(
     ready: Boolean,
     flow: org.crisisnetwork.android.ui.permissions.MeshStartFlow,
     onNext: () -> Unit,
-    onBack: () -> Unit,
 ) {
     val context = LocalContext.current
     StepFrame(
@@ -295,7 +303,6 @@ private fun NearbyStep(
                 )
                 QuietButton(text = stringResource(R.string.onb_skip), onClick = onNext)
             }
-            QuietButton(text = stringResource(R.string.onb_back), onClick = onBack)
         },
     ) {
         ScreenTitle(stringResource(R.string.onb_nearby_title))
@@ -325,7 +332,6 @@ private fun NearbyStep(
 @Composable
 private fun BackgroundStep(
     onNext: () -> Unit,
-    onBack: () -> Unit,
 ) {
     val context = LocalContext.current
     var recheck by remember { mutableIntStateOf(0) }
@@ -335,7 +341,6 @@ private fun BackgroundStep(
     StepFrame(
         actions = {
             PrimaryButton(text = stringResource(R.string.onb_next), onClick = onNext)
-            QuietButton(text = stringResource(R.string.onb_back), onClick = onBack)
         },
     ) {
         ScreenTitle(stringResource(R.string.onb_background_title))
@@ -370,13 +375,11 @@ private fun DoneStep(
     nearbyReady: Boolean,
     joinFlow: org.crisisnetwork.android.ui.permissions.MeshStartFlow,
     onOpenApp: () -> Unit,
-    onBack: () -> Unit,
 ) {
     StepFrame(
         actions = {
             PrimaryButton(text = stringResource(R.string.onb_join_now), enabled = identityCreated, onClick = joinFlow.start)
             SecondaryButton(text = stringResource(R.string.onb_open_app), onClick = onOpenApp)
-            QuietButton(text = stringResource(R.string.onb_back), onClick = onBack)
         },
     ) {
         ScreenTitle(stringResource(R.string.onb_done_title))

@@ -1,3 +1,47 @@
+# Changes: Android phase A8 and Core phase C8 fix
+
+Written without a Rust or Android toolchain: **nothing here was compiled or run**. Run
+`cargo fmt --all && cargo test --workspace && cargo clippy --workspace --all-targets -- -D warnings`, then
+`./gradlew test` and the instrumented tests (`./gradlew connectedAndroidTest`) on a phone.
+
+## C8 fix (core)
+
+* `core/crates/appcodec/tests/properties.rs`: `prop_assert!` turns the text of its argument into a format
+  string, so the closure with `'\u{7F}'` and braces did not compile ("Invalid format string"). The check is
+  now the function `is_allowed`.
+* New FFI function `budget_status(used, limit)`: the byte counter of an already encoded payload (the announcement
+  screen measures a payload, not a text). `count_bytes` uses it.
+
+## A8 (Android)
+
+* **The app uses the core's conventions.** `AnnouncementCodec`, `TextSanitizer`, `CardCodec`, `ByteBudget`
+  (limits and `Count`), `Lifetimes`, `NicknameStore.normalize`, `Names.shortId` and `MessageStatus` keep their
+  API, but their rules now come from the Rust core (`appcodec`) through UniFFI. The screens did not change.
+  The JVM unit tests that exercised them moved to `app/src/androidTest` (the native library is only loaded on a
+  device); the pure ones stay (`HexTest`). New `ConventionVectorsTest` runs the shared vectors
+  `core/testdata/appcodec.json` against the app, and `DefaultLifetimesTest` took over the lifetime check of
+  `NetworkSettingsTest`. The vectors reach the instrumented tests as resources (Variant API in `app/build.gradle.kts`).
+* **Back buttons.** One component, `BackButton` (an arrow icon of 48 dp that mirrors in right-to-left
+  languages; new drawable `ic_arrow_back`), at the start of the top bar of every screen that opens over the shell
+  (`ScreenTopBar`); the title sits next to it and actions at the end. The "Back to settings" text button of the
+  self-test screen became a normal top bar. In the introduction the four "Back" text buttons under the main
+  button are gone: the arrow sits in the header next to the progress bar from the second step on (an empty
+  space of the same size on the first). Strings `diag_back` and `onb_back` were removed.
+* **BLE link profile 1.1** (`docs/src/protocol/ble-link.md`, rewritten: it now also describes the advertised
+  token and the tie-break of A3, which it did not). New HELLO characteristic
+  (`6f1d5a33-7c2e-4b8a-9d41-c3b5e0a7f2d6`, read and write): after the notifications are on, the client reads the
+  server's 64-bit identifier and writes its own. Both ends of a link then know both identifiers; when a device
+  holds two links to the same neighbour it keeps the one whose client has the lower identifier, and the client of
+  the closed link leaves that address alone for 5 minutes (`duplicateCooldownMs`). The identifier rotates with the
+  token. Needed for iOS, which cannot advertise a token, so two iPhones (or an iPhone and an Android phone) would
+  otherwise always connect twice. A 1.0 neighbour has no HELLO and everything works as before.
+  Code: `HelloValue`, `GattLinkEvent.PeerHello`, `setHello` on `GattConnector` and `GattServerPort`
+  (default no-op), `BleTransport` (`onPeerHello`, `closeDuplicate`, `helloSource`), `AndroidGattClientLink`
+  (new `Hello` step), `AndroidGattServer` (read and write handlers), diagnostic `DuplicateLink`,
+  `BleStats.duplicateLinks`. Tests: `HelloValueTest`, `DuplicateLinkTest`, a case in `BleConfigTest`.
+* Not tested on a phone: the hello exchange needs two real devices (an old and a new build is the useful pair,
+  to prove that a 1.0 neighbour still works).
+
 # Changes: Core phase C8 (app conventions in Rust)
 
 Written without a Rust toolchain: **nothing here was compiled or run**. Run

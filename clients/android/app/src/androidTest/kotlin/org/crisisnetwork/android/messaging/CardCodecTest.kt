@@ -1,12 +1,19 @@
 package org.crisisnetwork.android.messaging
 
+import androidx.test.ext.junit.runners.AndroidJUnit4
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import org.junit.runner.RunWith
 
+/**
+ * Runs on a device: the rules under test live in the Rust core, which is only loaded there
+ * (the JVM unit tests cannot load the native library).
+ */
+@RunWith(AndroidJUnit4::class)
 class CardCodecTest {
     private val card = ByteArray(CardCodec.CARD_LEN) { (it * 7 + 3).toByte() }
 

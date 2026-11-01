@@ -47,6 +47,9 @@ sealed interface BleDiagnostic {
     /** The oldest outgoing link was closed to make room for a waiting neighbour. */
     data class LinkRotated(val address: String) : BleDiagnostic
 
+    /** A link was closed because the same neighbour was already connected through another one (profile 1.1). */
+    data class DuplicateLink(val address: String, val role: LinkRole) : BleDiagnostic
+
     /** The advertised token was replaced. */
     data object TokenRotated : BleDiagnostic
 
@@ -119,4 +122,5 @@ data class BleStats(
     val linkRotations: Long,
     val tokenRotations: Long,
     val scanStarts: Long,
+    val duplicateLinks: Long = 0,
 )

@@ -224,10 +224,20 @@ pub fn announcement_byte_limit(max_payload_bytes: u32, severity: AnnouncementSev
 /// Counts the UTF-8 bytes of a text against a limit.
 #[uniffi::export]
 pub fn count_bytes(text: String, limit: u32) -> ByteCount {
-    let count = appcodec::count_bytes(&text, usize::try_from(limit).unwrap_or(usize::MAX));
+    budget_status(small(appcodec::utf8_length(&text)), limit)
+}
+
+/// How much of a limit `used` bytes take, for a payload that was already encoded (an
+/// announcement counts its marker bytes too, so it is measured in bytes, not as a text).
+#[uniffi::export]
+pub fn budget_status(used: u32, limit: u32) -> ByteCount {
+    let count = appcodec::ByteCount {
+        used: usize::try_from(used).unwrap_or(usize::MAX),
+        limit: usize::try_from(limit).unwrap_or(usize::MAX),
+    };
     ByteCount {
-        used: small(count.used),
-        limit: small(count.limit),
+        used,
+        limit,
         remaining: small(count.remaining()),
         over: count.over(),
         near_limit: count.near_limit(),
@@ -247,10 +257,7 @@ pub fn lifetime_presets(max_secs: i64) -> Vec<i64> {
 /// overflowing.
 #[uniffi::export]
 pub fn lifetime_to_seconds(value: i64, unit: LifetimeUnit) -> i64 {
-    seconds_out(appcodec::lifetime_to_seconds(
-        seconds_in(value),
-        unit.into(),
-    ))
+    seconds_out(appcodec::lifetime_to_seconds(seconds_in(value), unit.into()))
 }
 
 /// Whether `secs` is between one second and `max_secs` (`CoreInfo.max_lifetime_secs`).
@@ -347,18 +354,10 @@ mod tests {
         let info = convention_info();
         let core = crate::core_info();
         assert_eq!(info.direct_seal_overhead, 48);
+        assert_eq!(direct_byte_limit(core.max_payload_bytes), core.max_payload_bytes - 48);
+        assert!(lifetime_is_valid(info.default_lifetime_secs, i64::from(core.max_lifetime_secs)));
         assert_eq!(
-            direct_byte_limit(core.max_payload_bytes),
-            core.max_payload_bytes - 48
-        );
-        assert!(lifetime_is_valid(
-            info.default_lifetime_secs,
-            i64::from(core.max_lifetime_secs)
-        ));
-        assert_eq!(
-            lifetime_presets(i64::from(core.max_lifetime_secs))
-                .last()
-                .copied(),
+            lifetime_presets(i64::from(core.max_lifetime_secs)).last().copied(),
             Some(i64::from(core.max_lifetime_secs))
         );
     }
@@ -375,6 +374,16 @@ mod tests {
                 unit: LifetimeUnit::Seconds
             }
         );
+    }
+
+    #[test]
+    fn a_payload_size_is_judged_like_a_text() {
+        let by_text = count_bytes("x".repeat(95), 100);
+        assert_eq!(budget_status(95, 100), by_text);
+        assert!(by_text.near_limit && !by_text.over);
+        let over = budget_status(101, 100);
+        assert!(over.over && !over.near_limit);
+        assert_eq!(over.remaining, 0);
     }
 
     #[test]

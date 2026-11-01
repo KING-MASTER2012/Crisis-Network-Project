@@ -1,5 +1,11 @@
 package org.crisisnetwork.android.messaging
 
+import uniffi.crisis_core.AnnouncementSeverity
+import uniffi.crisis_core.announcementOverhead
+import uniffi.crisis_core.decodeAnnouncement
+import uniffi.crisis_core.encodeAnnouncement
+import uniffi.crisis_core.sanitizeText
+
 /** How urgent an announcement is. It travels inside the payload, so every phone shows the same style. */
 enum class Severity(val code: Char) {
     Normal('0'),
@@ -18,35 +24,21 @@ enum class Severity(val code: Char) {
  * When reading, a digit above 2 counts as an emergency, `0` as normal, and a payload that does not
  * start with the marker is plain text. Text typed by a person never contains control characters
  * ([TextSanitizer]), so nobody can forge the marker from inside a text.
+ *
+ * The rules live in the Rust core (`appcodec`), so that every client applies the same ones; this object
+ * only translates between the app's types and the core's.
  */
 object AnnouncementCodec {
-    private const val MARKER: Byte = 0x1E
-
     /** Bytes the marker takes from the payload. */
-    fun overhead(severity: Severity): Int = if (severity == Severity.Normal) 0 else 2
+    fun overhead(severity: Severity): Int = announcementOverhead(severity.toCore()).toInt()
 
     class Decoded(val text: String, val severity: Severity)
 
-    fun encode(text: String, severity: Severity): ByteArray {
-        val body = TextSanitizer.clean(text).toByteArray(Charsets.UTF_8)
-        if (severity == Severity.Normal) return body
-        return byteArrayOf(MARKER, severity.code.code.toByte()) + body
-    }
+    fun encode(text: String, severity: Severity): ByteArray = encodeAnnouncement(text, severity.toCore())
 
     fun decode(payload: ByteArray): Decoded {
-        if (payload.size >= 2 && payload[0] == MARKER) {
-            val digit = payload[1].toInt() - '0'.code
-            if (digit in 0..9) {
-                val severity =
-                    when (digit) {
-                        0 -> Severity.Normal
-                        1 -> Severity.Important
-                        else -> Severity.Emergency
-                    }
-                return Decoded(TextSanitizer.clean(String(payload, 2, payload.size - 2, Charsets.UTF_8)), severity)
-            }
-        }
-        return Decoded(TextSanitizer.clean(String(payload, Charsets.UTF_8)), Severity.Normal)
+        val decoded = decodeAnnouncement(payload)
+        return Decoded(decoded.text, decoded.severity.toApp())
     }
 }
 
@@ -56,17 +48,19 @@ object TextSanitizer {
      * Removes control characters (except new lines and tabs) and the bidirectional embedding,
      * override and isolate characters, which can be used to make a text read as something else.
      */
-    fun clean(text: String): String {
-        val out = StringBuilder(text.length)
-        for (ch in text) {
-            when {
-                ch == '\n' || ch == '\t' -> out.append(ch)
-                ch.code < 0x20 || ch.code == 0x7F -> Unit
-                ch in '\u202A'..'\u202E' -> Unit
-                ch in '\u2066'..'\u2069' -> Unit
-                else -> out.append(ch)
-            }
-        }
-        return out.toString()
-    }
+    fun clean(text: String): String = sanitizeText(text)
 }
+
+internal fun Severity.toCore(): AnnouncementSeverity =
+    when (this) {
+        Severity.Normal -> AnnouncementSeverity.NORMAL
+        Severity.Important -> AnnouncementSeverity.IMPORTANT
+        Severity.Emergency -> AnnouncementSeverity.EMERGENCY
+    }
+
+private fun AnnouncementSeverity.toApp(): Severity =
+    when (this) {
+        AnnouncementSeverity.NORMAL -> Severity.Normal
+        AnnouncementSeverity.IMPORTANT -> Severity.Important
+        AnnouncementSeverity.EMERGENCY -> Severity.Emergency
+    }

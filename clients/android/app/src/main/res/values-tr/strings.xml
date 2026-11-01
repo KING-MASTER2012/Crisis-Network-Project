@@ -67,7 +67,6 @@
     <string name="home_error_title">Bir sorun oluştu</string>
     <string name="home_identity_title">Güvenlik numaranız</string>
     <string name="home_identity_hint">Tanıştığınız kişiye okuyun; o da telefonunda sizin için görünen numarayla karşılaştırsın.</string>
-    <string name="diag_back">Ayarlara dön</string>
     <string name="settings_appearance">Görünüm</string>
     <string name="settings_theme_system">Sistemi izle</string>
     <string name="settings_theme_light">Açık</string>
@@ -96,7 +95,6 @@
     <string name="onb_step_of">Adım %1$d / %2$d</string>
     <string name="onb_get_started">Başla</string>
     <string name="onb_next">Devam</string>
-    <string name="onb_back">Geri</string>
     <string name="onb_skip">Şimdi değil</string>
     <string name="onb_welcome_title">Kriz Ağı’na hoş geldiniz</string>
     <string name="onb_welcome_body">Telefon şebekesi ve internet çalışmadığında çevrenizdekilerle mesajlaşın.</string>

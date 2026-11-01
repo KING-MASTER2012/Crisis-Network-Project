@@ -1,6 +1,7 @@
 package org.crisisnetwork.android.messaging
 
-import java.util.Base64
+import uniffi.crisis_core.decodeCardText
+import uniffi.crisis_core.encodeCardText
 
 /**
  * The text form of a contact card, used in QR codes and when a card is shared as text.
@@ -9,7 +10,7 @@ import java.util.Base64
  * `crisis:` followed by the card in URL-safe base64 without padding (171 characters), which fits a
  * QR code of version 8 at the lowest error correction level: few, large modules that scan easily.
  * [decode] is forgiving: it ignores white space and the case of the prefix, the prefix may be
- * missing, and standard base64 is accepted as well.
+ * missing, and standard base64 is accepted as well. The rules live in the Rust core (`appcodec`).
  */
 object CardCodec {
     /** Length of a contact card in bytes. */
@@ -17,25 +18,8 @@ object CardCodec {
 
     const val PREFIX = "crisis:"
 
-    fun encode(card: ByteArray): String = PREFIX + Base64.getUrlEncoder().withoutPadding().encodeToString(card)
+    fun encode(card: ByteArray): String = encodeCardText(card)
 
     /** The card bytes, or `null` when [text] is not a card (wrong characters or wrong length). */
-    fun decode(text: String): ByteArray? {
-        val cleaned = text.filterNot { it.isWhitespace() }
-        val body = if (cleaned.startsWith(PREFIX, ignoreCase = true)) cleaned.substring(PREFIX.length) else cleaned
-        if (body.isEmpty()) return null
-        val bytes = decodeBase64(body) ?: return null
-        return bytes.takeIf { it.size == CARD_LEN }
-    }
-
-    private fun decodeBase64(body: String): ByteArray? =
-        try {
-            Base64.getUrlDecoder().decode(body)
-        } catch (_: IllegalArgumentException) {
-            try {
-                Base64.getDecoder().decode(body)
-            } catch (_: IllegalArgumentException) {
-                null
-            }
-        }
+    fun decode(text: String): ByteArray? = decodeCardText(text)
 }

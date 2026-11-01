@@ -8,6 +8,20 @@ use appcodec::{
 use proptest::collection::vec;
 use proptest::prelude::*;
 
+/// What `clean` must leave in a text. A function, not a closure inside `prop_assert!`: that macro
+/// turns the text of its argument into a format string, and braces (`'\u{7F}'`, a closure body)
+/// are not valid there.
+fn is_allowed(c: char) -> bool {
+    if c == '\n' || c == '\t' {
+        return true;
+    }
+    let forbidden = c < ' '
+        || c == '\u{7F}'
+        || ('\u{202A}'..='\u{202E}').contains(&c)
+        || ('\u{2066}'..='\u{2069}').contains(&c);
+    !forbidden
+}
+
 fn arb_severity() -> impl Strategy<Value = Severity> {
     prop_oneof![
         Just(Severity::Normal),
@@ -21,12 +35,7 @@ proptest! {
     fn clean_is_idempotent_and_leaves_no_forbidden_character(text in any::<String>()) {
         let once = clean(&text);
         prop_assert_eq!(clean(&once), once.clone());
-        prop_assert!(once.chars().all(|c| {
-            c == '\n'
-                || c == '\t'
-                || !(c < ' ' || c == '\u{7F}' || ('\u{202A}'..='\u{202E}').contains(&c)
-                    || ('\u{2066}'..='\u{2069}').contains(&c))
-        }));
+        prop_assert!(once.chars().all(is_allowed));
     }
 
     #[test]

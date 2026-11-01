@@ -1,3 +1,4 @@
+import com.android.build.api.variant.ApplicationAndroidComponentsExtension
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 // AGP 9 compiles Kotlin itself (built-in Kotlin): do not apply org.jetbrains.kotlin.android.
@@ -138,4 +139,13 @@ dependencies {
     androidTestImplementation(libs.junit)
     androidTestImplementation(libs.androidx.test.ext.junit)
     androidTestImplementation(libs.androidx.test.runner)
+}
+
+// The shared test vectors of the Rust core (core/testdata/appcodec.json) are packed as resources of the
+// instrumented tests, which run them against the app's conventions on a device. AGP 9 has no
+// `android.sourceSets` in build scripts: the Variant API adds the directory.
+val sharedTestData: File = rootProject.projectDir.resolve("../../core/testdata")
+
+extensions.getByType<ApplicationAndroidComponentsExtension>().onVariants { variant ->
+    variant.androidTest?.sources?.resources?.addStaticSourceDirectory(sharedTestData.absolutePath)
 }

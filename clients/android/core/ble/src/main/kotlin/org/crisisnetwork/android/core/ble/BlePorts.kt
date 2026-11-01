@@ -84,10 +84,16 @@ interface GattServerPort {
 
     /** Closes the server and every link it handed out. */
     fun close()
+
+    /** The identifier the server shows in the HELLO characteristic from now on (profile 1.1). */
+    fun setHello(id: Long) {}
 }
 
 /** The central side: opens outgoing connections. */
 interface GattConnector {
+    /** The identifier written to the HELLO characteristic of every link opened from now on (profile 1.1). */
+    fun setHello(id: Long) {}
+
     /**
      * Starts connecting to [address] and returns the link at once; the outcome arrives as
      * [GattLinkEvent]s (Ready, or Closed when it failed).
@@ -125,6 +131,12 @@ sealed interface GattLinkEvent {
      * remote device subscribed (server). [attMtu] is the ATT MTU known at that moment.
      */
     data class Ready(val attMtu: Int) : GattLinkEvent
+
+    /**
+     * The device on the other side of the link told its identifier (profile 1.1: the server was read, or the
+     * client wrote its HELLO). Reported at most once, and only when the other side speaks profile 1.1.
+     */
+    data class PeerHello(val id: Long) : GattLinkEvent
 
     /** The ATT MTU changed after (or while) the link became ready. */
     data class MtuChanged(val attMtu: Int) : GattLinkEvent

@@ -1,7 +1,5 @@
 package org.crisisnetwork.android.ui
 
-import org.crisisnetwork.android.messaging.Lifetimes
-import org.crisisnetwork.android.settings.DefaultLifetimes
 import org.crisisnetwork.android.settings.StorageLimits
 import org.crisisnetwork.android.ui.network.ByteSizes
 import org.junit.Assert.assertEquals
@@ -25,16 +23,6 @@ class NetworkSettingsTest {
         assertEquals(StorageLimits.DEFAULT_MB, StorageLimits.coerce(-5))
         assertEquals(StorageLimits.DEFAULT_MB, StorageLimits.coerce(33))
         assertTrue(StorageLimits.DEFAULT_MB in StorageLimits.presetsMb)
-    }
-
-    @Test
-    fun theDefaultLifetimeIsAlwaysOneOfTheComposerPresets() {
-        assertEquals(3_600L, DefaultLifetimes.coerce(3_600L))
-        assertEquals(Lifetimes.DEFAULT_SECS, DefaultLifetimes.coerce(1L))
-        assertEquals(Lifetimes.DEFAULT_SECS, DefaultLifetimes.coerce(Long.MAX_VALUE))
-        // A protocol maximum below a preset removes that preset from the choices.
-        assertEquals(Lifetimes.DEFAULT_SECS, DefaultLifetimes.coerce(604_800L, maxSecs = 86_400L))
-        assertTrue(DefaultLifetimes.options().all { it in Lifetimes.presetSeconds })
     }
 
     @Test

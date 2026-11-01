@@ -43,7 +43,11 @@ import uniffi.crisis_core.TrustLevel
 
 // Pieces shared by the messaging screens of phase A5 (chats, contacts, announcements).
 
-/** The top of a screen that opens over the shell: a way back, the title and optional actions at the end. */
+/**
+ * The top of a screen that opens over the shell: the back arrow at the start, then the title, then
+ * optional actions at the end. The arrow sits where the thumb and the eye expect it, in the top corner
+ * (the start edge in right-to-left languages), and the title stays next to it.
+ */
 @Composable
 fun ScreenTopBar(
     title: String,
@@ -52,16 +56,16 @@ fun ScreenTopBar(
     trailing: @Composable () -> Unit = {},
 ) {
     Row(
-        modifier = modifier.fillMaxWidth().heightIn(min = 56.dp).padding(horizontal = 4.dp),
+        modifier = modifier.fillMaxWidth().heightIn(min = 56.dp).padding(start = 4.dp, end = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        QuietButton(text = stringResource(R.string.back), onClick = onBack)
+        BackButton(onClick = onBack)
         Text(
             text = title,
             style = MaterialTheme.typography.titleLarge,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.weight(1f).padding(horizontal = 8.dp).semantics { heading() },
+            modifier = Modifier.weight(1f).padding(horizontal = 4.dp).semantics { heading() },
         )
         trailing()
     }

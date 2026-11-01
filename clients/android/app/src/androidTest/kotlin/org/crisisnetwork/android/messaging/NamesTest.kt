@@ -1,9 +1,16 @@
 package org.crisisnetwork.android.messaging
 
+import androidx.test.ext.junit.runners.AndroidJUnit4
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
+import org.junit.runner.RunWith
 
+/**
+ * Runs on a device: the rules under test live in the Rust core, which is only loaded there
+ * (the JVM unit tests cannot load the native library).
+ */
+@RunWith(AndroidJUnit4::class)
 class NamesTest {
     private class MapStore : KeyValueStore {
         val map = mutableMapOf<String, String>()
@@ -42,15 +49,6 @@ class NamesTest {
     fun shortIdsAreEightDigits() {
         assertEquals("0123abcd", Names.shortId("0123abcd4567ef89"))
         assertEquals("ab", Names.shortId("ab"))
-    }
-
-    @Test
-    fun hexRoundTrips() {
-        val bytes = byteArrayOf(0, 1, 0x7F, 0x80.toByte(), 0xFF.toByte())
-        assertEquals("00017f80ff", Hex.encode(bytes))
-        assertEquals(bytes.toList(), Hex.decode("00017F80FF")!!.toList())
-        assertNull(Hex.decode("abc"))
-        assertNull(Hex.decode("zz"))
     }
 
     @Test

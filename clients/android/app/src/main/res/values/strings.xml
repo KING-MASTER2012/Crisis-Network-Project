@@ -67,7 +67,6 @@
     <string name="home_error_title">Something went wrong</string>
     <string name="home_identity_title">Your safety number</string>
     <string name="home_identity_hint">Read it to a person you meet, so that they can check it against what their phone shows for you.</string>
-    <string name="diag_back">Back to settings</string>
     <string name="settings_appearance">Appearance</string>
     <string name="settings_theme_system">Follow the system</string>
     <string name="settings_theme_light">Light</string>
@@ -96,7 +95,6 @@
     <string name="onb_step_of">Step %1$d of %2$d</string>
     <string name="onb_get_started">Get started</string>
     <string name="onb_next">Continue</string>
-    <string name="onb_back">Back</string>
     <string name="onb_skip">Not now</string>
     <string name="onb_welcome_title">Welcome to Crisis Network</string>
     <string name="onb_welcome_body">Message the people around you when the phone network and the internet are down.</string>

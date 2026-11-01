@@ -21,6 +21,7 @@ import org.crisisnetwork.android.core.ble.CloseReason
 import org.crisisnetwork.android.core.ble.GattLink
 import org.crisisnetwork.android.core.ble.GattLinkEvent
 import org.crisisnetwork.android.core.ble.GattServerPort
+import org.crisisnetwork.android.core.ble.HelloValue
 import org.crisisnetwork.android.core.ble.LinkRole
 import org.crisisnetwork.android.core.ble.ServerEvent
 import java.util.concurrent.ConcurrentHashMap
@@ -59,6 +60,13 @@ internal class AndroidGattServer(
     @Volatile
     private var txCharacteristic: BluetoothGattCharacteristic? = null
 
+    @Volatile
+    private var helloId: Long? = null
+
+    override fun setHello(id: Long) {
+        helloId = id
+    }
+
     private val callback =
         object : BluetoothGattServerCallback() {
             override fun onServiceAdded(status: Int, service: BluetoothGattService?) {
@@ -79,6 +87,23 @@ internal class AndroidGattServer(
 
             override fun onMtuChanged(device: BluetoothDevice, mtu: Int) {
                 links[device.address]?.onMtu(mtu)
+            }
+
+            override fun onCharacteristicReadRequest(
+                device: BluetoothDevice,
+                requestId: Int,
+                offset: Int,
+                characteristic: BluetoothGattCharacteristic,
+            ) {
+                val value = helloId?.let { HelloValue.encode(it) }
+                val ok = characteristic.uuid == BleUuids.HELLO && value != null && offset in 0..value.size
+                respond(
+                    device,
+                    requestId,
+                    if (ok) BluetoothGatt.GATT_SUCCESS else BluetoothGatt.GATT_REQUEST_NOT_SUPPORTED,
+                    offset,
+                    if (ok) value!!.copyOfRange(offset, value.size) else null,
+                )
             }
 
             override fun onDescriptorReadRequest(
@@ -137,8 +162,14 @@ internal class AndroidGattServer(
                 value: ByteArray?,
             ) {
                 val link = links[device.address]
-                val accepted = characteristic.uuid == BleUuids.RX && link != null && !preparedWrite && offset == 0 && value != null
-                if (accepted) link?.onPacket(value!!.copyOf())
+                val plain = link != null && !preparedWrite && offset == 0 && value != null
+                val hello = if (plain && characteristic.uuid == BleUuids.HELLO) HelloValue.decode(value) else null
+                val accepted = (plain && characteristic.uuid == BleUuids.RX) || hello != null
+                if (hello != null) {
+                    link?.onHello(hello)
+                } else if (accepted) {
+                    link?.onPacket(value!!.copyOf())
+                }
                 if (responseNeeded) {
                     respond(
                         device,
@@ -170,6 +201,12 @@ internal class AndroidGattServer(
                 BluetoothGattDescriptor.PERMISSION_READ or BluetoothGattDescriptor.PERMISSION_WRITE,
             ),
         )
+        val helloCharacteristic =
+            BluetoothGattCharacteristic(
+                BleUuids.HELLO,
+                BluetoothGattCharacteristic.PROPERTY_READ or BluetoothGattCharacteristic.PROPERTY_WRITE,
+                BluetoothGattCharacteristic.PERMISSION_READ or BluetoothGattCharacteristic.PERMISSION_WRITE,
+            )
         val rx =
             BluetoothGattCharacteristic(
                 BleUuids.RX,
@@ -179,6 +216,7 @@ internal class AndroidGattServer(
         val service = BluetoothGattService(BleUuids.SERVICE, BluetoothGattService.SERVICE_TYPE_PRIMARY)
         service.addCharacteristic(rx)
         service.addCharacteristic(tx)
+        service.addCharacteristic(helloCharacteristic)
 
         txCharacteristic = tx
         gattServer = server
@@ -267,6 +305,10 @@ internal class AndroidGattServer(
         fun onMtu(mtu: Int) {
             attMtu = mtu
             if (subscribed && !closed.get()) channel.trySend(GattLinkEvent.MtuChanged(mtu))
+        }
+
+        fun onHello(id: Long) {
+            if (!closed.get()) channel.trySend(GattLinkEvent.PeerHello(id))
         }
 
         fun onPacket(bytes: ByteArray) {

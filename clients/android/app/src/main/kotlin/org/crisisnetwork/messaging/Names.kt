@@ -1,6 +1,10 @@
 package org.crisisnetwork.android.messaging
 
 import android.content.SharedPreferences
+import uniffi.crisis_core.messageDeliveryStatus
+import uniffi.crisis_core.normalizeNickname
+import uniffi.crisis_core.shortNodeId
+import uniffi.crisis_core.DeliveryStatus as CoreDeliveryStatus
 
 /** Where nicknames are kept. A map in tests, `SharedPreferences` in the app. */
 interface KeyValueStore {
@@ -42,17 +46,14 @@ class NicknameStore(private val store: KeyValueStore) {
         const val MAX_LENGTH = 40
 
         /** One line, no control characters, trimmed, at most [MAX_LENGTH] characters; `null` when nothing is left. */
-        fun normalize(raw: String): String? {
-            val oneLine = TextSanitizer.clean(raw).replace('\n', ' ').replace('\t', ' ').trim()
-            return oneLine.take(MAX_LENGTH).trim().ifEmpty { null }
-        }
+        fun normalize(raw: String): String? = normalizeNickname(raw)
     }
 }
 
 /** How a node is called on screen. */
 object Names {
     /** The first eight hexadecimal digits of a node id: enough to tell nodes apart at a glance. */
-    fun shortId(nodeIdHex: String): String = nodeIdHex.take(8)
+    fun shortId(nodeIdHex: String): String = shortNodeId(nodeIdHex)
 }
 
 /** What a sent message has been through so far. Received messages have no status. */
@@ -65,9 +66,9 @@ object MessageStatus {
      * published (stored and spreading). An announcement never gets an acknowledgement.
      */
     fun of(outgoing: Boolean, direct: Boolean, delivered: Boolean): DeliveryStatus? =
-        when {
-            !outgoing -> null
-            direct && delivered -> DeliveryStatus.Delivered
-            else -> DeliveryStatus.Published
+        when (messageDeliveryStatus(outgoing, direct, delivered)) {
+            null -> null
+            CoreDeliveryStatus.PUBLISHED -> DeliveryStatus.Published
+            CoreDeliveryStatus.DELIVERED -> DeliveryStatus.Delivered
         }
 }

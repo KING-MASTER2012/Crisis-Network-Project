@@ -35,4 +35,10 @@ class BleConfigTest {
         assertEquals(2_000.0, rx.rxBytesPerSecond!!, 0.001)
         assertNull(LinkMetrics(packetsReceived = 1, bytesReceived = 100, firstReceiveMs = 5, lastReceiveMs = 5).rxBytesPerSecond)
     }
+
+    @Test
+    fun theDuplicatePauseMayNotBeNegative() {
+        assertThrows(IllegalArgumentException::class.java) { BleConfig(duplicateCooldownMs = -1L) }
+        assertEquals(5 * 60_000L, BleConfig().duplicateCooldownMs)
+    }
 }
