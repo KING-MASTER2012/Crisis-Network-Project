@@ -118,7 +118,7 @@ fat_library() {
 }
 
 echo "==> Generating the Swift bindings"
-scripts/gen-bindings.sh swift
+bash scripts/gen-bindings.sh swift
 bindings="target/bindings/swift"
 for file in crisis_core.swift crisis_coreFFI.h crisis_coreFFI.modulemap; do
     [ -f "$bindings/$file" ] || { echo "UniFFI did not produce $bindings/$file" >&2; exit 1; }

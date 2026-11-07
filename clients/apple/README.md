@@ -1,12 +1,13 @@
 # Crisis Network for Apple (iOS, iPadOS, macOS)
 
-SwiftUI clients on top of the Rust core. Plan and phases: `I0` ... `I9` (see `CHANGELOG.md`). This folder is the
-result of **phase I0**: the toolchain, the core as a Swift package, a placeholder app and CI. There is no
-Bluetooth and no real screen yet.
+SwiftUI clients on top of the Rust core. Plan and phases: `I0` ... `I9` (see `CHANGELOG.md`). This folder holds the
+result of **phase I0** (the toolchain, the core as a Swift package, a placeholder app, CI) and **phase I1** (the
+runtime around the core). There is no Bluetooth and no real screen yet.
 
 ```
 clients/apple/
   Packages/CrisisCore/     Swift package: the Rust core (XCFramework), its UniFFI bindings, CoreSelfCheck
+  Packages/CrisisRuntime/  Swift package: clock, secrets (Keychain), storage layout, NodeRuntime, transport seam
   App/Shared/              the app (iOS and macOS share it)
   Tests/iOS/               tests that run inside the iOS app on the simulator
   Config/                  Base.xcconfig (shared), Local.xcconfig (yours, not committed)
@@ -29,10 +30,11 @@ Minimum systems: **iOS 17** and **macOS 14** (set in `Package.swift`, `Config/Ba
 
 ```sh
 # 1. The core: static libraries, XCFramework, Swift bindings (a few minutes the first time).
-scripts/build-apple.sh                  # dev profile, arm64 slices; add --sqlcipher for the encrypted database
+bash scripts/build-apple.sh             # dev profile, arm64 slices; add --sqlcipher for the encrypted database
 
 # 2. The Swift package tests on the Mac.
-cd clients/apple/Packages/CrisisCore && swift test && cd -
+swift test --package-path clients/apple/Packages/CrisisCore
+swift test --package-path clients/apple/Packages/CrisisRuntime
 
 # 3. The Xcode project, then open it.
 cd clients/apple && xcodegen generate && open CrisisNetwork.xcodeproj
@@ -52,6 +54,31 @@ cp clients/apple/Config/Local.xcconfig.example clients/apple/Config/Local.xcconf
 
 Then regenerate the project (`xcodegen generate`), pick your phone and run. The first time, the phone asks you to
 trust the developer (Settings > General > VPN & Device Management).
+
+## The runtime (phase I1)
+
+`CrisisRuntime` is the Swift counterpart of the Android module `core:runtime`, with the same contracts:
+
+| Piece | What it does |
+| --- | --- |
+| `NodeBootstrap` | Checks the interface version, prepares the storage directory, takes the seed and the database key from the vault, opens the database, returns a `NodeRuntime`. `EncryptionPolicy`: `required` (release), `ifAvailable` (debug), `disabled` (tests). |
+| `NodeRuntime` (actor) | Owns the node. Transport events, calls and timer ticks run one after another. Routes the core's output: packets to the `Transport`, notifications to `notifications()`. Errors become `CoreFailure`; a fatal one stops the runtime. |
+| `Transport` | The seam to the radio (events in, `send`/`disconnect` out, same contract as on Android). `LoopbackNetwork` is the in-memory implementation for tests and previews; the Bluetooth one is I2 and I3. |
+| `SecretVault` + `KeychainSecretStore` | Seed and database key in the Keychain (`AfterFirstUnlockThisDeviceOnly`: readable while the phone is locked, never copied to another device or to a backup). An item that exists but cannot be read is **never overwritten**; only an explicit `resetIdentity` clears it. |
+| `StorageLayout` | `Application Support/Crisis`: excluded from backups, protection class `completeUntilFirstUserAuthentication` on iOS (the default `complete` would make background writes fail on a locked phone). |
+| `MonotonicWallClock` | The clock the core sees: monotonic inside a process (`mach_continuous_time`, which counts sleep), adopts forward corrections, remembers a high-water mark across restarts (same rules as Android). |
+| `TimerPolicy` | When to `tick` next (the core's deadline, an idle tick every 30 s, never faster than every 10 ms). |
+| `CoreFailure` | The errors the app can react to, mapped from the core's `CoreError`. |
+
+**A deleted app starts with a new identity.** On iOS Keychain items survive the deletion of the app, its files do
+not. `NodeBootstrap` therefore discards secrets that have neither the install marker (`installed-v1`) nor a
+database next to them. (Android needs no such rule: the Keystore key goes with the app.)
+
+**Background.** iOS runs no timers while the app is suspended. In the background the runtime ticks when the
+Bluetooth stack wakes the app; that is I3's job.
+
+`RuntimeSelfCheck` runs the clock, the Keychain, the bootstrap (restart and reinstall) and two runtimes talking over
+the loopback; the app shows it under "Runtime", and the iOS test bundle runs it on the simulator.
 
 ## `scripts/build-apple.sh`
 
@@ -79,6 +106,9 @@ them is committed. After every change to the Rust core (or to a UniFFI signature
 * **The SQLCipher decision is open until the CI job `apple-sqlcipher` is green**: the plan is the same vendored
   OpenSSL build as Android (one crypto stack to audit). If OpenSSL does not build for the simulator or
   macOS slices, the fallback is SQLCipher with Apple's CommonCrypto, which needs a change in the `storage` crate.
+* **Scripts are called with `bash`** (`bash scripts/build-apple.sh`): a ZIP unpacked on Windows loses the
+  executable bit, and CI would fail with "Permission denied". On a Mac you can also `chmod +x scripts/*.sh`, and
+  `git update-index --chmod=+x scripts/*.sh` makes git remember it.
 * **Static library with a C module map**, not a dynamic framework: nothing to embed or sign, and App Store review
   sees one binary.
 

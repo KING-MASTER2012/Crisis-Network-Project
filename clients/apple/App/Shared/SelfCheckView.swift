@@ -1,25 +1,25 @@
 import CrisisCore
+import CrisisRuntime
 import SwiftUI
 
-/// Runs the self-test of the Rust core and shows every step. On a phone this is the proof that the core works
-/// there; it needs no Bluetooth and no permission.
+/// Runs the self-tests of the Rust core and of the runtime and shows every step. On a phone this is the proof that
+/// they work there; it needs no Bluetooth and no permission.
 struct SelfCheckView: View {
-    @State private var report: SelfCheckReport?
+    @State private var coreReport: SelfCheckReport?
+    @State private var runtimeReport: SelfCheckReport?
     @State private var running = false
 
     var body: some View {
         NavigationStack {
             List {
-                if let report {
-                    Section {
-                        ForEach(report.steps) { step in
-                            StepRow(step: step)
-                        }
-                    } footer: {
-                        Text(report.passed ? "Everything works on this device." : "Something does not work on this device.")
-                    }
-                } else {
+                if coreReport == nil && runtimeReport == nil {
                     ProgressView("Running the self-test…")
+                }
+                if let coreReport {
+                    ReportSection(title: "Core", report: coreReport)
+                }
+                if let runtimeReport {
+                    ReportSection(title: "Runtime", report: runtimeReport)
                 }
             }
             .navigationTitle("Crisis Network")
@@ -35,9 +35,27 @@ struct SelfCheckView: View {
 
     private func run() async {
         running = true
-        // The checks are quick, but they open a database, so they stay off the main thread.
-        report = await Task.detached(priority: .userInitiated) { CoreSelfCheck.run() }.value
+        // The checks open databases and the Keychain, so they stay off the main thread.
+        coreReport = await Task.detached(priority: .userInitiated) { CoreSelfCheck.run() }.value
+        runtimeReport = await RuntimeSelfCheck.run()
         running = false
+    }
+}
+
+private struct ReportSection: View {
+    let title: String
+    let report: SelfCheckReport
+
+    var body: some View {
+        Section {
+            ForEach(report.steps) { step in
+                StepRow(step: step)
+            }
+        } header: {
+            Text(title)
+        } footer: {
+            Text(report.passed ? "Everything works on this device." : "Something does not work on this device.")
+        }
     }
 }
 

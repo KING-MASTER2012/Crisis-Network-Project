@@ -12,7 +12,7 @@ MARKETING_VERSION = 0.1.0
 CURRENT_PROJECT_VERSION = 1
 
 // One bundle identifier for iOS and macOS (a "universal purchase" in the App Store). The targets build on it.
-APP_BUNDLE_ID = org.crisisnetwork.app
+APP_BUNDLE_ID = org.crisisnetworkproject.crisisnetwork
 
 // Your Apple developer team and anything else personal: copy Local.xcconfig.example to Local.xcconfig.
 #include? "Local.xcconfig"

@@ -267,10 +267,11 @@ jobs:
               run: brew install xcodegen
             # The `dev` Cargo profile, as for Android: fast, and nothing here needs optimised code.
             - name: Build the core for iOS, the iOS simulator and macOS
-              run: scripts/build-apple.sh --profile dev
+              run: bash scripts/build-apple.sh --profile dev
             - name: Swift package tests (on the Mac)
-              working-directory: clients/apple/Packages/CrisisCore
-              run: swift test
+              run: |
+                  swift test --package-path clients/apple/Packages/CrisisCore
+                  swift test --package-path clients/apple/Packages/CrisisRuntime
             - name: Generate the Xcode project
               working-directory: clients/apple
               run: xcodegen generate
@@ -285,7 +286,7 @@ jobs:
                       -destination 'generic/platform=iOS' CODE_SIGNING_ALLOWED=NO build
             - name: iOS app tests on the simulator
               run: |
-                  udid=$(scripts/apple-simulator-udid.sh)
+                  udid=$(bash scripts/apple-simulator-udid.sh)
                   echo "Simulator: $udid"
                   xcodebuild -project clients/apple/CrisisNetwork.xcodeproj -scheme CrisisNetwork-iOS \
                       -destination "id=$udid" CODE_SIGNING_ALLOWED=NO test
@@ -316,9 +317,10 @@ jobs:
               with:
                   key: apple-sqlcipher
             - name: Build the core with SQLCipher
-              run: scripts/build-apple.sh --profile dev --sqlcipher
+              run: bash scripts/build-apple.sh --profile dev --sqlcipher
             - name: Swift package tests (on the Mac), SQLCipher required
-              working-directory: clients/apple/Packages/CrisisCore
               env:
                   CRISIS_EXPECT_SQLCIPHER: "1"
-              run: swift test
+              run: |
+                  swift test --package-path clients/apple/Packages/CrisisCore
+                  swift test --package-path clients/apple/Packages/CrisisRuntime

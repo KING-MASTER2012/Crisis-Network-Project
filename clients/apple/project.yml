@@ -17,6 +17,8 @@ configFiles:
 packages:
     CrisisCore:
         path: Packages/CrisisCore
+    CrisisRuntime:
+        path: Packages/CrisisRuntime
 
 targets:
     CrisisNetwork-iOS:
@@ -26,6 +28,7 @@ targets:
             - path: App/Shared
         dependencies:
             - package: CrisisCore
+            - package: CrisisRuntime
         info:
             path: App/iOS/Info.plist
             properties:
@@ -62,6 +65,7 @@ targets:
             - path: App/Shared
         dependencies:
             - package: CrisisCore
+            - package: CrisisRuntime
         info:
             path: App/macOS/Info.plist
             properties:
@@ -88,6 +92,7 @@ targets:
         dependencies:
             - target: CrisisNetwork-iOS
             - package: CrisisCore
+            - package: CrisisRuntime
         settings:
             base:
                 PRODUCT_BUNDLE_IDENTIFIER: "$(APP_BUNDLE_ID).tests"

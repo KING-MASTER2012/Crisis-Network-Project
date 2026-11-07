@@ -1,3 +1,37 @@
+# Changes: Apple phase I1 (the runtime) and a CI fix
+
+Written without a Mac or a Swift compiler: **nothing here was compiled or run**. Likeliest first mismatches: the
+spelling of the bindings' `CoreError` cases (isolated in `CoreFailure.swift`, see the comment there), Swift
+concurrency warnings, and the Keychain on the unsigned iOS simulator test (`RuntimeAppTests`).
+
+* **CI fix: "Permission denied".** A ZIP unpacked on Windows loses the executable bit of `scripts/*.sh`. The workflow
+  now calls them with `bash`, `build-apple.sh` calls `bash scripts/gen-bindings.sh`, and the README says how to keep
+  the bit in git (`git update-index --chmod=+x`). The CI jobs also run the tests of the new package.
+* **New package `clients/apple/Packages/CrisisRuntime`** (the Swift counterpart of the Android `core:runtime`):
+    * `NodeBootstrap` and `EncryptionPolicy`: interface check, storage directory, vault, open the database, hand out a
+      `NodeRuntime`; `resetIdentity`. **Leftovers of an earlier install are discarded** (Keychain items outlive the app on
+      Apple, unlike the Android Keystore key): secrets with neither the install marker nor a database are deleted.
+    * `NodeRuntime` (actor): the node's single owner; peer/packet events, calls and ticks run one after another; outputs
+      routed to the `Transport` and to `notifications()`, `failures()`, `states()` (each call gets its own stream);
+      timer rescheduled after every output; errors mapped to `CoreFailure`; a fatal one stops the runtime.
+      The full API of the Android `NodeRuntime` (publish, contacts, trust, history, conversations, unread, stats).
+    * `Transport` (`TransportEvent`) and `LoopbackNetwork`, same contract as Android (handles never reused, MTU enforced).
+    * `SecretVault`, `SecretStore`, `KeychainSecretStore` (`AfterFirstUnlockThisDeviceOnly`, no iCloud, data protection
+      keychain on iOS; the file keychain on macOS until I8), `NodeSecrets`. Never overwrites a secret it cannot read.
+    * `StorageLayout`: `Application Support/Crisis`, excluded from backups, `completeUntilFirstUserAuthentication` on iOS.
+    * `MonotonicWallClock` (+ `FileHighWaterStore`, `MemoryHighWaterStore`, `SystemClocks` on `mach_continuous_time`),
+      `TimerPolicy`, `CoreFailure`.
+    * `RuntimeSelfCheck`: clock, Keychain, bootstrap with restart and reinstall, two runtimes over the loopback.
+* **Tests** (`swift test`, on the Mac, no Keychain needed): `TimerPolicyTests`, `MonotonicWallClockTests`,
+  `SecretVaultTests`, `LoopbackNetworkTests`, `CoreFailureTests` (against errors the real core produces),
+  `NodeRuntimeTests` (the exit test of I1: two runtimes with real cores, broadcast, private message and
+  acknowledgement, link up and down, lifecycle, failure of the transport), `NodeBootstrapTests` (restart, reinstall,
+  unreadable secrets, reset, encryption policies). The iOS test bundle runs `RuntimeSelfCheck` inside the app on the
+  simulator (`Tests/iOS/RuntimeAppTests.swift`), which is where the real Keychain is exercised.
+* **App**: the self-test screen now shows the core's and the runtime's report. `CrisisCore` got public initialisers for
+  `SelfCheckStep` and `SelfCheckReport`. `project.yml` and the CI jobs know the new package.
+* **Not in I1**: Bluetooth (I2, I3), real screens (I4+), the macOS data protection keychain (I8).
+
 # Changes: Apple phase I0 (toolchain, the core as a Swift package, placeholder app, CI)
 
 Written without Xcode, a Mac or a Swift compiler: **nothing here was compiled or run**. The first thing to do is

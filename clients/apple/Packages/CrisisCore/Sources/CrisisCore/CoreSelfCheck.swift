@@ -6,11 +6,22 @@ public struct SelfCheckStep: Sendable, Identifiable, Equatable {
     public let title: String
     public let passed: Bool
     public let detail: String
+
+    public init(id: Int, title: String, passed: Bool, detail: String) {
+        self.id = id
+        self.title = title
+        self.passed = passed
+        self.detail = detail
+    }
 }
 
 /// The outcome of ``CoreSelfCheck/run()``.
 public struct SelfCheckReport: Sendable, Equatable {
     public let steps: [SelfCheckStep]
+
+    public init(steps: [SelfCheckStep]) {
+        self.steps = steps
+    }
 
     /// Whether every step passed.
     public var passed: Bool { steps.allSatisfy(\.passed) }
