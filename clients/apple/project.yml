@@ -49,6 +49,13 @@ targets:
                 # Encryption is only used for the content of the app's own protocol; see the export compliance note in
                 # clients/apple/README.md before the first App Store upload.
                 ITSAppUsesNonExemptEncryption: false
+        # The Keychain group of the app. An item is only usable with an application identifier; the simulator takes
+        # it from the (ad-hoc) signature, see the iOS test step in .github/workflows/ci.yml.
+        entitlements:
+            path: App/iOS/CrisisNetwork.entitlements
+            properties:
+                keychain-access-groups:
+                    - "$(AppIdentifierPrefix)$(APP_BUNDLE_ID)"
         settings:
             base:
                 PRODUCT_BUNDLE_IDENTIFIER: "$(APP_BUNDLE_ID)"

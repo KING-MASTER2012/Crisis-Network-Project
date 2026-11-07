@@ -59,16 +59,16 @@ trust the developer (Settings > General > VPN & Device Management).
 
 `CrisisRuntime` is the Swift counterpart of the Android module `core:runtime`, with the same contracts:
 
-| Piece | What it does |
-| --- | --- |
-| `NodeBootstrap` | Checks the interface version, prepares the storage directory, takes the seed and the database key from the vault, opens the database, returns a `NodeRuntime`. `EncryptionPolicy`: `required` (release), `ifAvailable` (debug), `disabled` (tests). |
-| `NodeRuntime` (actor) | Owns the node. Transport events, calls and timer ticks run one after another. Routes the core's output: packets to the `Transport`, notifications to `notifications()`. Errors become `CoreFailure`; a fatal one stops the runtime. |
-| `Transport` | The seam to the radio (events in, `send`/`disconnect` out, same contract as on Android). `LoopbackNetwork` is the in-memory implementation for tests and previews; the Bluetooth one is I2 and I3. |
+| Piece                                 | What it does                                                                                                                                                                                                                                                              |
+|---------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `NodeBootstrap`                       | Checks the interface version, prepares the storage directory, takes the seed and the database key from the vault, opens the database, returns a `NodeRuntime`. `EncryptionPolicy`: `required` (release), `ifAvailable` (debug), `disabled` (tests).                       |
+| `NodeRuntime` (actor)                 | Owns the node. Transport events, calls and timer ticks run one after another. Routes the core's output: packets to the `Transport`, notifications to `notifications()`. Errors become `CoreFailure`; a fatal one stops the runtime.                                       |
+| `Transport`                           | The seam to the radio (events in, `send`/`disconnect` out, same contract as on Android). `LoopbackNetwork` is the in-memory implementation for tests and previews; the Bluetooth one is I2 and I3.                                                                        |
 | `SecretVault` + `KeychainSecretStore` | Seed and database key in the Keychain (`AfterFirstUnlockThisDeviceOnly`: readable while the phone is locked, never copied to another device or to a backup). An item that exists but cannot be read is **never overwritten**; only an explicit `resetIdentity` clears it. |
-| `StorageLayout` | `Application Support/Crisis`: excluded from backups, protection class `completeUntilFirstUserAuthentication` on iOS (the default `complete` would make background writes fail on a locked phone). |
-| `MonotonicWallClock` | The clock the core sees: monotonic inside a process (`mach_continuous_time`, which counts sleep), adopts forward corrections, remembers a high-water mark across restarts (same rules as Android). |
-| `TimerPolicy` | When to `tick` next (the core's deadline, an idle tick every 30 s, never faster than every 10 ms). |
-| `CoreFailure` | The errors the app can react to, mapped from the core's `CoreError`. |
+| `StorageLayout`                       | `Application Support/Crisis`: excluded from backups, protection class `completeUntilFirstUserAuthentication` on iOS (the default `complete` would make background writes fail on a locked phone).                                                                         |
+| `MonotonicWallClock`                  | The clock the core sees: monotonic inside a process (`mach_continuous_time`, which counts sleep), adopts forward corrections, remembers a high-water mark across restarts (same rules as Android).                                                                        |
+| `TimerPolicy`                         | When to `tick` next (the core's deadline, an idle tick every 30 s, never faster than every 10 ms).                                                                                                                                                                        |
+| `CoreFailure`                         | The errors the app can react to, mapped from the core's `CoreError`.                                                                                                                                                                                                      |
 
 **A deleted app starts with a new identity.** On iOS Keychain items survive the deletion of the app, its files do
 not. `NodeBootstrap` therefore discards secrets that have neither the install marker (`installed-v1`) nor a
@@ -77,17 +77,23 @@ database next to them. (Android needs no such rule: the Keystore key goes with t
 **Background.** iOS runs no timers while the app is suspended. In the background the runtime ticks when the
 Bluetooth stack wakes the app; that is I3's job.
 
+**Keychain and signing in tests.** An unsigned app (`CODE_SIGNING_ALLOWED=NO`) has no application identifier, so on the
+simulator every Keychain call fails with `-34018` ("a required entitlement isn't present"). The iOS target therefore
+declares a `keychain-access-groups` entitlement (`App/iOS/CrisisNetwork.entitlements`, generated by XcodeGen) and CI runs
+the simulator tests **ad-hoc signed** (`CODE_SIGN_IDENTITY=-`, no team or certificate needed). Building without
+signing is still fine where nothing runs (macOS build, device slice).
+
 `RuntimeSelfCheck` runs the clock, the Keychain, the bootstrap (restart and reinstall) and two runtimes talking over
 the loopback; the app shows it under "Runtime", and the iOS test bundle runs it on the simulator.
 
 ## `scripts/build-apple.sh`
 
-| Option | Meaning |
-| --- | --- |
-| `--profile dev\|release` | Cargo profile. `release` (fat LTO) is for builds you ship. |
-| `--sqlcipher` | The encrypted database (vendored OpenSSL), the same feature Android ships with. |
-| `--universal` | Also the x86_64 slices (Intel simulator, Intel Macs). Default: arm64 only. |
-| `--platforms ios,sim,mac` | A subset, to save time while working on one platform. |
+| Option                    | Meaning                                                                         |
+|---------------------------|---------------------------------------------------------------------------------|
+| `--profile dev\|release`  | Cargo profile. `release` (fat LTO) is for builds you ship.                      |
+| `--sqlcipher`             | The encrypted database (vendored OpenSSL), the same feature Android ships with. |
+| `--universal`             | Also the x86_64 slices (Intel simulator, Intel Macs). Default: arm64 only.      |
+| `--platforms ios,sim,mac` | A subset, to save time while working on one platform.                           |
 
 It writes `Packages/CrisisCore/CrisisCoreFFI.xcframework`, `Sources/CrisisCore/Generated/crisis_core.swift` and
 `Generated/CoreBuildInfo.swift` (what the build was made with: profile, SQLCipher, slices, revision). None of

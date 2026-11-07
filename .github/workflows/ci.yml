@@ -284,12 +284,15 @@ jobs:
               run: |
                   xcodebuild -project clients/apple/CrisisNetwork.xcodeproj -scheme CrisisNetwork-iOS \
                       -destination 'generic/platform=iOS' CODE_SIGNING_ALLOWED=NO build
+            # Not `CODE_SIGNING_ALLOWED=NO`: an unsigned app has no application identifier, and the Keychain then fails
+            # with -34018 ("a required entitlement isn't present"). Ad-hoc signing (`-`) needs no team or certificate.
             - name: iOS app tests on the simulator
               run: |
                   udid=$(bash scripts/apple-simulator-udid.sh)
                   echo "Simulator: $udid"
                   xcodebuild -project clients/apple/CrisisNetwork.xcodeproj -scheme CrisisNetwork-iOS \
-                      -destination "id=$udid" CODE_SIGNING_ALLOWED=NO test
+                      -destination "id=$udid" CODE_SIGN_IDENTITY=- CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=YES \
+                      DEVELOPMENT_TEAM= test
             - uses: actions/upload-artifact@v4
               with:
                   name: apple-xcframework
