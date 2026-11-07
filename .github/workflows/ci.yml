@@ -250,3 +250,75 @@ jobs:
                       clients/android/**/build/reports
                       clients/android/**/build/outputs/androidTest-results
                   if-no-files-found: ignore
+
+    # Phase I0: the Rust core as an XCFramework, its Swift package, and the placeholder app for iOS and macOS.
+    # Pinned (not macos-latest) so that a runner image change cannot break the Xcode toolchain. Nothing here
+    # needs signing or a device: Bluetooth and real iPhones come in later phases.
+    apple:
+        runs-on: macos-15
+        timeout-minutes: 60
+        steps:
+            - uses: actions/checkout@v4
+            - uses: dtolnay/rust-toolchain@stable
+            - uses: Swatinem/rust-cache@v2
+              with:
+                  key: apple
+            - name: Install XcodeGen
+              run: brew install xcodegen
+            # The `dev` Cargo profile, as for Android: fast, and nothing here needs optimised code.
+            - name: Build the core for iOS, the iOS simulator and macOS
+              run: scripts/build-apple.sh --profile dev
+            - name: Swift package tests (on the Mac)
+              working-directory: clients/apple/Packages/CrisisCore
+              run: swift test
+            - name: Generate the Xcode project
+              working-directory: clients/apple
+              run: xcodegen generate
+            - name: Build the macOS app
+              run: |
+                  xcodebuild -project clients/apple/CrisisNetwork.xcodeproj -scheme CrisisNetwork-macOS \
+                      -destination 'platform=macOS' CODE_SIGNING_ALLOWED=NO build
+            # Links the iOS device slice; running it needs a phone and a signing team.
+            - name: Build the iOS app for a device
+              run: |
+                  xcodebuild -project clients/apple/CrisisNetwork.xcodeproj -scheme CrisisNetwork-iOS \
+                      -destination 'generic/platform=iOS' CODE_SIGNING_ALLOWED=NO build
+            - name: iOS app tests on the simulator
+              run: |
+                  udid=$(scripts/apple-simulator-udid.sh)
+                  echo "Simulator: $udid"
+                  xcodebuild -project clients/apple/CrisisNetwork.xcodeproj -scheme CrisisNetwork-iOS \
+                      -destination "id=$udid" CODE_SIGNING_ALLOWED=NO test
+            - uses: actions/upload-artifact@v4
+              with:
+                  name: apple-xcframework
+                  path: clients/apple/Packages/CrisisCore/CrisisCoreFFI.xcframework
+            - uses: actions/upload-artifact@v4
+              if: failure()
+              with:
+                  name: apple-logs
+                  path: |
+                      ~/Library/Logs/DiagnosticReports
+                      ~/Library/Developer/Xcode/DerivedData/**/Logs/Test
+                  if-no-files-found: ignore
+
+    # The SQLCipher spike of phase I0: does the encrypted database (vendored OpenSSL, as on Android) build for
+    # all three Apple platforms and work there? `continue-on-error` while this is being found out; remove it, and
+    # make `apple` build with `--sqlcipher`, once this job is green.
+    apple-sqlcipher:
+        runs-on: macos-15
+        continue-on-error: true
+        timeout-minutes: 90
+        steps:
+            - uses: actions/checkout@v4
+            - uses: dtolnay/rust-toolchain@stable
+            - uses: Swatinem/rust-cache@v2
+              with:
+                  key: apple-sqlcipher
+            - name: Build the core with SQLCipher
+              run: scripts/build-apple.sh --profile dev --sqlcipher
+            - name: Swift package tests (on the Mac), SQLCipher required
+              working-directory: clients/apple/Packages/CrisisCore
+              env:
+                  CRISIS_EXPECT_SQLCIPHER: "1"
+              run: swift test

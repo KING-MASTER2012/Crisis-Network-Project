@@ -1,0 +1,94 @@
+# XcodeGen specification: `xcodegen generate` (in this folder) produces CrisisNetwork.xcodeproj, which is not
+# committed. Install XcodeGen with `brew install xcodegen`.
+name: CrisisNetwork
+
+options:
+    bundleIdPrefix: org.crisisnetwork
+    deploymentTarget:
+        iOS: "17.0"
+        macOS: "14.0"
+    createIntermediateGroups: true
+    generateEmptyDirectories: true
+
+configFiles:
+    Debug: Config/Base.xcconfig
+    Release: Config/Base.xcconfig
+
+packages:
+    CrisisCore:
+        path: Packages/CrisisCore
+
+targets:
+    CrisisNetwork-iOS:
+        type: application
+        platform: iOS
+        sources:
+            - path: App/Shared
+        dependencies:
+            - package: CrisisCore
+        info:
+            path: App/iOS/Info.plist
+            properties:
+                CFBundleDisplayName: Crisis Network
+                UILaunchScreen: {}
+                UISupportedInterfaceOrientations:
+                    - UIInterfaceOrientationPortrait
+                    - UIInterfaceOrientationLandscapeLeft
+                    - UIInterfaceOrientationLandscapeRight
+                UISupportedInterfaceOrientations~ipad:
+                    - UIInterfaceOrientationPortrait
+                    - UIInterfaceOrientationPortraitUpsideDown
+                    - UIInterfaceOrientationLandscapeLeft
+                    - UIInterfaceOrientationLandscapeRight
+                # The reason shown to the person when Bluetooth is first used (phase I2 starts using it).
+                NSBluetoothAlwaysUsageDescription: >-
+                    Crisis Network uses Bluetooth to pass messages between nearby phones when there is no network.
+                # Encryption is only used for the content of the app's own protocol; see the export compliance note in
+                # clients/apple/README.md before the first App Store upload.
+                ITSAppUsesNonExemptEncryption: false
+        settings:
+            base:
+                PRODUCT_BUNDLE_IDENTIFIER: "$(APP_BUNDLE_ID)"
+                TARGETED_DEVICE_FAMILY: "1,2"
+                GENERATE_INFOPLIST_FILE: NO
+        scheme:
+            testTargets:
+                - CrisisNetworkTests-iOS
+
+    CrisisNetwork-macOS:
+        type: application
+        platform: macOS
+        sources:
+            - path: App/Shared
+        dependencies:
+            - package: CrisisCore
+        info:
+            path: App/macOS/Info.plist
+            properties:
+                CFBundleDisplayName: Crisis Network
+                LSMinimumSystemVersion: "14.0"
+                NSBluetoothAlwaysUsageDescription: >-
+                    Crisis Network uses Bluetooth to pass messages between nearby devices when there is no network.
+                ITSAppUsesNonExemptEncryption: false
+        entitlements:
+            path: App/macOS/CrisisNetwork.entitlements
+            properties:
+                com.apple.security.app-sandbox: true
+                com.apple.security.device.bluetooth: true
+        settings:
+            base:
+                PRODUCT_BUNDLE_IDENTIFIER: "$(APP_BUNDLE_ID)"
+                GENERATE_INFOPLIST_FILE: NO
+
+    CrisisNetworkTests-iOS:
+        type: bundle.unit-test
+        platform: iOS
+        sources:
+            - path: Tests/iOS
+        dependencies:
+            - target: CrisisNetwork-iOS
+            - package: CrisisCore
+        settings:
+            base:
+                PRODUCT_BUNDLE_IDENTIFIER: "$(APP_BUNDLE_ID).tests"
+                GENERATE_INFOPLIST_FILE: YES

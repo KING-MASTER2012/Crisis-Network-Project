@@ -1,0 +1,7 @@
+*.xcodeproj/
+xcuserdata/
+DerivedData/
+Config/Local.xcconfig
+App/iOS/Info.plist
+App/macOS/Info.plist
+App/macOS/CrisisNetwork.entitlements

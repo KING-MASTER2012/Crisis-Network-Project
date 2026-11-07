@@ -1,0 +1,4 @@
+# Produced by scripts/build-apple.sh
+CrisisCoreFFI.xcframework/
+Sources/CrisisCore/Generated/
+.build/

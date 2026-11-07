@@ -20,6 +20,7 @@ decision records.
 | `core/crates/appcodec` | App conventions shared by every client: text cleaning, announcement severity, contact-card text, byte budgets, lifetimes, nicknames (`core/testdata/appcodec.json` pins them) |
 | `core/crates/sim` | Deterministic network simulator (many engines, one virtual clock) |
 | `core/crates/cli` | Command-line tools, binary `crisis`: `simulate`, `identity`, `node` (UDP test node) |
+| `clients/apple` | iOS / iPadOS / macOS clients (SwiftUI), the core as a Swift package; build with `scripts/build-apple.sh` (see its README) |
 | `doc/` | mdBook documentation |
 
 ## Trying it

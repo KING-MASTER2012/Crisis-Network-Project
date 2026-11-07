@@ -1,0 +1,18 @@
+// Settings shared by every target. Machine- and person-specific values go into Local.xcconfig.
+
+// The oldest systems the app supports. Keep in step with scripts/build-apple.sh and Package.swift.
+IPHONEOS_DEPLOYMENT_TARGET = 17.0
+MACOSX_DEPLOYMENT_TARGET = 14.0
+
+// Swift 5 language mode with the strict concurrency checks as warnings: the code is meant for Swift 6 and the
+// warnings show what is left to do. Switching to 6.0 is a one-line change once the build is warning-free.
+SWIFT_VERSION = 5.0
+SWIFT_STRICT_CONCURRENCY = complete
+MARKETING_VERSION = 0.1.0
+CURRENT_PROJECT_VERSION = 1
+
+// One bundle identifier for iOS and macOS (a "universal purchase" in the App Store). The targets build on it.
+APP_BUNDLE_ID = org.crisisnetwork.app
+
+// Your Apple developer team and anything else personal: copy Local.xcconfig.example to Local.xcconfig.
+#include? "Local.xcconfig"

@@ -1,3 +1,34 @@
+# Changes: Apple phase I0 (toolchain, the core as a Swift package, placeholder app, CI)
+
+Written without Xcode, a Mac or a Swift compiler: **nothing here was compiled or run**. The first thing to do is
+`scripts/build-apple.sh`, then `swift test` in `clients/apple/Packages/CrisisCore`, and to send me the errors:
+UniFFI's Swift naming and Swift 6 concurrency are the likeliest places for a first mismatch.
+
+* **`scripts/build-apple.sh`**: builds `libcrisis_core.a` (only the static library, via `cargo rustc --crate-type
+  staticlib`) for iOS device, iOS simulator and macOS, makes fat libraries where an architecture is doubled, runs
+  `scripts/gen-bindings.sh swift`, creates `CrisisCoreFFI.xcframework` and writes
+  `Sources/CrisisCore/Generated/` (`crisis_core.swift` and `CoreBuildInfo.swift`, which records profile, SQLCipher,
+  slices and git revision). Options: `--profile`, `--sqlcipher`, `--universal`, `--platforms`. Deployment targets
+  iOS 17 and macOS 14 (environment variables override). `scripts/apple-simulator-udid.sh` picks an iPhone simulator
+  for CI.
+* **Swift package `clients/apple/Packages/CrisisCore`**: `binaryTarget` of the XCFramework plus the target
+  `CrisisCore` (generated bindings, `CoreRuntime.verify()` which refuses an interface version other than 2, and
+  `CoreSelfCheck`: the core loads, identity, conventions, two nodes exchanging a broadcast / a private message / its
+  acknowledgement through an in-memory link, encrypted database with a wrong-key check). Tests: `CoreSmokeTests`.
+* **Placeholder app** (`App/Shared`, SwiftUI): shows the self-test; `project.yml` (XcodeGen) defines the iOS and
+  macOS targets (sandbox + Bluetooth entitlement on the Mac, Bluetooth usage text, one bundle identifier
+  `org.crisisnetwork.app` built from `APP_BUNDLE_ID`), plus an iOS test bundle that runs the self-test inside the app on
+  the simulator. `Config/Base.xcconfig` and `Local.xcconfig.example` (team id, own bundle id).
+* **CI** (`.github/workflows/ci.yml`): job `apple` (macos-15: build the core, `swift test`, generate the project, build
+  the macOS app, build the iOS app for a device without signing, run the iOS tests on a simulator, upload the
+  XCFramework) and the spike job `apple-sqlcipher` (`continue-on-error`): the same with `--sqlcipher`, requiring it
+  in the tests via `CRISIS_EXPECT_SQLCIPHER=1`. Once the spike is green, remove `continue-on-error` and build `apple`
+  with `--sqlcipher`.
+* **Decisions** (defaults, recorded in `clients/apple/README.md`): iOS 17 / macOS 14, XcodeGen, one bundle id for
+  both platforms, Swift 5 language mode with strict-concurrency warnings, static library instead of a dynamic
+  framework. Open: SQLCipher on Apple (vendored OpenSSL, decided by the spike) and the GPL / App Store question.
+* **Not in I0**: Bluetooth, Keychain, real screens, localisation (I1 to I9).
+
 # Changes: Android phase A8 and Core phase C8 fix
 
 Written without a Rust or Android toolchain: **nothing here was compiled or run**. Run

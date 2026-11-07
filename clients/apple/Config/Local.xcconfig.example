@@ -1,0 +1,8 @@
+// Copy to Local.xcconfig (ignored by git) and fill in.
+
+// Your 10-character Apple developer team identifier (Xcode > Settings > Accounts, or developer.apple.com).
+// Needed to run on a real iPhone; the simulator and the Mac build without it.
+DEVELOPMENT_TEAM =
+
+// Use your own identifier while testing on a device, because a bundle identifier belongs to one team:
+// APP_BUNDLE_ID = com.crisisnetworkproject.crisisnetwork
