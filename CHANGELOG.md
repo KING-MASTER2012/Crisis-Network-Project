@@ -1,3 +1,29 @@
+# Changes: phase I2, the Bluetooth link on Apple
+
+**What is new**
+
+* `Packages/CrisisRuntime/Sources/CrisisRuntime/Ble/`: `BleTransport` (the `Transport` over BLE: links, handshake of 15 s,
+  one send in flight per link with a bounded queue, back-off per address, HELLO exchange and removal of duplicate
+  links), its ports, `BleProfile`/`HelloValue` (the UUIDs and the HELLO value of the Android client) and the
+  CoreBluetooth implementations: `CoreBluetoothCentral` (scan, connect, client links) and `CoreBluetoothPeripheral`
+  (GATT service, advertising, server links). `BleTransport.coreBluetooth(config:)` builds it.
+* `App/Shared/BleLinkTestView.swift` and `BleLinkTestModel.swift`: the Bluetooth test bench (Android `BleLinkTest`);
+  `CrisisNetworkApp.swift` shows it next to the self-test in a tab bar.
+* Tests: `BleSupportTests`, `BleTransportTests` (state machine against fakes: roles, connecting, back-off, link
+  size, receiving, sending and its timeouts, duplicates, stop).
+* `clients/apple/README.md`: the Bluetooth section, what iOS cannot do and the exit test.
+
+**Not done (by design)**
+
+* Background operation, tie-break, power profiles, state restoration: I3. The Android A8 patch (profile 1.1 in
+  `ble-link.md`, duplicate links) should come before I3; the Swift side already follows 1.1 as the Android code speaks it.
+* The exit test (iPhone <-> Android, iPhone <-> iPhone) needs real devices and was **not run**: nothing here was
+  compiled or run either (no Swift toolchain where this was written). Expect to fix a compiler complaint or two; the
+  first place to look is `CoreBluetoothCentral.swift` and `CoreBluetoothPeripheral.swift` (CoreBluetooth signatures).
+* An iPhone as a peripheral cannot disconnect a central (no API): see the README table.
+
+---
+
 # Changes: CI fix, Keychain error -34018 on the iOS simulator
 
 `RuntimeAppTests` failed on the simulator with "Keychain error -34018: A required entitlement isn't present".

@@ -1,11 +1,16 @@
 import SwiftUI
 
-/// Phase I0: a placeholder app that proves the toolchain end to end. The real screens come in I4 and later.
+/// Phases I0 to I2: the self-test and the Bluetooth test bench. The real screens come in I4 and later.
 @main
 struct CrisisNetworkApp: App {
     var body: some Scene {
         WindowGroup {
-            SelfCheckView()
+            TabView {
+                SelfCheckView()
+                    .tabItem { Label("Self-test", systemImage: "checkmark.seal") }
+                BleLinkTestView()
+                    .tabItem { Label("Bluetooth", systemImage: "dot.radiowaves.left.and.right") }
+            }
         }
     }
 }
