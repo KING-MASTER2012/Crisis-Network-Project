@@ -119,10 +119,14 @@ final class BleRig {
             clockMs: { clock.now },
             helloSource: { hello }
         )
-        queue.sync { transport.eventObserver = { [unowned self] event in self.recorded.append(event) } }
+        queue.sync { transport.eventObserver = { [weak self] event in self?.recorded.append(event) } }
     }
 
-    deinit { transport.stop() }
+    deinit {
+        // `stop()` reports the loss of every link; the rig is already half gone by then.
+        queue.sync { transport.eventObserver = nil }
+        transport.stop()
+    }
 
     func start() { try! transport.start() }
 

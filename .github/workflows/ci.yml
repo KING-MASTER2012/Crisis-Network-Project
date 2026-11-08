@@ -53,7 +53,12 @@ jobs:
         timeout-minutes: 10
         steps:
             - uses: actions/checkout@v4
-            - uses: EmbarkStudios/cargo-deny-action@v2
+            # Not EmbarkStudios/cargo-deny-action: it builds a Docker image on every run, and that build failed.
+            - uses: dtolnay/rust-toolchain@stable
+            - uses: taiki-e/install-action@v2
+              with:
+                  tool: cargo-deny
+            - run: cargo deny check
 
     docs:
         runs-on: ubuntu-latest

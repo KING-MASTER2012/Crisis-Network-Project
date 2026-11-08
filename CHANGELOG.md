@@ -1,3 +1,14 @@
+# Changes: CI fixes after I2
+
+* **apple, apple-sqlcipher:** `swift test` of `CrisisRuntime` crashed ("unowned reference ... already deallocated") in the
+  first `BleTransportTests` case. Cause: the test rig's event observer captured the rig as `unowned`, and the rig's
+  `deinit` calls `transport.stop()`, which reports the lost links to that observer. The observer is now `weak` and is
+  cleared before `stop()`. Test code only; the transport is unchanged.
+* **deny:** `EmbarkStudios/cargo-deny-action` builds a Docker image on every run and that build failed. The job now
+  installs the prebuilt `cargo-deny` (`taiki-e/install-action`) and runs `cargo deny check`.
+
+---
+
 # Changes: phase I2, the Bluetooth link on Apple
 
 **What is new**
