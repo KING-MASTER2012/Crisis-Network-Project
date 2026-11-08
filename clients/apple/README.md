@@ -59,16 +59,16 @@ trust the developer (Settings > General > VPN & Device Management).
 
 `CrisisRuntime` is the Swift counterpart of the Android module `core:runtime`, with the same contracts:
 
-| Piece | What it does |
-| --- | --- |
-| `NodeBootstrap` | Checks the interface version, prepares the storage directory, takes the seed and the database key from the vault, opens the database, returns a `NodeRuntime`. `EncryptionPolicy`: `required` (release), `ifAvailable` (debug), `disabled` (tests). |
-| `NodeRuntime` (actor) | Owns the node. Transport events, calls and timer ticks run one after another. Routes the core's output: packets to the `Transport`, notifications to `notifications()`. Errors become `CoreFailure`; a fatal one stops the runtime. |
-| `Transport` | The seam to the radio (events in, `send`/`disconnect` out, same contract as on Android). `LoopbackNetwork` is the in-memory implementation for tests and previews; the Bluetooth one is I2 and I3. |
+| Piece                                 | What it does                                                                                                                                                                                                                                                              |
+|---------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `NodeBootstrap`                       | Checks the interface version, prepares the storage directory, takes the seed and the database key from the vault, opens the database, returns a `NodeRuntime`. `EncryptionPolicy`: `required` (release), `ifAvailable` (debug), `disabled` (tests).                       |
+| `NodeRuntime` (actor)                 | Owns the node. Transport events, calls and timer ticks run one after another. Routes the core's output: packets to the `Transport`, notifications to `notifications()`. Errors become `CoreFailure`; a fatal one stops the runtime.                                       |
+| `Transport`                           | The seam to the radio (events in, `send`/`disconnect` out, same contract as on Android). `LoopbackNetwork` is the in-memory implementation for tests and previews; the Bluetooth one is I2 and I3.                                                                        |
 | `SecretVault` + `KeychainSecretStore` | Seed and database key in the Keychain (`AfterFirstUnlockThisDeviceOnly`: readable while the phone is locked, never copied to another device or to a backup). An item that exists but cannot be read is **never overwritten**; only an explicit `resetIdentity` clears it. |
-| `StorageLayout` | `Application Support/Crisis`: excluded from backups, protection class `completeUntilFirstUserAuthentication` on iOS (the default `complete` would make background writes fail on a locked phone). |
-| `MonotonicWallClock` | The clock the core sees: monotonic inside a process (`mach_continuous_time`, which counts sleep), adopts forward corrections, remembers a high-water mark across restarts (same rules as Android). |
-| `TimerPolicy` | When to `tick` next (the core's deadline, an idle tick every 30 s, never faster than every 10 ms). |
-| `CoreFailure` | The errors the app can react to, mapped from the core's `CoreError`. |
+| `StorageLayout`                       | `Application Support/Crisis`: excluded from backups, protection class `completeUntilFirstUserAuthentication` on iOS (the default `complete` would make background writes fail on a locked phone).                                                                         |
+| `MonotonicWallClock`                  | The clock the core sees: monotonic inside a process (`mach_continuous_time`, which counts sleep), adopts forward corrections, remembers a high-water mark across restarts (same rules as Android).                                                                        |
+| `TimerPolicy`                         | When to `tick` next (the core's deadline, an idle tick every 30 s, never faster than every 10 ms).                                                                                                                                                                        |
+| `CoreFailure`                         | The errors the app can react to, mapped from the core's `CoreError`.                                                                                                                                                                                                      |
 
 **A deleted app starts with a new identity.** On iOS Keychain items survive the deletion of the app, its files do
 not. `NodeBootstrap` therefore discards secrets that have neither the install marker (`installed-v1`) nor a
@@ -103,21 +103,20 @@ Everything that touches CoreBluetooth sits behind the ports, so the state machin
 (`BleTransportTests`, no radio, no permission). The transport and both managers share **one queue**; every callback
 arrives on it, and `send`/`disconnect` only enqueue.
 
-**Profile.** It speaks the link profile as the Android client does today: service `6f1d5a30-...`, RX (write without
-response), TX (notify), and the **HELLO characteristic `6f1d5a33-...` of profile 1.1** (read and write, nine bytes:
-version `1` and a big-endian 64-bit identifier). `docs/src/protocol/ble-link.md` still describes 1.0: bringing it up to
-date (HELLO, the manufacturer-data token, duplicate links) is part of A8; the facts above are what iOS relies on.
+**Profile.** It speaks **profile 1.1** of `docs/src/protocol/ble-link.md` (rewritten in A8): service `6f1d5a30-...`,
+RX (write without response), TX (notify) and the HELLO characteristic `6f1d5a33-...` (read and write, nine bytes:
+version `1` and a big-endian 64-bit identifier). The document also says what an Apple device does without a token.
 
 **What iOS cannot do, and what the code does about it:**
 
-| Android | iOS |
-| --- | --- |
-| Radio address | Only `CBPeripheral.identifier` (a UUID, stable on this device only). Links are keyed by it while they exist. |
-| Token and flag in the advertisement | Not possible: only the service UUID can be advertised. An iPhone therefore advertises no token and connects to everything it sees; two devices that connected both ways close one link through the HELLO identifiers (same rule as Android: the link whose client has the lower identifier stays). |
-| Request an MTU of 517 | The system negotiates; the code reads `maximumWriteValueLength(for: .withoutResponse)` (= ATT MTU - 3) and polls it at every tick, reporting a larger value again for the same neighbour. |
-| Completion of a write | None for a write without response: it is complete when queued; `canSendWriteWithoutResponse` and `peripheralIsReady` are the flow control. A busy platform is asked again when it is ready. |
-| Drop a connected central | No call for it. The server link goes quiet (nothing sent, writes ignored) until the central leaves; the other side's rules end the connection. |
-| Connect/disconnect events for centrals | Only subscribe and unsubscribe of TX; a link exists from the subscription. |
+| Android                                | iOS                                                                                                                                                                                                                                                                                                |
+|----------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Radio address                          | Only `CBPeripheral.identifier` (a UUID, stable on this device only). Links are keyed by it while they exist.                                                                                                                                                                                       |
+| Token and flag in the advertisement    | Not possible: only the service UUID can be advertised. An iPhone therefore advertises no token and connects to everything it sees; two devices that connected both ways close one link through the HELLO identifiers (same rule as Android: the link whose client has the lower identifier stays). |
+| Request an MTU of 517                  | The system negotiates; the code reads `maximumWriteValueLength(for: .withoutResponse)` (= ATT MTU - 3) and polls it at every tick, reporting a larger value again for the same neighbour.                                                                                                          |
+| Completion of a write                  | None for a write without response: it is complete when queued; `canSendWriteWithoutResponse` and `peripheralIsReady` are the flow control. A busy platform is asked again when it is ready.                                                                                                        |
+| Drop a connected central               | No call for it. The server link goes quiet (nothing sent, writes ignored) until the central leaves; the other side's rules end the connection.                                                                                                                                                     |
+| Connect/disconnect events for centrals | Only subscribe and unsubscribe of TX; a link exists from the subscription.                                                                                                                                                                                                                         |
 
 I2 is **foreground only**: advertising and scanning in the background work differently on iOS (the service UUID moves
 to an overflow area that only iOS scanners see) and are I3. The Bluetooth permission is asked the first time the
@@ -140,12 +139,12 @@ Exit test of I2, with both apps in the foreground and the screens on:
 
 ## `scripts/build-apple.sh`
 
-| Option | Meaning |
-| --- | --- |
-| `--profile dev\|release` | Cargo profile. `release` (fat LTO) is for builds you ship. |
-| `--sqlcipher` | The encrypted database (vendored OpenSSL), the same feature Android ships with. |
-| `--universal` | Also the x86_64 slices (Intel simulator, Intel Macs). Default: arm64 only. |
-| `--platforms ios,sim,mac` | A subset, to save time while working on one platform. |
+| Option                    | Meaning                                                                         |
+|---------------------------|---------------------------------------------------------------------------------|
+| `--profile dev\|release`  | Cargo profile. `release` (fat LTO) is for builds you ship.                      |
+| `--sqlcipher`             | The encrypted database (vendored OpenSSL), the same feature Android ships with. |
+| `--universal`             | Also the x86_64 slices (Intel simulator, Intel Macs). Default: arm64 only.      |
+| `--platforms ios,sim,mac` | A subset, to save time while working on one platform.                           |
 
 It writes `Packages/CrisisCore/CrisisCoreFFI.xcframework`, `Sources/CrisisCore/Generated/crisis_core.swift` and
 `Generated/CoreBuildInfo.swift` (what the build was made with: profile, SQLCipher, slices, revision). None of

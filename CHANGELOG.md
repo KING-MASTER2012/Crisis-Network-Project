@@ -1,3 +1,26 @@
+# Changes: phase A8, the missing half (profile document)
+
+A8 was applied to the repository except for one file: the CHANGELOG entry "Android phase A8" says that
+`docs/src/protocol/ble-link.md` was rewritten for profile 1.1, but the file in the repository still described
+profile 1.0 (no HELLO, no token). The code of A8 is all there and was checked against the entry:
+`HelloValue`, `PeerHello`, the Hello step of `AndroidGattClientLink`, the read and write handlers of
+`AndroidGattServer`, `onPeerHello` and `closeDuplicate` in `BleTransport`, `DuplicateLinkTest`, `HelloValueTest`,
+`BackButton`, the `appcodec` bindings and `ConventionVectorsTest`. So nothing in Kotlin changes.
+
+* `docs/src/protocol/ble-link.md`: **rewritten for profile 1.1.** Version table; the advertisement with the token
+  (layout, company id, rotation) and the tie-break of A3, neither of which was documented; the HELLO characteristic
+  and its value; setup step 5 (read, then write the identifier; best effort); duplicate links and the rule that
+  keeps one; what a platform without a token or without the ability to drop a central does (the Apple rules found
+  in I2); notifications that arrive during step 5 must be kept; compatibility between 1.0 and 1.1; known limits.
+  The text was written from the Android code (`BleAdvertisement`, `BleUuids`, `HelloValue`, `AndroidGattClient`,
+  `AndroidGattServer`, `BleTransport`), not from the old entry, and from the Apple implementation of I2.
+* `clients/apple/README.md`: the Bluetooth section points to the finished document instead of saying it is behind.
+
+Not run: `mdbook build docs` (the CI job `docs` does). The exchange of HELLO between an old and a new build, and
+between Android and an iPhone, still needs real devices.
+
+---
+
 # Changes: CI fixes after I2
 
 * **apple, apple-sqlcipher:** `swift test` of `CrisisRuntime` crashed ("unowned reference ... already deallocated") in the
