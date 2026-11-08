@@ -5,7 +5,7 @@ import SwiftUI
 /// count what arrives. Two devices (iPhone and Android, or two iPhones) in the foreground exchange packets; that is
 /// the exit test of the phase. It needs real devices: the simulator has no Bluetooth.
 struct BleLinkTestView: View {
-    @StateObject private var model = BleLinkTestModel()
+    @ObservedObject private var model = BleLinkTestModel.shared
 
     var body: some View {
         NavigationStack {
@@ -13,6 +13,7 @@ struct BleLinkTestView: View {
                 controlSection
                 if model.running {
                     if let stats = model.stats { radioSection(stats) }
+                    batterySection
                     actionSection
                     linksSection
                     countersSection
@@ -33,6 +34,17 @@ struct BleLinkTestView: View {
             .pickerStyle(.segmented)
             .disabled(model.running || model.busy)
 
+            Picker("Power", selection: $model.profile) {
+                ForEach(BlePowerProfile.allCases) { profile in
+                    Text(profile.title).tag(profile)
+                }
+            }
+            .pickerStyle(.segmented)
+
+            if model.lowPowerMode {
+                Text("Low Power Mode is on: the saver profile is used.").font(.footnote).foregroundStyle(.secondary)
+            }
+
             Button(model.running ? "Stop" : "Start") {
                 Task {
                     if model.running {
@@ -51,8 +63,9 @@ struct BleLinkTestView: View {
                 LabeledContent("Node", value: model.nodeId).font(.footnote)
             }
         } footer: {
-            Text("Bluetooth works in the foreground only in this phase: keep the app open and the screen on. "
-                + "Use Central on one device and Peripheral on the other to avoid two links between them; Both is what the product does.")
+            Text("The node starts again at every launch until you stop it. In the background iOS runs it only when Bluetooth wakes the app; "
+                + "an iPhone that advertises in the background is invisible to Android. For a chain A - B - C run the ends as Central or Peripheral "
+                + "and the middle device as Both.")
         }
     }
 
@@ -67,7 +80,30 @@ struct BleLinkTestView: View {
                 LabeledContent("Peripheral", value: "\(stats.peripheralState.title)\(stats.advertising ? ", advertising" : "")")
                 LabeledContent("Service", value: stats.serverReady ? "registered" : "not registered")
             }
+            LabeledContent("Held back by the tie-break", value: "\(stats.heldByTieBreak)")
             LabeledContent("Duplicate links closed", value: "\(stats.duplicateLinks)")
+            LabeledContent("Links rotated", value: "\(stats.linkRotations)")
+            LabeledContent("Profile", value: "\(stats.profile.title), up to \(stats.effectiveMaxLinks) links, \(stats.foreground ? "foreground" : "background")")
+        }
+        .font(.footnote)
+    }
+
+    private var batterySection: some View {
+        Section("Battery") {
+            if let battery = model.battery {
+                LabeledContent("Level", value: "\(battery.startPercent) % -> \(battery.nowPercent) %")
+                LabeledContent("Running for", value: "\(Int(battery.elapsedSeconds / 60)) min")
+                if battery.charged {
+                    Text("The device charged during the measurement: it is not valid. Reset the counters to start again.")
+                        .foregroundStyle(.orange)
+                } else if let rate = battery.percentPerHour {
+                    LabeledContent("Drain", value: String(format: "%.1f %% per hour", rate))
+                } else {
+                    Text("Needs at least 10 minutes on battery (iOS reports whole percents).").foregroundStyle(.secondary)
+                }
+            } else {
+                Text("Not available on this device.").foregroundStyle(.secondary)
+            }
         }
         .font(.footnote)
     }
@@ -120,6 +156,16 @@ struct BleLinkTestView: View {
             ForEach(Array(model.log.enumerated().reversed()), id: \.offset) { entry in
                 Text(entry.element).font(.system(.caption2, design: .monospaced))
             }
+        }
+    }
+}
+
+private extension BlePowerProfile {
+    var title: String {
+        switch self {
+        case .saver: return "Saver"
+        case .balanced: return "Balanced"
+        case .aggressive: return "Aggressive"
         }
     }
 }

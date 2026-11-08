@@ -24,7 +24,12 @@ final class FakeScanner: BleScanner {
     var onScanEvent: ((ScanEvent) -> Void)?
     var startCount = 0
     var stopCount = 0
-    func start() { startCount += 1 }
+    /// The `allowDuplicates` of every start, in order.
+    var starts: [Bool] = []
+    func start(allowDuplicates: Bool) {
+        startCount += 1
+        starts.append(allowDuplicates)
+    }
     func stop() { stopCount += 1 }
 }
 
@@ -102,13 +107,21 @@ final class BleRig {
     let connector = FakeConnector()
     let transport: BleTransport
     private var recorded: [TransportEvent] = []
+    private var recordedDiagnostics: [BleDiagnostic] = []
 
-    init(role: BleRole = .both, hello: UInt64 = 0x1111, configure: (inout BleConfig) -> Void = { _ in }) {
+    /// `rotatingHello`: every call of the hello source returns the next number after `hello`.
+    init(
+        role: BleRole = .both,
+        hello: UInt64 = 0x1111,
+        rotatingHello: Bool = false,
+        configure: (inout BleConfig) -> Void = { _ in }
+    ) {
         var config = BleConfig()
         config.role = role
         config.tickMs = 3_600_000 // the tests call housekeeping themselves
         configure(&config)
         let clock = self.clock
+        let helloCounter = HelloCounter(first: hello)
         transport = BleTransport(
             config: config,
             queue: queue,
@@ -117,14 +130,20 @@ final class BleRig {
             server: server,
             connector: connector,
             clockMs: { clock.now },
-            helloSource: { hello }
+            helloSource: { rotatingHello ? helloCounter.next() : hello }
         )
-        queue.sync { transport.eventObserver = { [weak self] event in self?.recorded.append(event) } }
+        queue.sync {
+            transport.eventObserver = { [weak self] event in self?.recorded.append(event) }
+            transport.diagnosticObserver = { [weak self] diagnostic in self?.recordedDiagnostics.append(diagnostic) }
+        }
     }
 
     deinit {
         // `stop()` reports the loss of every link; the rig is already half gone by then.
-        queue.sync { transport.eventObserver = nil }
+        queue.sync {
+            transport.eventObserver = nil
+            transport.diagnosticObserver = nil
+        }
         transport.stop()
     }
 
@@ -133,9 +152,10 @@ final class BleRig {
     func run(_ block: () -> Void) { queue.sync(execute: block) }
 
     var events: [TransportEvent] { queue.sync { recorded } }
+    var diagnostics: [BleDiagnostic] { queue.sync { recordedDiagnostics } }
 
-    func sight(_ address: String, rssi: Int = -50) {
-        run { scanner.onScanEvent?(.sighting(address: address, rssi: rssi)) }
+    func sight(_ address: String, rssi: Int = -50, advertisement: BleAdvertisement? = nil) {
+        run { scanner.onScanEvent?(.sighting(address: address, rssi: rssi, advertisement: advertisement)) }
     }
 
     func emit(_ link: FakeLink, _ event: GattLinkEvent) {
@@ -163,5 +183,21 @@ final class BleRig {
     func advance(_ ms: Int64) {
         clock.advance(ms)
         run { transport.housekeeping() }
+    }
+}
+
+/// Numbers that go up by one on every call (for a hello source that rotates).
+final class HelloCounter: @unchecked Sendable {
+    private let lock = NSLock()
+    private var value: UInt64
+
+    init(first: UInt64) { value = first }
+
+    func next() -> UInt64 {
+        lock.lock()
+        defer { lock.unlock() }
+        let current = value
+        value += 1
+        return current
     }
 }

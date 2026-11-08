@@ -8,8 +8,8 @@ public enum BleTransportError: Error, Sendable, Equatable {
 /// The Bluetooth Low Energy ``Transport``: the state machine between the core and the radio. It follows the BLE
 /// link profile (`docs/src/protocol/ble-link.md`, profile 1.1 as the Android client speaks it) and is the Swift
 /// counterpart of the Android `BleTransport`, reduced to what phase I2 needs: one connection at a time, a simple
-/// back-off, the HELLO exchange and the removal of duplicate links. Power profiles, tie-break and state restoration
-/// are phase I3.
+/// back-off, the HELLO exchange and the removal of duplicate links, and (I3) the tie-break, the power profiles as a
+/// scan duty cycle, link rotation and the foreground/background switch.
 ///
 /// * **One serial queue** owns all state. The ports (CoreBluetooth) are created with that queue and call back on it;
 ///   ``send(peer:bytes:)`` and ``disconnect(peer:)`` only enqueue and return.
@@ -33,6 +33,9 @@ public final class BleTransport: Transport, @unchecked Sendable {
     /// Called with every event handed to the core, on the queue. For tests.
     var eventObserver: ((TransportEvent) -> Void)?
 
+    /// Called with every diagnostic, on the queue. For tests.
+    var diagnosticObserver: ((BleDiagnostic) -> Void)?
+
     private let eventContinuation: AsyncStream<TransportEvent>.Continuation
     private let diagnosticContinuation: AsyncStream<BleDiagnostic>.Continuation
     private let config: BleConfig
@@ -41,6 +44,7 @@ public final class BleTransport: Transport, @unchecked Sendable {
     private let server: GattServerPort?
     private let connector: GattConnector?
     private let clockMs: @Sendable () -> Int64
+    private let helloSource: @Sendable () -> UInt64
 
     private var started = false
     private var stopped = false
@@ -53,7 +57,16 @@ public final class BleTransport: Transport, @unchecked Sendable {
     private var candidates: [String: Candidate] = [:]
     private var cooldownUntil: [String: Int64] = [:]
     private var failureCounts: [String: Int] = [:]
-    private let ownHello: UInt64
+    private var ownHello: UInt64
+
+    private var profile: BlePowerProfile
+    private var foreground = true
+    private var scanEpochMs: Int64 = 0
+    private var scanRequested = false
+    private var scanAllowDuplicates = false
+    private var nextRotationMs: Int64 = 0
+    private var nextHelloRotationMs: Int64 = 0
+    private var rotations: Int64 = 0
 
     private var centralState = BleRadioState.unknown
     private var peripheralState = BleRadioState.unknown
@@ -65,8 +78,10 @@ public final class BleTransport: Transport, @unchecked Sendable {
     private var duplicateTotal: Int64 = 0
 
     private struct Candidate {
+        var firstSeenMs: Int64
         var lastSeenMs: Int64
         var rssi: Int
+        var advertisement: BleAdvertisement?
     }
 
     private final class Session {
@@ -112,6 +127,8 @@ public final class BleTransport: Transport, @unchecked Sendable {
         self.advertiser = config.role.runsPeripheral ? advertiser : nil
         self.server = config.role.runsPeripheral ? server : nil
         self.clockMs = clockMs
+        self.helloSource = helloSource
+        profile = config.profile
         ownHello = helloSource()
         (events, eventContinuation) = AsyncStream.makeStream(of: TransportEvent.self)
         (diagnostics, diagnosticContinuation) = AsyncStream.makeStream(of: BleDiagnostic.self, bufferingPolicy: .bufferingNewest(512))
@@ -136,9 +153,11 @@ public final class BleTransport: Transport, @unchecked Sendable {
                 server?.open()
                 advertiser?.start()
             }
-            if config.role.runsCentral {
-                scanner?.start()
-            }
+            let now = clockMs()
+            scanEpochMs = now
+            nextRotationMs = now + profile.tuning.rotationIntervalMs
+            nextHelloRotationMs = now + config.helloRotationMs
+            updateScan(now)
             startTimer()
         }
     }
@@ -150,6 +169,8 @@ public final class BleTransport: Transport, @unchecked Sendable {
             timer?.cancel()
             timer = nil
             scanner?.stop()
+            scanRequested = false
+            scanning = false
             advertiser?.stop()
             server?.close()
             for session in Array(sessions.values) {
@@ -182,6 +203,36 @@ public final class BleTransport: Transport, @unchecked Sendable {
             guard !stopped, let session = byHandle[peer] else { return }
             closeSession(session, "closed by the core", fault: false, cooldownMs: config.reconnectCooldownMs)
         }
+    }
+
+    /// Changes the power profile (scan duty cycle, number of links, rotation). Links that are open stay open.
+    public func setPowerProfile(_ newProfile: BlePowerProfile) {
+        queue.async { [self] in
+            guard !stopped, newProfile != profile else { return }
+            profile = newProfile
+            powerChanged()
+        }
+    }
+
+    /// Tells the transport whether the app is in the foreground. In the background the scan runs without a duty cycle
+    /// (the system schedules it) and does not report duplicates, and a device that advertises no token connects to
+    /// every neighbour itself, because Android cannot see an iPhone that advertises in the background.
+    public func setAppForeground(_ isForeground: Bool) {
+        queue.async { [self] in
+            guard !stopped, isForeground != foreground else { return }
+            foreground = isForeground
+            powerChanged()
+        }
+    }
+
+    private func powerChanged() {
+        let now = clockMs()
+        scanEpochMs = now
+        nextRotationMs = now + profile.tuning.rotationIntervalMs
+        report(.powerChanged(profile: profile, foreground: foreground))
+        guard started else { return }
+        updateScan(now)
+        connectIfPossible(now)
     }
 
     // MARK: - Snapshots
@@ -217,6 +268,11 @@ public final class BleTransport: Transport, @unchecked Sendable {
                 serverReady: serverReady,
                 candidates: candidates.count,
                 backedOff: cooldownUntil.values.filter { $0 > now }.count,
+                heldByTieBreak: candidates.values.filter { !mayInitiate($0, now) }.count,
+                profile: profile,
+                foreground: foreground,
+                effectiveMaxLinks: effectiveMaxLinks(),
+                linkRotations: rotations,
                 connectAttempts: connectAttempts,
                 connectFailures: connectFailures,
                 duplicateLinks: duplicateTotal
@@ -255,6 +311,7 @@ public final class BleTransport: Transport, @unchecked Sendable {
     }
 
     private func report(_ diagnostic: BleDiagnostic) {
+        diagnosticObserver?(diagnostic)
         diagnosticContinuation.yield(diagnostic)
     }
 
@@ -273,10 +330,13 @@ public final class BleTransport: Transport, @unchecked Sendable {
         case let .failed(code):
             scanning = false
             report(.scanFailed(code: code))
-        case let .sighting(address, rssi):
+        case let .restored(count):
+            report(.restored(side: "central", count: count))
+        case let .sighting(address, rssi, advertisement):
             guard config.role.runsCentral, !clientAddresses.contains(address) else { return }
             let now = clockMs()
-            candidates[address] = Candidate(lastSeenMs: now, rssi: rssi)
+            let firstSeen = candidates[address]?.firstSeenMs ?? now
+            candidates[address] = Candidate(firstSeenMs: firstSeen, lastSeenMs: now, rssi: rssi, advertisement: advertisement)
             connectIfPossible(now)
         }
     }
@@ -297,6 +357,8 @@ public final class BleTransport: Transport, @unchecked Sendable {
         case let .failed(code):
             advertising = false
             report(.advertiseFailed(code: code))
+        case let .restored(count):
+            report(.restored(side: "peripheral", count: count))
         }
     }
 
@@ -322,17 +384,44 @@ public final class BleTransport: Transport, @unchecked Sendable {
         sessions.values.filter { $0.link.role == .client && !$0.active }.count
     }
 
+    /// The profile's limit, capped by the configuration.
+    private func effectiveMaxLinks() -> Int {
+        min(config.maxLinks, profile.tuning.maxLinks)
+    }
+
     /// One slot stays free for incoming connections when the limit is 3 or more.
     private func maxOutgoing() -> Int {
-        config.maxLinks >= 3 ? config.maxLinks - 1 : config.maxLinks
+        let limit = effectiveMaxLinks()
+        return limit >= 3 ? limit - 1 : limit
+    }
+
+    private func saturated() -> Bool {
+        sessions.count >= effectiveMaxLinks() || outgoingCount() >= maxOutgoing()
+    }
+
+    /// A candidate that is not seen again within this time is forgotten: at least one scan cycle plus a margin, or
+    /// the candidates of a scan that pauses for long would never survive the pause.
+    private func candidateTtl() -> Int64 {
+        let duty = scanDuty()
+        return max(config.candidateTtlMs, duty.on + duty.off + 5_000)
+    }
+
+    /// Whether the tie-break lets us open the connection (profile 1.1). A device held back by it connects anyway when it
+    /// has no link at all after the fallback time.
+    private func mayInitiate(_ candidate: Candidate, _ now: Int64) -> Bool {
+        let yield = config.yieldToInitiators && config.role.runsPeripheral && foreground
+        if TieBreak.shouldInitiate(ownToken: nil, peer: candidate.advertisement, yieldToInitiatingPeers: yield) { return true }
+        return sessions.isEmpty && now - candidate.firstSeenMs >= config.tieBreakFallbackMs
     }
 
     private func pickCandidate(_ now: Int64) -> (address: String, candidate: Candidate)? {
-        candidates
+        let ttl = candidateTtl()
+        return candidates
             .filter { entry in
-                now - entry.value.lastSeenMs <= config.candidateTtlMs
+                now - entry.value.lastSeenMs <= ttl
                     && (cooldownUntil[entry.key] ?? 0) <= now
                     && !clientAddresses.contains(entry.key)
+                    && mayInitiate(entry.value, now)
             }
             .max { $0.value.rssi < $1.value.rssi }
             .map { (address: $0.key, candidate: $0.value) }
@@ -341,7 +430,7 @@ public final class BleTransport: Transport, @unchecked Sendable {
     private func connectIfPossible(_ now: Int64) {
         guard started, !stopped, config.role.runsCentral, let connector else { return }
         while connectingCount() < config.maxConcurrentConnects,
-              sessions.count < config.maxLinks,
+              sessions.count < effectiveMaxLinks(),
               outgoingCount() < maxOutgoing()
         {
             guard let pick = pickCandidate(now) else { return }
@@ -362,7 +451,7 @@ public final class BleTransport: Transport, @unchecked Sendable {
             link.close()
             return
         }
-        guard sessions.count < config.maxLinks else {
+        guard sessions.count < effectiveMaxLinks() else {
             report(.linkRefused(address: link.address, role: link.role))
             link.close()
             return
@@ -618,8 +707,79 @@ public final class BleTransport: Transport, @unchecked Sendable {
             }
             if session.active { pump(session) }
         }
-        candidates = candidates.filter { now - $0.value.lastSeenMs <= config.candidateTtlMs }
+        let ttl = candidateTtl()
+        candidates = candidates.filter { now - $0.value.lastSeenMs <= ttl }
         cooldownUntil = cooldownUntil.filter { $0.value > now }
+        rotateHelloIfDue(now)
+        rotateLinksIfDue(now)
+        updateScan(now)
         connectIfPossible(now)
+    }
+
+    // MARK: - Scanning policy
+
+    /// The duty cycle in use: the profile's, or the saver's once the node has all the links it wants (it then only
+    /// needs to notice a neighbour that is waiting).
+    private func scanDuty() -> (on: Int64, off: Int64) {
+        let tuning = saturated() ? BlePowerProfile.saver.tuning : profile.tuning
+        return (tuning.scanOnMs, tuning.scanOffMs)
+    }
+
+    /// Starts and stops the scan so that it follows the duty cycle. In the background the scan simply stays on: the
+    /// system schedules it (and wakes the app for a sighting), and pausing it would stop those wake-ups.
+    private func updateScan(_ now: Int64) {
+        guard started, !stopped, config.role.runsCentral, let scanner else { return }
+        let allowDuplicates = foreground && profile.tuning.allowDuplicates && !saturated()
+        let wanted: Bool
+        if !foreground {
+            wanted = true
+        } else {
+            let duty = scanDuty()
+            let cycle = duty.on + duty.off
+            if duty.off == 0 || cycle <= 0 {
+                wanted = true
+            } else {
+                wanted = (now - scanEpochMs) % cycle < duty.on
+            }
+        }
+        if wanted {
+            if !scanRequested || allowDuplicates != scanAllowDuplicates {
+                scanner.start(allowDuplicates: allowDuplicates)
+                scanRequested = true
+                scanAllowDuplicates = allowDuplicates
+            }
+        } else if scanRequested {
+            scanner.stop()
+            scanRequested = false
+            scanning = false
+        }
+    }
+
+    // MARK: - Rotation
+
+    /// A node that is full keeps looking for neighbours that wait, and now and then swaps its oldest outgoing link for
+    /// one of them, so that a crowd of devices does not leave some of them out for good.
+    private func rotateLinksIfDue(_ now: Int64) {
+        guard config.role.runsCentral, now >= nextRotationMs else { return }
+        nextRotationMs = now + profile.tuning.rotationIntervalMs
+        guard saturated(), pickCandidate(now) != nil else { return }
+        let victim = sessions.values
+            .filter { $0.active && $0.link.role == .client && now - $0.activatedMs >= config.minLinkAgeForRotationMs }
+            .min { $0.activatedMs < $1.activatedMs }
+        guard let victim else { return }
+        rotations += 1
+        report(.linkRotated(address: victim.link.address))
+        closeSession(victim, "rotated for a waiting neighbour", fault: false, cooldownMs: config.rotationPauseMs)
+    }
+
+    /// The HELLO identifier only has to be stable for the life of a link; replacing it now and then keeps a device
+    /// that stays in range from being followed by it.
+    private func rotateHelloIfDue(_ now: Int64) {
+        guard now >= nextHelloRotationMs else { return }
+        nextHelloRotationMs = now + config.helloRotationMs
+        ownHello = helloSource()
+        connector?.setHello(ownHello)
+        server?.setHello(ownHello)
+        report(.helloRotated)
     }
 }

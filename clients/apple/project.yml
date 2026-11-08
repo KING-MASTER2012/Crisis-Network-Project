@@ -43,6 +43,12 @@ targets:
                     - UIInterfaceOrientationPortraitUpsideDown
                     - UIInterfaceOrientationLandscapeLeft
                     - UIInterfaceOrientationLandscapeRight
+                # Bluetooth in the background (phase I3): scanning and connections go on while the app is suspended, and the
+                # system relaunches the app for a Bluetooth event (state restoration). Both ends are needed: every device is
+                # a central and a peripheral at the same time.
+                UIBackgroundModes:
+                    - bluetooth-central
+                    - bluetooth-peripheral
                 # The reason shown to the person when Bluetooth is first used (phase I2 starts using it).
                 NSBluetoothAlwaysUsageDescription: >-
                     Crisis Network uses Bluetooth to pass messages between nearby phones when there is no network.

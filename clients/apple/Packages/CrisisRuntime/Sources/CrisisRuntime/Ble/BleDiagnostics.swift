@@ -34,6 +34,18 @@ public enum BleDiagnostic: Sendable, Equatable {
     case connectBackoff(address: String, delayMs: Int64, failures: Int)
 
     case packetDropped(handle: UInt64, reason: DropReason)
+
+    /// The oldest outgoing link was closed to make room for a neighbour that is waiting.
+    case linkRotated(address: String)
+
+    case powerChanged(profile: BlePowerProfile, foreground: Bool)
+
+    /// The HELLO identifier was replaced (new links use the new one).
+    case helloRotated
+
+    /// The system relaunched the app for Bluetooth (`side` is "central" or "peripheral") and handed back `count`
+    /// connections or services, which were reset.
+    case restored(side: String, count: Int)
 }
 
 public enum DropReason: String, Sendable, Equatable {
@@ -92,6 +104,15 @@ public struct BleStats: Sendable, Equatable {
 
     /// Addresses currently in back-off.
     public var backedOff: Int
+
+    /// Candidates the tie-break holds back (the neighbour is expected to connect to us).
+    public var heldByTieBreak: Int
+    public var profile: BlePowerProfile
+    public var foreground: Bool
+
+    /// The most links the profile and the configuration allow together.
+    public var effectiveMaxLinks: Int
+    public var linkRotations: Int64
     public var connectAttempts: Int64
     public var connectFailures: Int64
     public var duplicateLinks: Int64

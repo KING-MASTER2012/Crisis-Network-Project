@@ -29,14 +29,24 @@ extension UUID {
 /// Apple shows no radio address; a peripheral is known by `CBPeripheral.identifier`, a UUID that is stable on this
 /// device only. The scan reports every advertisement (`AllowDuplicates`), because a peripheral that was not
 /// connected to is otherwise reported once per scan, and the transport has to see it again when a connection ends.
-/// That is cheap in the foreground, which is all phase I2 does; I3 revisits it for the background.
+/// That is cheap in the foreground, and the transport pauses the scan between duty cycles (power profiles). In the
+/// background the system ignores `AllowDuplicates` and reports a device once, so the transport asks for it only in the
+/// foreground; a scan that is restarted reports every device again.
+///
+/// **State restoration (iOS):** with a restore identifier the system keeps the scan and the connections of a
+/// terminated app and relaunches it for a Bluetooth event. The app has to create the manager again, at launch, with the
+/// same identifier; the transport does that when it is started at launch. The restored connections are cancelled: a
+/// link needs its handshake and its handle, and a half-known one is worth less than a fresh scan.
 final class CoreBluetoothCentral: NSObject, BleScanner, GattConnector, CBCentralManagerDelegate, @unchecked Sendable {
     var onScanEvent: ((ScanEvent) -> Void)?
 
     fileprivate let queue: DispatchQueue
     private var manager: CBCentralManager?
     private var wantScan = false
+    private var allowDuplicates = false
     private var scanning = false
+    private let restoreIdentifier: String?
+    private var restoredPeripherals: [CBPeripheral] = []
     private var helloId: UInt64?
     private var seen: [String: CBPeripheral] = [:]
     private var links: [UUID: CoreBluetoothClientLink] = [:]
@@ -44,28 +54,39 @@ final class CoreBluetoothCentral: NSObject, BleScanner, GattConnector, CBCentral
 
     private static let maxRememberedPeripherals = 64
 
-    init(queue: DispatchQueue) {
+    init(queue: DispatchQueue, restoreIdentifier: String? = nil) {
         self.queue = queue
+        self.restoreIdentifier = restoreIdentifier
         super.init()
     }
 
     // MARK: BleScanner
 
-    func start() {
+    func start(allowDuplicates: Bool) {
         wantScan = true
         if manager == nil {
-            manager = CBCentralManager(delegate: self, queue: queue, options: [CBCentralManagerOptionShowPowerAlertKey: true])
+            self.allowDuplicates = allowDuplicates
+            var options: [String: Any] = [CBCentralManagerOptionShowPowerAlertKey: true]
+            #if os(iOS)
+            if let restoreIdentifier { options[CBCentralManagerOptionRestoreIdentifierKey] = restoreIdentifier }
+            #endif
+            manager = CBCentralManager(delegate: self, queue: queue, options: options)
         } else {
+            // Another duty phase or another mode: scan again, so that every device is reported again.
+            if scanning {
+                manager?.stopScan()
+                scanning = false
+            }
+            self.allowDuplicates = allowDuplicates
             startScanIfPossible()
         }
     }
 
+    /// Stops scanning. The connections stay: the transport closes them itself.
     func stop() {
         wantScan = false
         if scanning { manager?.stopScan() }
         scanning = false
-        for link in Array(links.values) { link.close() }
-        links.removeAll()
     }
 
     // MARK: GattConnector
@@ -97,7 +118,7 @@ final class CoreBluetoothCentral: NSObject, BleScanner, GattConnector, CBCentral
         guard wantScan, !scanning, let manager, manager.state == .poweredOn else { return }
         manager.scanForPeripherals(
             withServices: [BleProfile.serviceUUID.cbUUID],
-            options: [CBCentralManagerScanOptionAllowDuplicatesKey: true]
+            options: [CBCentralManagerScanOptionAllowDuplicatesKey: allowDuplicates]
         )
         scanning = true
         onScanEvent?(.started)
@@ -109,6 +130,11 @@ final class CoreBluetoothCentral: NSObject, BleScanner, GattConnector, CBCentral
         let state = BleRadioState(central.state)
         onScanEvent?(.radioState(state))
         if state == .poweredOn {
+            // Connections the system kept for us are of no use without their handshake: start from a clean slate.
+            let restored = restoredPeripherals
+            restoredPeripherals.removeAll()
+            for peripheral in restored { central.cancelPeripheralConnection(peripheral) }
+            if !restored.isEmpty { onScanEvent?(.restored(count: restored.count)) }
             startScanIfPossible()
         } else {
             // Bluetooth went away: the system drops every connection without telling each peripheral.
@@ -132,8 +158,16 @@ final class CoreBluetoothCentral: NSObject, BleScanner, GattConnector, CBCentral
             seen = seen.filter { entry in links[entry.value.identifier] != nil || closing[entry.value.identifier] != nil }
         }
         seen[address] = peripheral
-        onScanEvent?(.sighting(address: address, rssi: RSSI.intValue))
+        let advertisement = BleAdvertisement.decode(manufacturerData: advertisementData[CBAdvertisementDataManufacturerDataKey] as? Data)
+        onScanEvent?(.sighting(address: address, rssi: RSSI.intValue, advertisement: advertisement))
     }
+
+    #if os(iOS)
+    /// The system relaunched the app and hands back what it kept. Called before the state update.
+    func centralManager(_ central: CBCentralManager, willRestoreState dict: [String: Any]) {
+        restoredPeripherals = dict[CBCentralManagerRestoredStatePeripheralsKey] as? [CBPeripheral] ?? []
+    }
+    #endif
 
     func centralManager(_ central: CBCentralManager, didConnect peripheral: CBPeripheral) {
         links[peripheral.identifier]?.didConnect()

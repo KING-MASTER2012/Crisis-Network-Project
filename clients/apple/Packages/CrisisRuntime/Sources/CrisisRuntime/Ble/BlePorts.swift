@@ -29,18 +29,24 @@ enum ScanEvent: Equatable {
 
     /// A device advertising the service was seen. May repeat for the same device. The address is the identifier
     /// CoreBluetooth gave the peripheral (a UUID that is stable on this device only; Apple never shows the radio
-    /// address).
-    case sighting(address: String, rssi: Int)
+    /// address). `advertisement` is the token of a profile 1.1 neighbour, `nil` when it advertises none.
+    case sighting(address: String, rssi: Int, advertisement: BleAdvertisement?)
 
     case radioState(BleRadioState)
     case failed(code: Int)
+
+    /// The system relaunched the app for this manager and handed back its state (iOS state restoration).
+    case restored(count: Int)
 }
 
 protocol BleScanner: AnyObject {
     var onScanEvent: ((ScanEvent) -> Void)? { get set }
 
-    /// Starts a scan filtered on the service UUID as soon as Bluetooth is on (immediately when it is).
-    func start()
+    /// Starts a scan filtered on the service UUID as soon as Bluetooth is on (immediately when it is). Called again
+    /// with another `allowDuplicates` it restarts the scan. Links are not touched.
+    func start(allowDuplicates: Bool)
+
+    /// Stops scanning only; the links that are open stay open (the transport pauses the scan between duty cycles).
     func stop()
 }
 
@@ -48,6 +54,9 @@ enum AdvertiseEvent: Equatable {
     case started
     case radioState(BleRadioState)
     case failed(code: Int)
+
+    /// The system relaunched the app for the peripheral manager (iOS state restoration).
+    case restored(count: Int)
 }
 
 protocol BleAdvertiser: AnyObject {

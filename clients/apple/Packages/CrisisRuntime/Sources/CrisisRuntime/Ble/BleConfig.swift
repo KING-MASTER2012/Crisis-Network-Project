@@ -64,5 +64,29 @@ public struct BleConfig: Sendable {
     /// Period of the housekeeping tick (timeouts, candidates, MTU polling).
     public var tickMs: Int64 = 250
 
+    /// The power profile at the start; ``BleTransport/setPowerProfile(_:)`` changes it later.
+    public var profile = BlePowerProfile.balanced
+
+    /// A device that is held back by the tie-break connects anyway when it has had no link at all for this long since
+    /// it first saw the neighbour.
+    public var tieBreakFallbackMs: Int64 = 30_000
+
+    /// An Apple device advertises no token, so a neighbour that does (and can initiate) will connect to it. While it
+    /// advertises in the foreground it leaves the connection to that neighbour instead of opening a second one
+    /// (see ``TieBreak``). Switch off to connect to everything (the duplicate is then closed through HELLO).
+    public var yieldToInitiators = true
+
+    /// Link rotation: only a link at least this old is swapped out, and its address is left alone afterwards for
+    /// ``rotationPauseMs``.
+    public var minLinkAgeForRotationMs: Int64 = 60_000
+    public var rotationPauseMs: Int64 = 60_000
+
+    /// The HELLO identifier is replaced this often (the Android client replaces it together with its token).
+    public var helloRotationMs: Int64 = 10 * 60_000
+
+    /// iOS: let the system relaunch the app in the background for Bluetooth events (state restoration). Needs the
+    /// transport to be started at launch, before any UI.
+    public var restoration = true
+
     public init() {}
 }

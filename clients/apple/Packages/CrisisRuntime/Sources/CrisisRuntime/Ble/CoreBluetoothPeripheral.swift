@@ -14,8 +14,13 @@ import Foundation
 /// * **No way to drop a central.** ``CoreBluetoothServerLink/close()`` silences the link (nothing more is sent, what
 ///   arrives is ignored); the central stays connected until it leaves. When the core asks for a disconnect or a
 ///   duplicate is closed, the other side's own rules end the connection (see ``BleTransport``).
-/// * **Advertising works in the foreground only** in this phase. In the background the service UUID moves to a
-///   special area only iOS scanners can see; I3 deals with it.
+/// * **In the background** the service UUID moves to a special area that only iOS scanners can see: an Android
+///   device does not find an iPhone that advertises in the background. The iPhone therefore connects to Android
+///   neighbours itself while it is in the background (see ``TieBreak``), and as a peripheral it only serves other
+///   iPhones.
+/// * **State restoration (iOS):** with a restore identifier the system relaunches the app for a central that wants
+///   to talk to it. The restored service and advertisement are reset (removed, then added again): the links are
+///   rebuilt by the centrals' next connection.
 final class CoreBluetoothPeripheral: NSObject, BleAdvertiser, GattServerPort, CBPeripheralManagerDelegate, @unchecked Sendable {
     var onAdvertiseEvent: ((AdvertiseEvent) -> Void)?
     var onServerEvent: ((ServerEvent) -> Void)?
@@ -30,9 +35,12 @@ final class CoreBluetoothPeripheral: NSObject, BleAdvertiser, GattServerPort, CB
     private var advertising = false
     private var helloId: UInt64?
     private var links: [UUID: CoreBluetoothServerLink] = [:]
+    private let restoreIdentifier: String?
+    private var restoredServices = 0
 
-    init(queue: DispatchQueue) {
+    init(queue: DispatchQueue, restoreIdentifier: String? = nil) {
         self.queue = queue
+        self.restoreIdentifier = restoreIdentifier
         super.init()
     }
 
@@ -74,7 +82,11 @@ final class CoreBluetoothPeripheral: NSObject, BleAdvertiser, GattServerPort, CB
 
     private func ensureManager() {
         guard manager == nil else { return }
-        manager = CBPeripheralManager(delegate: self, queue: queue, options: nil)
+        var options: [String: Any] = [:]
+        #if os(iOS)
+        if let restoreIdentifier { options[CBPeripheralManagerOptionRestoreIdentifierKey] = restoreIdentifier }
+        #endif
+        manager = CBPeripheralManager(delegate: self, queue: queue, options: options.isEmpty ? nil : options)
     }
 
     private func addServiceIfPossible() {
@@ -121,6 +133,15 @@ final class CoreBluetoothPeripheral: NSObject, BleAdvertiser, GattServerPort, CB
         let state = BleRadioState(peripheral.state)
         onAdvertiseEvent?(.radioState(state))
         if state == .poweredOn {
+            if restoredServices > 0 {
+                // What the system kept is of no use: the characteristics are not ours any more.
+                peripheral.stopAdvertising()
+                peripheral.removeAllServices()
+                onAdvertiseEvent?(.restored(count: restoredServices))
+                restoredServices = 0
+                serviceAdded = false
+                advertising = false
+            }
             addServiceIfPossible()
         } else {
             // Services and advertising are gone, and so are the centrals.
@@ -131,6 +152,15 @@ final class CoreBluetoothPeripheral: NSObject, BleAdvertiser, GattServerPort, CB
             for link in lost { link.finish(.remote) }
         }
     }
+
+    #if os(iOS)
+    /// The system relaunched the app and hands back what it kept. Called before the state update.
+    func peripheralManager(_ peripheral: CBPeripheralManager, willRestoreState dict: [String: Any]) {
+        let services = dict[CBPeripheralManagerRestoredStateServicesKey] as? [CBMutableService] ?? []
+        let advertising = dict[CBPeripheralManagerRestoredStateAdvertisementDataKey] != nil
+        restoredServices = max(services.count, advertising ? 1 : 0)
+    }
+    #endif
 
     func peripheralManager(_ peripheral: CBPeripheralManager, didAdd service: CBService, error: Error?) {
         if let error {

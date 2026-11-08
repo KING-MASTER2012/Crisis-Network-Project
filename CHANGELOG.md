@@ -1,3 +1,51 @@
+# Changes: phase I3, discovery, topology and the background on Apple
+
+**Package `CrisisRuntime` (`Ble/`)**
+
+* `BleAdvertisement` and `TieBreak`: the token of an Android neighbour is read from the manufacturer data; an iPhone
+  advertises none. While it advertises in the foreground it leaves the connection to a neighbour that can initiate;
+  it connects itself when it only scans, in the background, or after 30 s without any link (`yieldToInitiators`
+  switches it off). The HELLO deduplication of I2 still removes the rare double link.
+* `BlePowerProfile` (`saver`, `balanced`, `aggressive`): the scan **duty cycle** in the foreground (2/18 s, 5/10 s,
+  continuous), the number of links (3, 5, 7) and the rotation interval. A node that has all its links scans like
+  the saver. In the background the scan stays on (the system schedules it) and does not ask for duplicates.
+  `BleTransport.setPowerProfile(_:)` and `setAppForeground(_:)`.
+* Link rotation (oldest outgoing link swapped for a waiting neighbour), HELLO rotation every 10 min, candidates keep
+  their first-seen time and live at least one scan cycle.
+* The scan port: `start(allowDuplicates:)` (restarts the scan, leaves links alone); `stop()` no longer closes links
+  (it had to change for the duty cycle; the transport closes its links itself).
+* State restoration (iOS): restore identifiers on both managers, `willRestoreState` resets what the system kept and
+  reports it (`restored` diagnostic). `BleConfig.restoration`.
+* Stats and diagnostics: tie-break holds, profile, foreground, effective link limit, rotations.
+
+**App**
+
+* `BleLinkTestModel` is now the node of the app (`shared`): persisted role, profile and "start at every launch"
+  (`resumeIfEnabled()` from `CrisisNetworkApp.init`, which also runs when the system relaunches the app), the
+  foreground/background switch, a 25 s background task, Low Power Mode lowers the profile, App Nap assertion on the
+  Mac, screen kept on while testing on iOS.
+* `BatteryProbe`: battery level at the start and now, drain per hour (invalid when the device charged).
+* `BleLinkTestView`: Power picker, Battery section, tie-break/rotation counters.
+* `project.yml`: `UIBackgroundModes` `bluetooth-central` and `bluetooth-peripheral` (the Info.plist is generated).
+
+**Docs:** `docs/src/protocol/ble-link.md` (the optional "leave it to the initiator" rule, the background limits) and
+the README of the Apple client (section "Discovery, topology and the background", with the exit test).
+
+**Tests:** `BleDiscoveryTests` (token, tie-break, fallback, duty cycle, profiles, rotation, HELLO rotation,
+restoration report); `BleFakes` follow the new scanner port.
+
+**Not done / not run**
+
+* Nothing here was compiled or run (no Swift toolchain where it was written). `CoreBluetoothCentral.swift`,
+  `CoreBluetoothPeripheral.swift` and the app files are the likeliest to need a compiler fix.
+* The exit test (3 mixed devices, battery per profile, background and relaunch) needs real devices and was not run. State
+  restoration and background behaviour in particular can only be confirmed on a device.
+* The Android 3-phone test, which the plan wants first, is still to be run by you.
+* Not in I3: settings UI for the profile (I7), connection-interval requests, background reconnection tuning beyond what
+  the system does.
+
+---
+
 # Changes: phase A8, the missing half (profile document)
 
 A8 was applied to the repository except for one file: the CHANGELOG entry "Android phase A8" says that

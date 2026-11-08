@@ -6,13 +6,24 @@ import SwiftUI
 import UIKit
 #endif
 
-/// The measuring half of the Bluetooth test bench (phase I2), the counterpart of the Android `BleLinkTestController`:
-/// it opens the node with a ``BleTransport``, sends test announcements through it and counts what arrives. It is a
-/// development tool, not product UI (the real screens arrive in I4 and later).
+/// The node of the app and the measuring half of the Bluetooth test bench (phases I2 and I3). It opens the node with a
+/// ``BleTransport``, sends test announcements and counts what arrives. It is a development tool, not product UI (the
+/// real screens arrive in I4 and later), but the part that keeps the node running is the real thing:
+///
+/// * **One instance for the app** (`shared`), started at launch when it was running before (`resumeIfEnabled()`).
+///   That is what state restoration needs: when the system relaunches the app in the background for a Bluetooth
+///   event, the transport must be created again at once, with the same identifiers, before any UI exists.
+/// * **Foreground and background** are passed to the transport (`appForegroundChanged`): in the background the scan is
+///   not paused and an iPhone connects to every neighbour itself. Going to the background also asks the system for a
+///   little extra time to finish what is in flight (iOS).
+/// * **Power:** the user's profile, lowered to the saver while Low Power Mode is on. On the Mac an activity
+///   assertion keeps App Nap from throttling the node's timers.
 ///
 /// The messages are public announcements, because they need no contact exchange (the QR flow is I5).
 @MainActor
 final class BleLinkTestModel: ObservableObject {
+    static let shared = BleLinkTestModel()
+
     /// Ten messages stay below the core's per-sender burst limit of 20 (refill 2 per second).
     static let burstCount = 10
     static let burstPayloadBytes = 1_000
@@ -30,7 +41,28 @@ final class BleLinkTestModel: ObservableObject {
         }
     }
 
-    @Published var role: BleRole = .both
+    private enum Keys {
+        static let role = "ble.role"
+        static let profile = "ble.profile"
+        static let autoStart = "ble.autoStart"
+    }
+
+    private let defaults = UserDefaults.standard
+
+    @Published var role: BleRole {
+        didSet { defaults.set(role.rawValue, forKey: Keys.role) }
+    }
+
+    @Published var profile: BlePowerProfile {
+        didSet {
+            defaults.set(profile.rawValue, forKey: Keys.profile)
+            applyPower()
+        }
+    }
+
+    /// Start the node at every launch (and so after a relaunch by the system). Set by Start and Stop.
+    @Published private(set) var autoStart: Bool
+
     @Published private(set) var running = false
     @Published private(set) var busy = false
     @Published private(set) var errorText: String?
@@ -39,14 +71,46 @@ final class BleLinkTestModel: ObservableObject {
     @Published private(set) var counters = Counters()
     @Published private(set) var log: [String] = []
     @Published private(set) var nodeId = ""
+    @Published private(set) var battery: BatteryReport?
+    @Published private(set) var lowPowerMode = ProcessInfo.processInfo.isLowPowerModeEnabled
 
     private var runtime: NodeRuntime?
     private var transport: BleTransport?
     private var tasks: [Task<Void, Never>] = []
+    private var foreground = true
+    private let batteryProbe = BatteryProbe()
+    private var powerObserver: NSObjectProtocol?
+    #if os(iOS)
+    private var backgroundTask = UIBackgroundTaskIdentifier.invalid
+    #endif
+    #if os(macOS)
+    private var activity: NSObjectProtocol?
+    #endif
 
     private static let maxLogLines = 150
 
+    private init() {
+        let stored = UserDefaults.standard
+        role = BleRole(rawValue: stored.string(forKey: Keys.role) ?? "") ?? .both
+        profile = BlePowerProfile(rawValue: stored.string(forKey: Keys.profile) ?? "") ?? .balanced
+        autoStart = stored.bool(forKey: Keys.autoStart)
+        powerObserver = NotificationCenter.default.addObserver(
+            forName: .NSProcessInfoPowerStateDidChange, object: nil, queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor in self?.applyPower() }
+        }
+    }
+
     // MARK: Start and stop
+
+    /// Called at launch, also when the system relaunches the app in the background for Bluetooth.
+    func resumeIfEnabled() {
+        guard autoStart, !running, !busy else { return }
+        #if os(iOS)
+        foreground = UIApplication.shared.applicationState != .background
+        #endif
+        Task { await start() }
+    }
 
     func start() async {
         guard !running, !busy else { return }
@@ -56,8 +120,10 @@ final class BleLinkTestModel: ObservableObject {
 
         var config = BleConfig()
         config.role = role
+        config.profile = effectiveProfile
         if let info = try? CoreRuntime.verify() { config.minLinkMtu = Int(info.minLinkMtu) }
         let transport = BleTransport.coreBluetooth(config: config)
+        transport.setAppForeground(foreground)
 
         let root: URL
         do {
@@ -81,17 +147,19 @@ final class BleLinkTestModel: ObservableObject {
             self.transport = transport
             nodeId = String(runtime.nodeIdHex.prefix(16))
             running = true
-            #if os(iOS)
-            // Bluetooth runs in the foreground only in this phase: keep the screen on while testing.
-            UIApplication.shared.isIdleTimerDisabled = true
-            #endif
-            appendLog("started as \(role.rawValue), node \(nodeId)")
+            autoStart = true
+            defaults.set(true, forKey: Keys.autoStart)
+            keepAwake(true)
+            batteryProbe.begin()
+            appendLog("started as \(role.rawValue), \(effectiveProfile.rawValue), \(foreground ? "foreground" : "background"), node \(nodeId)")
             observe(runtime: runtime, transport: transport)
         }
     }
 
     func stop() async {
         guard running, let runtime else { return }
+        autoStart = false
+        defaults.set(false, forKey: Keys.autoStart)
         for task in tasks { task.cancel() }
         tasks.removeAll()
         await runtime.stop()
@@ -100,10 +168,73 @@ final class BleLinkTestModel: ObservableObject {
         running = false
         links = []
         stats = nil
-        #if os(iOS)
-        UIApplication.shared.isIdleTimerDisabled = false
-        #endif
+        battery = nil
+        keepAwake(false)
+        batteryProbe.end()
+        endBackgroundTask()
         appendLog("stopped")
+    }
+
+    // MARK: Foreground, background, power
+
+    /// The profile in force: the user's, or the saver while Low Power Mode is on.
+    var effectiveProfile: BlePowerProfile {
+        lowPowerMode ? .saver : profile
+    }
+
+    func appForegroundChanged(_ isForeground: Bool) {
+        foreground = isForeground
+        transport?.setAppForeground(isForeground)
+        if isForeground {
+            endBackgroundTask()
+        } else {
+            beginBackgroundTask()
+        }
+        if running { appendLog(isForeground ? "app in the foreground" : "app in the background") }
+    }
+
+    private func applyPower() {
+        lowPowerMode = ProcessInfo.processInfo.isLowPowerModeEnabled
+        transport?.setPowerProfile(effectiveProfile)
+        if running { appendLog("power profile \(effectiveProfile.rawValue)\(lowPowerMode ? " (Low Power Mode)" : "")") }
+    }
+
+    /// While the screen is on and the node runs: no sleep on iOS (a test bench), no App Nap on the Mac.
+    private func keepAwake(_ on: Bool) {
+        #if os(iOS)
+        UIApplication.shared.isIdleTimerDisabled = on
+        #endif
+        #if os(macOS)
+        if on, activity == nil {
+            activity = ProcessInfo.processInfo.beginActivity(options: [.userInitiatedAllowingIdleSystemSleep], reason: "Crisis Network mesh")
+        } else if !on, let current = activity {
+            ProcessInfo.processInfo.endActivity(current)
+            activity = nil
+        }
+        #endif
+    }
+
+    /// iOS gives an app that goes to the background a few seconds to finish its work. Packets that are in flight get
+    /// them; after 25 s the node goes on only through Bluetooth wake-ups.
+    private func beginBackgroundTask() {
+        #if os(iOS)
+        guard running, backgroundTask == .invalid else { return }
+        backgroundTask = UIApplication.shared.beginBackgroundTask(withName: "crisis-mesh") { [weak self] in
+            Task { @MainActor in self?.endBackgroundTask() }
+        }
+        Task { [weak self] in
+            try? await Task.sleep(nanoseconds: 25_000_000_000)
+            self?.endBackgroundTask()
+        }
+        #endif
+    }
+
+    private func endBackgroundTask() {
+        #if os(iOS)
+        guard backgroundTask != .invalid else { return }
+        UIApplication.shared.endBackgroundTask(backgroundTask)
+        backgroundTask = .invalid
+        #endif
     }
 
     // MARK: Test traffic
@@ -145,6 +276,7 @@ final class BleLinkTestModel: ObservableObject {
     func resetCounters() {
         transport?.resetLinkMetrics()
         counters = Counters()
+        batteryProbe.begin()
         refresh()
     }
 
@@ -174,6 +306,7 @@ final class BleLinkTestModel: ObservableObject {
         guard let transport else { return }
         links = transport.linkInfos()
         stats = transport.stats()
+        battery = batteryProbe.report()
     }
 
     private func handle(_ notification: CoreNotification) {

@@ -71,6 +71,14 @@ Equal tokens (1 in 4 billion) make both wait until the next rotation. A device t
 the tie-break connects anyway when it has had no link at all for 30 s since it first saw the
 neighbour: this protects against a neighbour that cannot see it.
 
+The first rule exists because a device without a token cannot take part in the comparison. A device
+that advertises the service in a way the neighbour can see (an Apple device in the foreground) may
+instead **leave the connection to a neighbour whose "can initiate" flag is set**: that neighbour
+applies the rules above, finds no token on us and connects. It must connect itself when it is not
+visible (it only scans, or it advertises in the background, where an Android scan filtered on the
+service UUID does not find an Apple device) and after the 30 s fallback. This is optional: a device
+that connects to everyone is correct too, and the duplicate is removed as described below.
+
 Discovery policy beyond this (scan modes, duty cycles, back-off, how many links) is not part of the
 profile; it is the business of each implementation.
 
@@ -195,8 +203,9 @@ identifier that is stable on that device only).
 * Radio addresses are random and rotate; links are keyed by address (or the platform's identifier)
   only while they exist.
 * Apple platforms advertise no token and cannot drop a central; both are handled as described above.
-* Apple platforms advertise and scan in the foreground only in this version. In the background the
-  service UUID moves to an area that only Apple scanners can see (and a scan needs the service UUID
-  as a filter); background operation is a separate phase of the Apple client and may add rules here.
+* An Apple device that advertises in the background is found by other Apple devices only: the
+  service UUID moves to an area that an Android scan with a service filter does not match. It
+  reaches Android neighbours by connecting to them. In the background an Apple scan is scheduled by
+  the system and reports a device once, and the app runs for a few seconds per Bluetooth event.
 * Power profiles, connection rotation and back-off per error code are implementation policy, not
   part of the profile.
