@@ -30,7 +30,7 @@ zeroize = { version = "1.9.1", features = ["zeroize_derive"] }
 getrandom = "0.4.3"
 
 # --- Storage (crate `storage`); features are chosen by that crate (and, for SQLCipher, by the final application) ---
-rusqlite = { version = "0.40.2", default-features = false }
+rusqlite = { version = "0.42.0", default-features = false }
 
 # --- General ---
 thiserror = "2.0.21"

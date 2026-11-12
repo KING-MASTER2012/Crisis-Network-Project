@@ -53,7 +53,7 @@ struct SettingsView: View {
         Section {
             Picker("settings_language", selection: $prefs.language) {
                 ForEach(AppLanguage.allCases) { language in
-                    Text(language.title).tag(language)
+                    language.label.tag(language)
                 }
             }
             #if os(iOS)
@@ -137,12 +137,13 @@ extension ThemeMode {
 
 extension AppLanguage {
     /// A language is named in itself, whatever language the app is in, so that it can be found by someone who does not
-    /// read the current one. Only the system choice is translated.
-    var title: LocalizedStringKey {
+    /// read the current one. Only the system choice is translated. (`LocalizedStringKey` has no verbatim initializer,
+    /// so the names are built as verbatim `Text`.)
+    var label: Text {
         switch self {
-        case .system: return "lang_system"
-        case .english: return LocalizedStringKey(verbatim: "English")
-        case .turkish: return LocalizedStringKey(verbatim: "Türkçe")
+        case .system: return Text("lang_system")
+        case .english: return Text(verbatim: "English")
+        case .turkish: return Text(verbatim: "Türkçe")
         }
     }
 }
