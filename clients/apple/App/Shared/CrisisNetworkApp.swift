@@ -1,6 +1,7 @@
 import SwiftUI
 
-/// Phases I0 to I3: the self-test and the Bluetooth test bench. The real screens come in I4 and later.
+/// Phase I4: the introduction, then the shell (tabs on an iPhone, sidebar on an iPad and a Mac). The Bluetooth test bench
+/// and the self-test of the earlier phases moved to the developer section of the settings.
 ///
 /// The node is started in `init`, which also runs when the system relaunches the app in the background for a Bluetooth
 /// event (state restoration): the transport must exist before any scene does.
@@ -14,12 +15,7 @@ struct CrisisNetworkApp: App {
 
     var body: some Scene {
         WindowGroup {
-            TabView {
-                SelfCheckView()
-                    .tabItem { Label("Self-test", systemImage: "checkmark.seal") }
-                BleLinkTestView()
-                    .tabItem { Label("Bluetooth", systemImage: "dot.radiowaves.left.and.right") }
-            }
+            RootView()
         }
         .onChange(of: scenePhase) { _, phase in
             switch phase {

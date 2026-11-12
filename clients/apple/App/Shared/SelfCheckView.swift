@@ -10,7 +10,7 @@ struct SelfCheckView: View {
     @State private var running = false
 
     var body: some View {
-        NavigationStack {
+        Group {  // the stack is the one of the settings screen that pushes this view
             List {
                 if coreReport == nil && runtimeReport == nil {
                     ProgressView("Running the self-test…")

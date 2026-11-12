@@ -8,7 +8,7 @@ struct BleLinkTestView: View {
     @ObservedObject private var model = BleLinkTestModel.shared
 
     var body: some View {
-        NavigationStack {
+        Group {  // the stack is the one of the settings screen that pushes this view
             List {
                 controlSection
                 if model.running {

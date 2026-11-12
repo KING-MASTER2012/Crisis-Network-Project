@@ -74,6 +74,9 @@ final class BleLinkTestModel: ObservableObject {
     @Published private(set) var battery: BatteryReport?
     @Published private(set) var lowPowerMode = ProcessInfo.processInfo.isLowPowerModeEnabled
 
+    /// The public identity of the running node (the safety number and the node id), `nil` while it is stopped.
+    private(set) var runningIdentity: (safetyNumber: String, nodeIdHex: String)?
+
     private var runtime: NodeRuntime?
     private var transport: BleTransport?
     private var tasks: [Task<Void, Never>] = []
@@ -146,6 +149,7 @@ final class BleLinkTestModel: ObservableObject {
             self.runtime = runtime
             self.transport = transport
             nodeId = String(runtime.nodeIdHex.prefix(16))
+            runningIdentity = (runtime.safetyNumber, runtime.nodeIdHex)
             running = true
             autoStart = true
             defaults.set(true, forKey: Keys.autoStart)
@@ -166,6 +170,7 @@ final class BleLinkTestModel: ObservableObject {
         self.runtime = nil
         transport = nil
         running = false
+        runningIdentity = nil
         links = []
         stats = nil
         battery = nil

@@ -1,3 +1,48 @@
+# Changes: phase I4, design system, shell and introduction on Apple
+
+**New in `App/Shared`**
+
+* `Design/`: `Palette` (the palette of the Android client: light, dark, high contrast, black; with the contrast
+  arithmetic), `ThemeSettings`/`crisisTheme` (appearance as data; palette, colour scheme and text size applied to
+  everything; the extra text size moves Dynamic Type up by steps), `TypeScale`, and the components `ScreenColumn`,
+  `InfoCard`, `StatusPill`, three button styles, `EmptyState`.
+* `Shell/`: `RootView` (introduction, then the shell; theme and language applied), `AppShell` (**tab bar** on an
+  iPhone, **NavigationSplitView** on an iPad and a Mac, a native `NavigationStack` per destination, so the back button
+  and the swipe are the platform's), `Destination`.
+* `Screens/`: `HomeView` (join and leave the mesh, neighbours, safety number, Bluetooth blockers), `SettingsView`
+  (appearance, language, power, identity, developer tools), `PlaceholderView` (chats, announcements, contacts).
+* `Onboarding/`: `OnboardingFlow` (the rules of the Android flow), the five steps, `IdentityCreator` (creates the
+  identity through `NodeBootstrap`, with a `NullTransport`), `BluetoothAccess` (authorisation, power state, the
+  permission request, an explanation per refusal).
+* `Prefs/`: `UiPreferences` (appearance, language, introduction done, public identity values), `AppLanguage`, `L10n`.
+* `Resources/Localizable.xcstrings`: English and Turkish, 123 entries, one plural (`home_neighbours`). The strings
+  are the Android ones where they apply (same keys), the rest written for iOS (Bluetooth permission, background).
+  **The language changes at once** (locale in the environment).
+
+**Changed**
+
+* `CrisisNetworkApp`: shows `RootView`; the tab bar with the self-test and the test bench is gone. Both are now in the
+  developer section of the settings (`SelfCheckView` and `BleLinkTestView` no longer own a navigation stack).
+* `BleLinkTestModel`: exposes the identity of the running node.
+* `project.yml`: `CFBundleLocalizations` en, tr in both Info.plists.
+
+**Tests (`Tests/iOS`, run in the simulator by CI):** `DesignSystemTests` (every text pair >= 4.5:1, high contrast >= 7:1,
+outlines >= 3:1, theme and text-size arithmetic), `OnboardingTests` (flow rules, safety number format, failure
+messages, shell destinations, Bluetooth readiness table, preferences, the catalog in both languages).
+
+**Not done / not run**
+
+* Nothing was compiled or run (no Swift toolchain where this was written). The likeliest compiler complaints: the
+  string catalog (is it picked up as a resource by XcodeGen?), `@ViewBuilder let` in `StepFrame`, and the view files in
+  general. The tests that read the catalog (`L10n`) fail if the catalog is not compiled into the app.
+* Whether `.environment(\.locale, ...)` switches the language of `Text` at once, as designed, has to be seen on a
+  device. If a screen stays in the old language after the change, look for a `Text` built from a `String` there.
+* VoiceOver, Dynamic Type at the largest sizes and the iPad/Mac layouts were not checked on devices (phase I9).
+* Not in I4: the contact and message screens (I5, I6), notifications and the rest of the settings (I7), the Mac menu
+  bar and sandbox work (I8).
+
+---
+
 # Changes: phase I3, discovery, topology and the background on Apple
 
 **Package `CrisisRuntime` (`Ble/`)**

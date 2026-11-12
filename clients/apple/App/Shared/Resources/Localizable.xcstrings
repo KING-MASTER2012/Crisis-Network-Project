@@ -1,0 +1,1998 @@
+{
+  "sourceLanguage": "en",
+  "strings": {
+    "app_name": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Crisis Network"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kriz Ağı"
+          }
+        }
+      }
+    },
+    "bt_denied_body": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Without Bluetooth the app cannot find or reach other devices. Open the settings and allow Bluetooth for Crisis Network."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bluetooth olmadan uygulama başka cihazları bulamaz ve onlara ulaşamaz. Ayarları açıp Kriz Ağı için Bluetooth’a izin verin."
+          }
+        }
+      }
+    },
+    "bt_denied_title": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bluetooth is not allowed"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bluetooth’a izin verilmedi"
+          }
+        }
+      }
+    },
+    "bt_off_body": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Turn Bluetooth on to find and reach other devices."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Diğer cihazları bulmak ve onlara ulaşmak için Bluetooth’u açın."
+          }
+        }
+      }
+    },
+    "bt_off_title": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bluetooth is off"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bluetooth kapalı"
+          }
+        }
+      }
+    },
+    "bt_open_settings": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open Settings"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ayarları aç"
+          }
+        }
+      }
+    },
+    "bt_restricted_body": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bluetooth is restricted on this device, for example by Screen Time or a management profile, so the app cannot use it."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bluetooth bu cihazda kısıtlı (örneğin Ekran Süresi veya bir yönetim profili tarafından), bu yüzden uygulama onu kullanamıyor."
+          }
+        }
+      }
+    },
+    "bt_restricted_title": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bluetooth is restricted"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bluetooth kısıtlı"
+          }
+        }
+      }
+    },
+    "bt_turn_on": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Turn on Bluetooth"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bluetooth’u aç"
+          }
+        }
+      }
+    },
+    "bt_unsupported_body": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This device does not support Bluetooth Low Energy, which the app needs."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bu cihaz, uygulamanın ihtiyaç duyduğu Bluetooth Low Energy’yi desteklemiyor."
+          }
+        }
+      }
+    },
+    "bt_unsupported_title": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bluetooth is not available"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bluetooth kullanılamıyor"
+          }
+        }
+      }
+    },
+    "home_error_title": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Something went wrong"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bir sorun oluştu"
+          }
+        }
+      }
+    },
+    "home_identity_hint": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Read it to a person you meet, so that they can check it against what their phone shows for you."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tanıştığınız kişiye okuyun; o da telefonunda sizin için görünen numarayla karşılaştırsın."
+          }
+        }
+      }
+    },
+    "home_identity_title": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your safety number"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Güvenlik numaranız"
+          }
+        }
+      }
+    },
+    "home_join": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Join the mesh"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ağa katıl"
+          }
+        }
+      }
+    },
+    "home_leave": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Leave the mesh"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ağdan ayrıl"
+          }
+        }
+      }
+    },
+    "home_mesh_title": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mesh"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ağ"
+          }
+        }
+      }
+    },
+    "home_neighbours %lld": {
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld neighbour connected"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld neighbours connected"
+                }
+              }
+            }
+          }
+        },
+        "tr": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld komşu bağlı"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld komşu bağlı"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "home_offline_hint": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "You are not part of the mesh. Join to exchange messages with phones around you, without internet."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ağa bağlı değilsiniz. Katılırsanız internet olmadan çevrenizdeki telefonlarla mesajlaşabilirsiniz."
+          }
+        }
+      }
+    },
+    "home_profile_line %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Power profile: %@"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Güç profili: %@"
+          }
+        }
+      }
+    },
+    "home_searching_hint": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Phones running this app within Bluetooth range are found automatically. This can take a minute."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bluetooth menzilindeki bu uygulamayı çalıştıran telefonlar otomatik bulunur. Bu bir dakika sürebilir."
+          }
+        }
+      }
+    },
+    "home_status_connected": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Connected"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bağlı"
+          }
+        }
+      }
+    },
+    "home_status_offline": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Offline"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Çevrimdışı"
+          }
+        }
+      }
+    },
+    "home_status_searching": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Looking for neighbours"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Komşular aranıyor"
+          }
+        }
+      }
+    },
+    "home_status_starting": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Starting…"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Başlatılıyor…"
+          }
+        }
+      }
+    },
+    "home_status_stopping": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stopping…"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Durduruluyor…"
+          }
+        }
+      }
+    },
+    "lang_system": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "System language"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sistem dili"
+          }
+        }
+      }
+    },
+    "mesh_profile_aggressive": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aggressive"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Agresif"
+          }
+        }
+      }
+    },
+    "mesh_profile_balanced": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Balanced"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dengeli"
+          }
+        }
+      }
+    },
+    "mesh_profile_saver": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Battery saver"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pil tasarrufu"
+          }
+        }
+      }
+    },
+    "nav_announcements": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Announcements"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Duyurular"
+          }
+        }
+      }
+    },
+    "nav_chats": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chats"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sohbetler"
+          }
+        }
+      }
+    },
+    "nav_contacts": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Contacts"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kişiler"
+          }
+        }
+      }
+    },
+    "nav_home": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Home"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ana sayfa"
+          }
+        }
+      }
+    },
+    "nav_settings": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Settings"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ayarlar"
+          }
+        }
+      }
+    },
+    "onb_background_title": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Staying connected"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bağlı kalmak"
+          }
+        }
+      }
+    },
+    "onb_bg_body": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iOS pauses apps that are not on screen. Bluetooth can wake the app for a few seconds when a nearby device sends something, and the system can start it again after it closed it. The app cannot run all the time as it can on Android."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iOS, ekranda olmayan uygulamaları duraklatır. Yakındaki bir cihaz bir şey gönderdiğinde Bluetooth uygulamayı birkaç saniyeliğine uyandırabilir ve sistem uygulamayı kapattıktan sonra yeniden başlatabilir. Uygulama, Android’deki gibi sürekli çalışamaz."
+          }
+        }
+      }
+    },
+    "onb_bg_forcequit_body": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "If you swipe the app away in the app switcher, iOS does not start it again for Bluetooth. Leave it in the background."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Uygulamayı uygulama değiştiricide yukarı kaydırarak kapatırsanız iOS onu Bluetooth için yeniden başlatmaz. Arka planda bırakın."
+          }
+        }
+      }
+    },
+    "onb_bg_forcequit_title": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Do not force-quit the app"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Uygulamayı zorla kapatmayın"
+          }
+        }
+      }
+    },
+    "onb_bg_lowpower_body": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Low Power Mode reduces background activity. The app then looks for neighbours less often to save battery."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Düşük Güç Modu arka plan etkinliğini azaltır. Uygulama da pilden tasarruf için komşuları daha seyrek arar."
+          }
+        }
+      }
+    },
+    "onb_bg_lowpower_off": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Low Power Mode is off."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Düşük Güç Modu kapalı."
+          }
+        }
+      }
+    },
+    "onb_bg_lowpower_on": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Low Power Mode is on."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Düşük Güç Modu açık."
+          }
+        }
+      }
+    },
+    "onb_bg_lowpower_title": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Low Power Mode"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Düşük Güç Modu"
+          }
+        }
+      }
+    },
+    "onb_bg_mac_body": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "On a Mac the app keeps running while it is open. Closing its window does not stop it; quitting the app does."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mac’te uygulama açık kaldığı sürece çalışmaya devam eder. Penceresini kapatmak onu durdurmaz; uygulamadan çıkmak durdurur."
+          }
+        }
+      }
+    },
+    "onb_bg_refresh_body": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "When it is off for this app, iOS does not wake the app for Bluetooth. Keep it on in the settings."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bu uygulama için kapalıysa iOS uygulamayı Bluetooth için uyandırmaz. Ayarlardan açık tutun."
+          }
+        }
+      }
+    },
+    "onb_bg_refresh_off": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Off: the app only works while it is on screen."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kapalı: uygulama yalnızca ekrandayken çalışır."
+          }
+        }
+      }
+    },
+    "onb_bg_refresh_on": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "On: Bluetooth can wake the app."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Açık: Bluetooth uygulamayı uyandırabilir."
+          }
+        }
+      }
+    },
+    "onb_bg_refresh_restricted": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Restricted by the system or a profile."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sistem veya bir profil tarafından kısıtlanmış."
+          }
+        }
+      }
+    },
+    "onb_bg_refresh_title": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Background App Refresh"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Arka Planda Uygulama Yenileme"
+          }
+        }
+      }
+    },
+    "onb_done_body": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "You can join the mesh now, or later from the home screen."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ağa şimdi katılabilir ya da daha sonra ana sayfadan katılabilirsiniz."
+          }
+        }
+      }
+    },
+    "onb_done_identity_missing": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No identity yet. Go back and create it."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Henüz kimlik yok. Geri dönüp oluşturun."
+          }
+        }
+      }
+    },
+    "onb_done_identity_ok": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Identity created."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kimlik oluşturuldu."
+          }
+        }
+      }
+    },
+    "onb_done_nearby_missing": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bluetooth permissions are still missing. You will be asked when you join."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bluetooth izinleri hâlâ eksik. Katılırken sorulacak."
+          }
+        }
+      }
+    },
+    "onb_done_nearby_ok": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bluetooth permissions granted."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bluetooth izinleri verildi."
+          }
+        }
+      }
+    },
+    "onb_done_title": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "You’re all set"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hazırsınız"
+          }
+        }
+      }
+    },
+    "onb_failure_database": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The saved data cannot be read. If you switched between app versions, delete the app and install it again."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kayıtlı veriler okunamıyor. Uygulama sürümleri arasında geçiş yaptıysanız uygulamayı silip yeniden yükleyin."
+          }
+        }
+      }
+    },
+    "onb_failure_encryption": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This build of the app cannot encrypt its data, so it does not store anything."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Uygulamanın bu derlemesi verilerini şifreleyemez, bu yüzden hiçbir şey saklamaz."
+          }
+        }
+      }
+    },
+    "onb_failure_generic": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Something unexpected went wrong. Try again."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Beklenmedik bir sorun oluştu. Yeniden deneyin."
+          }
+        }
+      }
+    },
+    "onb_failure_newer": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The saved data was written by a newer version of the app. Update the app."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kayıtlı veriler uygulamanın daha yeni bir sürümüyle yazılmış. Uygulamayı güncelleyin."
+          }
+        }
+      }
+    },
+    "onb_failure_secrets": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The device’s secure storage (Keychain) is not available right now. Try again in a moment."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cihazın güvenli depolaması (Anahtar Zinciri) şu anda kullanılamıyor. Biraz sonra tekrar deneyin."
+          }
+        }
+      }
+    },
+    "onb_failure_secrets_resettable": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The device’s secure storage can no longer unlock the saved identity. This happens after some system changes or when the app is restored on another device. The only way forward is to reset the identity."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cihazın güvenli depolaması artık kayıtlı kimliğin kilidini açamıyor. Bu, bazı sistem değişikliklerinden sonra veya uygulama başka bir cihaza geri yüklendiğinde olur. Tek çıkış yolu kimliği sıfırlamak."
+          }
+        }
+      }
+    },
+    "onb_get_started": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Get started"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Başla"
+          }
+        }
+      }
+    },
+    "onb_identity_body": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The app creates a key pair on this phone. The secret part is kept in the phone’s protected storage and never leaves it. There is nothing to sign up for."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Uygulama bu telefonda bir anahtar çifti oluşturur. Gizli kısım telefonun korumalı depolamasında saklanır ve oradan hiç çıkmaz. Kaydolacak bir şey yoktur."
+          }
+        }
+      }
+    },
+    "onb_identity_create": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Create my identity"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kimliğimi oluştur"
+          }
+        }
+      }
+    },
+    "onb_identity_created": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your identity is ready"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kimliğiniz hazır"
+          }
+        }
+      }
+    },
+    "onb_identity_creating": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Creating your identity…"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kimliğiniz oluşturuluyor…"
+          }
+        }
+      }
+    },
+    "onb_identity_failed": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The identity could not be created"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kimlik oluşturulamadı"
+          }
+        }
+      }
+    },
+    "onb_identity_reset": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reset identity…"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kimliği sıfırla…"
+          }
+        }
+      }
+    },
+    "onb_identity_safety_hint": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "When you meet someone, read this number to each other to be sure that you have the right person."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Biriyle karşılaştığınızda, doğru kişi olduğundan emin olmak için bu numarayı birbirinize okuyun."
+          }
+        }
+      }
+    },
+    "onb_identity_safety_label": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Safety number"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Güvenlik numarası"
+          }
+        }
+      }
+    },
+    "onb_identity_title": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Create your identity"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kimliğinizi oluşturun"
+          }
+        }
+      }
+    },
+    "onb_join_now": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Join the mesh now"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ağa şimdi katıl"
+          }
+        }
+      }
+    },
+    "onb_nearby_allow": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Allow Bluetooth"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bluetooth’a izin ver"
+          }
+        }
+      }
+    },
+    "onb_nearby_body": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The app needs to look for other phones and talk to them over Bluetooth."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Uygulamanın diğer telefonları araması ve onlarla Bluetooth üzerinden konuşması gerekir."
+          }
+        }
+      }
+    },
+    "onb_nearby_ready": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Everything is in place: Bluetooth is allowed and on."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Her şey hazır: Bluetooth’a izin verildi ve açık."
+          }
+        }
+      }
+    },
+    "onb_nearby_title": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Find phones around you"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Çevrenizdeki telefonları bulun"
+          }
+        }
+      }
+    },
+    "onb_nearby_why_body": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The system asks once before an app may use Bluetooth. Crisis Network uses it only to find and talk to nearby devices, never to learn where you are."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sistem, bir uygulamanın Bluetooth’u kullanmasından önce bir kez sorar. Kriz Ağı onu yalnızca yakındaki cihazları bulmak ve onlarla konuşmak için kullanır, nerede olduğunuzu öğrenmek için asla."
+          }
+        }
+      }
+    },
+    "onb_nearby_why_title": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Why the system asks"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sistem neden soruyor"
+          }
+        }
+      }
+    },
+    "onb_next": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Continue"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Devam"
+          }
+        }
+      }
+    },
+    "onb_open_app": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open the app"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Uygulamayı aç"
+          }
+        }
+      }
+    },
+    "onb_point_offline_body": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Phones talk to each other directly over Bluetooth. Nothing needs a mobile network or Wi-Fi."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Telefonlar birbirleriyle doğrudan Bluetooth üzerinden konuşur. Mobil şebekeye ya da Wi-Fi’a gerek yoktur."
+          }
+        }
+      }
+    },
+    "onb_point_offline_title": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Works without internet"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "İnternetsiz çalışır"
+          }
+        }
+      }
+    },
+    "onb_point_private_body": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "You are identified by a key that is created on this phone. Private messages are encrypted; announcements are public."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kimliğiniz bu telefonda oluşturulan bir anahtardır. Özel mesajlar şifrelenir; duyurular herkese açıktır."
+          }
+        }
+      }
+    },
+    "onb_point_private_title": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No account, no phone number"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hesap yok, telefon numarası yok"
+          }
+        }
+      }
+    },
+    "onb_point_relay_body": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Every phone that runs the app passes messages on, so they can travel further than one Bluetooth link reaches."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Uygulamayı çalıştıran her telefon mesajları iletir; böylece mesajlar tek bir Bluetooth bağlantısının ulaştığından daha uzağa gidebilir."
+          }
+        }
+      }
+    },
+    "onb_point_relay_title": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Messages hop from phone to phone"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mesajlar telefondan telefona atlar"
+          }
+        }
+      }
+    },
+    "onb_reset_body": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The old identity and all messages stored on this phone are deleted and cannot be recovered. A new identity is created afterwards."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eski kimlik ve bu telefonda saklanan tüm mesajlar silinir, geri alınamaz. Ardından yeni bir kimlik oluşturulur."
+          }
+        }
+      }
+    },
+    "onb_reset_cancel": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cancel"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vazgeç"
+          }
+        }
+      }
+    },
+    "onb_reset_confirm": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete and reset"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sil ve sıfırla"
+          }
+        }
+      }
+    },
+    "onb_reset_title": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reset the identity?"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kimlik sıfırlansın mı?"
+          }
+        }
+      }
+    },
+    "onb_skip": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Not now"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Şimdi değil"
+          }
+        }
+      }
+    },
+    "onb_step_of %lld %lld": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Step %1$lld of %2$lld"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Adım %1$lld / %2$lld"
+          }
+        }
+      }
+    },
+    "onb_welcome_body": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Message the people around you when the phone network and the internet are down."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Telefon şebekesi ve internet çalışmadığında çevrenizdekilerle mesajlaşın."
+          }
+        }
+      }
+    },
+    "onb_welcome_title": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Welcome to Crisis Network"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kriz Ağı’na hoş geldiniz"
+          }
+        }
+      }
+    },
+    "ph_announcements_body": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Public announcements from people around you will appear here."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Çevrenizdeki kişilerin herkese açık duyuruları burada görünecek."
+          }
+        }
+      }
+    },
+    "ph_announcements_title": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Announcements are on the way"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Duyurular yolda"
+          }
+        }
+      }
+    },
+    "ph_chats_body": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Private conversations with your contacts will appear here once you can add contacts."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kişi ekleyebildiğinizde kişilerinizle özel yazışmalar burada görünecek."
+          }
+        }
+      }
+    },
+    "ph_chats_title": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chats are on the way"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sohbetler yolda"
+          }
+        }
+      }
+    },
+    "ph_contacts_body": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "You will add people by scanning a QR code or pasting a card."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "İnsanları QR kod okutarak veya kart yapıştırarak ekleyeceksiniz."
+          }
+        }
+      }
+    },
+    "ph_contacts_title": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Contacts are on the way"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kişiler yolda"
+          }
+        }
+      }
+    },
+    "settings_appearance": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Appearance"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Görünüm"
+          }
+        }
+      }
+    },
+    "settings_developer": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Developer tools"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Geliştirici araçları"
+          }
+        }
+      }
+    },
+    "settings_high_contrast": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "High contrast"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Yüksek kontrast"
+          }
+        }
+      }
+    },
+    "settings_high_contrast_hint": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Black and white with strong outlines, easier to read."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Güçlü çizgilerle siyah ve beyaz, okuması daha kolay."
+          }
+        }
+      }
+    },
+    "settings_language": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Language"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dil"
+          }
+        }
+      }
+    },
+    "settings_node_id": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Node ID"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Düğüm kimliği"
+          }
+        }
+      }
+    },
+    "settings_open_bluetooth_test": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bluetooth test bench"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bluetooth test tezgâhı"
+          }
+        }
+      }
+    },
+    "settings_power_hint": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "How hard the phone works to find neighbours. A stronger setting finds them faster and uses more battery."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Telefonun komşuları bulmak için ne kadar çalışacağı. Güçlü ayar komşuları daha hızlı bulur, daha çok pil harcar."
+          }
+        }
+      }
+    },
+    "settings_power_low_power": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Low Power Mode is on, so the battery saver is used."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Düşük Güç Modu açık, bu yüzden pil tasarrufu kullanılıyor."
+          }
+        }
+      }
+    },
+    "settings_power_title": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Power"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Güç"
+          }
+        }
+      }
+    },
+    "settings_selftest": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Self-test"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kendi kendine test"
+          }
+        }
+      }
+    },
+    "settings_show_intro": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Show the introduction again"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tanıtımı yeniden göster"
+          }
+        }
+      }
+    },
+    "settings_text_large": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Large"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Büyük"
+          }
+        }
+      }
+    },
+    "settings_text_larger": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Larger"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Daha büyük"
+          }
+        }
+      }
+    },
+    "settings_text_largest": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Largest"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "En büyük"
+          }
+        }
+      }
+    },
+    "settings_text_normal": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Normal"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Normal"
+          }
+        }
+      }
+    },
+    "settings_text_sample": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This is how text looks at the chosen size."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Yazı, seçtiğiniz boyutta böyle görünür."
+          }
+        }
+      }
+    },
+    "settings_text_size": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Text size"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Yazı boyutu"
+          }
+        }
+      }
+    },
+    "settings_theme_amoled": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Black (saves power on OLED screens)"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Siyah (OLED ekranlarda güç tasarrufu sağlar)"
+          }
+        }
+      }
+    },
+    "settings_theme_dark": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dark"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Koyu"
+          }
+        }
+      }
+    },
+    "settings_theme_light": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Light"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Açık"
+          }
+        }
+      }
+    },
+    "settings_theme_system": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Follow the system"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sistemi izle"
+          }
+        }
+      }
+    },
+    "settings_theme_title": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Theme"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tema"
+          }
+        }
+      }
+    }
+  },
+  "version": "1.0"
+}

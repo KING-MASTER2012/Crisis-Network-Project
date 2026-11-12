@@ -2,7 +2,8 @@
 
 SwiftUI clients on top of the Rust core. Plan and phases: `I0` ... `I9` (see `CHANGELOG.md`). This folder holds the
 result of **phase I0** (the toolchain, the core as a Swift package, a placeholder app, CI), **phase I1** (the
-runtime around the core) and **phase I2** (the Bluetooth link and its test bench). There is no real screen yet.
+runtime around the core), **phase I2** (the Bluetooth link), **phase I3** (discovery, topology, the background) and
+**phase I4** (design system, shell, introduction). Chats, announcements and contacts are still placeholders (I5, I6).
 
 ```
 clients/apple/
@@ -135,6 +136,54 @@ Exit test of I2, with both apps in the foreground and the screens on:
 2. **iPhone and iPhone:** the same. With role Both on both phones two links may appear for a moment; the "Duplicate
    links closed" counter goes up and one link stays.
 3. A burst of 10 x 1,000 B arrives completely; note the rate from the other device's counters.
+
+## Interface (phase I4)
+
+```
+App/Shared/
+  Design/      Palette (colours, contrast), Theme (appearance settings, type scale), Components (cards, buttons, pills)
+  Prefs/       UiPreferences (UserDefaults), AppLanguage and L10n
+  Shell/       RootView, AppShell (tabs or sidebar), Destination
+  Screens/     HomeView, SettingsView, PlaceholderView
+  Onboarding/  OnboardingFlow (the rules), OnboardingView, IdentityCreator, BluetoothAccess
+  Resources/   Localizable.xcstrings (en, tr)
+```
+
+**Design system.** The palette and the text sizes of the Android client (`ui/theme`), as `Palette`: light, dark, a
+high-contrast version of each, and a black dark theme for OLED screens. The wallpaper colours of Android have no
+counterpart. Every text/background pair is tested for contrast (4.5:1, 7:1 in high contrast) in
+`DesignSystemTests`. The type scale uses Dynamic Type text styles, so everything follows the system setting; the app's
+text size (normal, large, larger, largest) moves Dynamic Type up by 0 to 3 steps on top of it. Colour never carries a
+meaning alone: cards and pills of a tone also have an icon.
+
+**Shell.** `AppShell` shows a **tab bar** on an iPhone (compact width) and a **sidebar with a detail column** on an
+iPad and a Mac (`NavigationSplitView`), with the five destinations of the Android client: Home, Chats, Announcements,
+Contacts, Settings. Every destination has a **native `NavigationStack`**, so the back button and the swipe from the
+edge are the platform's (no custom back handling, unlike Android's overlay stack). The selected destination is
+remembered per scene.
+
+**Introduction.** Welcome, identity, Bluetooth, background, done; the steps are pushed on a `NavigationStack` and the
+rules (`OnboardingFlow`) are those of Android: only the identity blocks, only the Bluetooth step can be skipped, a
+person who already has an identity starts at the Bluetooth step with the earlier steps on the back stack.
+
+* **Identity:** `IdentityCreator` opens the node once with `NodeBootstrap.open` (a transport that does nothing), reads
+  the safety number and node id, and closes it again; the seed and the database key are made and kept by the vault in
+  the Keychain as before. A failure is shown in words with a reset where a reset helps (`secretsUnavailable(resettable)`).
+* **Bluetooth permission:** `BluetoothAccess` reads `CBManager.authorization` and the power state, asks only when the
+  button is pressed (the system dialog is the one with the reason in `NSBluetoothAlwaysUsageDescription`), and
+  explains each refusal: denied (open Settings), restricted, off (system alert), not supported. The same card is on
+  the home screen when joining is not possible.
+* **Background (iOS):** what Bluetooth can and cannot do in the background, the state of Background App Refresh, Low
+  Power Mode, and "do not force-quit the app". On a Mac only a short note.
+
+**Language.** `Localizable.xcstrings` has English and Turkish (the Android strings that apply, plus the iOS-specific ones
+for the permission and the background). The language can be changed in the settings and **takes effect at once**: the
+root view puts the chosen locale into the environment, which is what `Text` looks its keys up with. Text that is not a
+`Text` goes through `L10n.string(_:language:)`. Add a language by adding it to the catalog and to `AppLanguage`.
+
+**Settings** has appearance (theme, high contrast, text size with a sample), language, power profile, the identity
+(safety number, node id) and a developer section (the Bluetooth test bench, the self-test, show the introduction
+again). The rest of the settings (notifications, storage, privacy) is I7.
 
 ## Discovery, topology and the background (phase I3)
 

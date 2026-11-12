@@ -33,6 +33,10 @@ targets:
             path: App/iOS/Info.plist
             properties:
                 CFBundleDisplayName: Crisis Network
+                # The languages of the String Catalog (App/Shared/Resources/Localizable.xcstrings).
+                CFBundleLocalizations:
+                    - en
+                    - tr
                 UILaunchScreen: {}
                 UISupportedInterfaceOrientations:
                     - UIInterfaceOrientationPortrait
@@ -83,6 +87,10 @@ targets:
             path: App/macOS/Info.plist
             properties:
                 CFBundleDisplayName: Crisis Network
+                # The languages of the String Catalog (App/Shared/Resources/Localizable.xcstrings).
+                CFBundleLocalizations:
+                    - en
+                    - tr
                 LSMinimumSystemVersion: "14.0"
                 NSBluetoothAlwaysUsageDescription: >-
                     Crisis Network uses Bluetooth to pass messages between nearby devices when there is no network.
