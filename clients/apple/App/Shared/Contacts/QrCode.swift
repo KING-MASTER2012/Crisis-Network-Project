@@ -6,7 +6,8 @@ import Foundation
 /// system's own detector is enough, and the app gains nothing to ship or to audit. The Android client does the same
 /// with ZXing.
 enum QrCode {
-    private static let context = CIContext()
+    // A CIContext is thread-safe by Apple's documentation, but is not marked `Sendable`.
+    private nonisolated(unsafe) static let context = CIContext()
 
     /// `text` as a picture ready to show or to read back: every module is `moduleSize` pixels, with `quietZone` modules
     /// of white around it (a reader needs the white; four modules is the standard).

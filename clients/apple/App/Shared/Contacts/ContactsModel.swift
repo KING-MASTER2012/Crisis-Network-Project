@@ -66,7 +66,7 @@ final class ContactsModel: ObservableObject {
     private let ownNodeIdHex: @MainActor () -> String?
     private let saveCardText: @MainActor (String) -> Void
     private var observation: AnyCancellable?
-    private var refreshing = false
+    private var refreshTask: Task<Void, Never>?
     private var refreshAgain = false
 
     init(
@@ -106,18 +106,24 @@ final class ContactsModel: ObservableObject {
     }
 
     /// Reads the node's contacts into ``contacts``. Without a running node the list is left as it was and `ready` is
-    /// `false`. Reads that overlap are merged: one that arrives while another runs triggers a second read afterwards.
+    /// `false`. Reads that overlap are merged: a call that arrives while a read runs makes it read once more when it
+    /// is done, and **returns only when that read is finished**, so the list is current for whoever asked.
     func refresh() async {
-        if refreshing {
+        if let running = refreshTask {
             refreshAgain = true
+            await running.value
             return
         }
-        refreshing = true
-        defer { refreshing = false }
-        repeat {
-            refreshAgain = false
-            await readOnce()
-        } while refreshAgain
+        let task = Task { @MainActor [weak self] in
+            guard let self else { return }
+            repeat {
+                self.refreshAgain = false
+                await self.readOnce()
+            } while self.refreshAgain
+            self.refreshTask = nil
+        }
+        refreshTask = task
+        await task.value
     }
 
     private func readOnce() async {

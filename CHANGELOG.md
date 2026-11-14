@@ -30,6 +30,10 @@
 * `Tests/iOS/ContactsTests.swift`: rules, model against a real in-memory core (add, own card, garbage, kept while off,
   trust, reset), text form, a QR code drawn and read back, camera readiness table, strings in both languages.
 
+**CI fix after the first run:** `ContactsModel.refresh()` returned at once when another read was running, so
+`addContact` could report success before the list was current. It now waits for the running read (and for the extra
+read it triggers). `QrCode.context` is `nonisolated(unsafe)` (Swift 6 concurrency warning).
+
 **Not done / not run**
 
 * Nothing was compiled or run (no Swift toolchain where this was written). Likeliest complaints: the generated
