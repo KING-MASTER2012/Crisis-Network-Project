@@ -3,7 +3,8 @@
 SwiftUI clients on top of the Rust core. Plan and phases: `I0` ... `I9` (see `CHANGELOG.md`). This folder holds the
 result of **phase I0** (the toolchain, the core as a Swift package, a placeholder app, CI), **phase I1** (the
 runtime around the core), **phase I2** (the Bluetooth link), **phase I3** (discovery, topology, the background) and
-**phase I4** (design system, shell, introduction). Chats, announcements and contacts are still placeholders (I5, I6).
+**phase I4** (design system, shell, introduction) and **phase I5** (contacts). Chats and announcements are still
+placeholders (I6).
 
 ```
 clients/apple/
@@ -184,6 +185,53 @@ root view puts the chosen locale into the environment, which is what `Text` look
 **Settings** has appearance (theme, high contrast, text size with a sample), language, power profile, the identity
 (safety number, node id) and a developer section (the Bluetooth test bench, the self-test, show the introduction
 again). The rest of the settings (notifications, storage, privacy) is I7.
+
+## Contacts (phase I5)
+
+The contacts destination has the list of known people and three ways to add one: **show my card** (a QR code, plus the
+card as text to copy or share), **scan a card** (the camera, iPhone and iPad) and **enter a card as text** (also the way
+on a Mac until I8 brings its camera). Adding a card shows the safety number to compare, takes an optional nickname and
+stores the contact. A contact has a **trust level** (not verified, verified, blocked) and a screen of its own: nickname,
+trust buttons, and the safety numbers (theirs and yours) to read to each other. Blocking asks first. Those screens are
+`App/Shared/Contacts/`:
+
+| File | Job |
+| --- | --- |
+| `ContactBook.swift` | The rules: who counts as a contact, the order of the list, display names, `Hex`, `CardText`, the stores for nicknames and for pending cards. No UI, no node. |
+| `ContactsModel.swift` | The holder for the whole app (`ContactsModel.shared`): reads the contacts from the running node, adds a card, changes the trust, keeps the nicknames. Talks to the node through the small `ContactsBackend` protocol, which `NodeRuntime` conforms to. |
+| `QrCode.swift` | QR codes with CoreImage only: `image(of:)` draws (black on white, with the quiet zone), `read(_:)` detects. |
+| `CameraAccess.swift`, `QrScannerView.swift` | The camera permission (asked when the person presses the button, one explanation per refusal) and the AVFoundation reader (iOS). |
+| `ContactsView`, `ContactDetailView`, `MyCardView`, `ScanCardView`, `PasteCardView`, `AddContactForm` | The screens. They are pushed on the destination's own `NavigationStack`, so the back button and the swipe are the platform's. |
+
+**The conventions are the core's.** The text form of a card (`crisis:` + URL-safe base64, 171 characters), nickname
+rules and the other app conventions are the Rust `appcodec` crate, called through the generated bindings
+(`encodeCardText`, `decodeCardText`, `normalizeNickname`, `shortNodeId`, ...). There is no second implementation to
+keep in step. What the three clients share is `core/testdata/appcodec.json`: the Rust tests, the Android tests and the
+Swift package test `ConventionVectorTests` (which runs on the Mac with `swift test`) read the same file.
+
+**Rules that follow the Android client**
+
+* The node is only open while the mesh runs (the database cannot be opened twice), so the list is read, and the trust
+  level can be changed, only then. A card scanned or pasted while the mesh is off is **kept** and added as soon as the
+  node runs; adding your own card is refused either way.
+* Nicknames live on this device only (the core knows keys, not names), in the app's defaults, keyed by node id.
+  A nickname alone makes a node a contact. A node that was merely seen is not a contact until it has a card, a changed
+  trust level or a nickname.
+* Deleting the identity (the introduction, "start over") forgets the nicknames and the pending cards.
+* The contact screen has a "Send a message" button that appears when the chats exist (`onMessage`, I6).
+
+**Camera.** `NSCameraUsageDescription` is in `project.yml` (iOS). The reader uses `AVCaptureMetadataOutput` with the
+`.qr` type; nothing is recorded or sent. On a device without a camera (a Mac, the simulator) the scan screen says so and
+leads to the text entry. The Mac camera, its sandbox entitlement and an image-based alternative are part of I8.
+
+**Tests.** `ConventionVectorTests` (package `CrisisCore`, all vector groups), `ContactsTests` (`Tests/iOS`: the
+rules, the model against a real in-memory core, the text form, a QR code drawn and read back, the camera table, the
+strings in both languages). Not tested by a machine: the live camera, which needs a device (see the exit check below).
+
+**Exit check of I5 (by hand, two devices).** On A: contacts, "Show my card". On B: contacts, "Scan a card" and read A's
+code; compare the safety numbers; add; mark as verified. Repeat the other way round. Then test the text path (copy on A,
+"Enter a card as text" on B), a card added with the mesh off, and an Android phone's card read by an iPhone and the
+other way round (the QR code and the text form are the same on both).
 
 ## Discovery, topology and the background (phase I3)
 

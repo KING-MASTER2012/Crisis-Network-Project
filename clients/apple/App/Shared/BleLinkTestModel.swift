@@ -74,10 +74,18 @@ final class BleLinkTestModel: ObservableObject {
     @Published private(set) var battery: BatteryReport?
     @Published private(set) var lowPowerMode = ProcessInfo.processInfo.isLowPowerModeEnabled
 
+    /// Counts what the node's data went through (a message arrived, was published or delivered, a neighbour came or
+    /// went). Screens that show stored data (the contacts, later the chats) read it again when it changes.
+    @Published private(set) var dataVersion = 0
+
     /// The public identity of the running node (the safety number and the node id), `nil` while it is stopped.
     private(set) var runningIdentity: (safetyNumber: String, nodeIdHex: String)?
 
     private var runtime: NodeRuntime?
+
+    /// The running node, `nil` while it is stopped. The database can only be opened once, so the screens that read or
+    /// change stored data (contacts, chats) go through this one instead of opening the node themselves.
+    var activeRuntime: NodeRuntime? { running ? runtime : nil }
     private var transport: BleTransport?
     private var tasks: [Task<Void, Never>] = []
     private var foreground = true
@@ -315,6 +323,7 @@ final class BleLinkTestModel: ObservableObject {
     }
 
     private func handle(_ notification: CoreNotification) {
+        dataVersion &+= 1
         guard case let .messageReceived(_, _, _, body) = notification else { return }
         let now = ProcessInfo.processInfo.systemUptime
         counters.messages += 1

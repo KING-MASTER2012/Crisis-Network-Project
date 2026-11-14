@@ -1,6 +1,198 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    "add_cancel": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cancel"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vazgeç"
+          }
+        }
+      }
+    },
+    "add_confirm": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add contact"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kişiyi ekle"
+          }
+        }
+      }
+    },
+    "add_done": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The contact was added."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kişi eklendi."
+          }
+        }
+      }
+    },
+    "add_failed": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The contact could not be added. Try again."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kişi eklenemedi. Yeniden deneyin."
+          }
+        }
+      }
+    },
+    "add_finish": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Done"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tamam"
+          }
+        }
+      }
+    },
+    "add_invalid": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This is not a valid card."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bu geçerli bir kart değil."
+          }
+        }
+      }
+    },
+    "add_nickname": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nickname (optional)"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Takma ad (isteğe bağlı)"
+          }
+        }
+      }
+    },
+    "add_own": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This is your own card."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bu sizin kendi kartınız."
+          }
+        }
+      }
+    },
+    "add_queued": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The card is saved. The contact is added as soon as you join the mesh."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kart kaydedildi. Ağa katılır katılmaz kişi eklenecek."
+          }
+        }
+      }
+    },
+    "add_safety_hint": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Check it against what the other person’s device shows, in person or on a call you trust."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Karşınızdaki kişinin cihazında görünenle karşılaştırın; yüz yüze ya da güvendiğiniz bir görüşmede."
+          }
+        }
+      }
+    },
+    "add_safety_label": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Safety number"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Güvenlik numarası"
+          }
+        }
+      }
+    },
+    "add_title": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add contact"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kişi ekle"
+          }
+        }
+      }
+    },
     "app_name": {
       "localizations": {
         "en": {
@@ -173,6 +365,422 @@
           "stringUnit": {
             "state": "translated",
             "value": "Bluetooth kullanılamıyor"
+          }
+        }
+      }
+    },
+    "contact_block": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Block"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Engelle"
+          }
+        }
+      }
+    },
+    "contact_block_hint": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Messages from a blocked contact are dropped and never passed on."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Engellenen kişiden gelen mesajlar atılır ve hiçbir zaman iletilmez."
+          }
+        }
+      }
+    },
+    "contact_block_title": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Block this contact?"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bu kişi engellensin mi?"
+          }
+        }
+      }
+    },
+    "contact_change_failed": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The change could not be made. Try again."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Değişiklik yapılamadı. Yeniden deneyin."
+          }
+        }
+      }
+    },
+    "contact_id_line %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Address: %@…"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Adres: %@…"
+          }
+        }
+      }
+    },
+    "contact_message": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Send a message"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mesaj gönder"
+          }
+        }
+      }
+    },
+    "contact_needs_mesh": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Join the mesh to change the trust level."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Güven düzeyini değiştirmek için ağa katılın."
+          }
+        }
+      }
+    },
+    "contact_nickname": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nickname"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Takma ad"
+          }
+        }
+      }
+    },
+    "contact_no_card_hint": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "There is no card for this person, so there is no number to compare. Scan their card first."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bu kişinin kartı yok, karşılaştırılacak numara da yok. Önce kartını tarayın."
+          }
+        }
+      }
+    },
+    "contact_no_card_pill": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No card"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kart yok"
+          }
+        }
+      }
+    },
+    "contact_safety_hint": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Read the numbers to each other, in person or on a call you trust. They must be identical on both devices."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Numaraları birbirinize okuyun; yüz yüze ya da güvendiğiniz bir görüşmede. İki cihazda da aynı olmalı."
+          }
+        }
+      }
+    },
+    "contact_safety_theirs": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Theirs"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Onunki"
+          }
+        }
+      }
+    },
+    "contact_safety_title": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Safety numbers"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Güvenlik numaraları"
+          }
+        }
+      }
+    },
+    "contact_safety_yours": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Yours"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sizinki"
+          }
+        }
+      }
+    },
+    "contact_save": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Save nickname"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Takma adı kaydet"
+          }
+        }
+      }
+    },
+    "contact_trust_title": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Trust"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Güven"
+          }
+        }
+      }
+    },
+    "contact_unblock": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unblock"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Engeli kaldır"
+          }
+        }
+      }
+    },
+    "contact_unknown_hint": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This device has no card for this person, so it cannot send them messages. Scan their card to add them."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bu cihazda bu kişinin kartı yok, bu yüzden ona mesaj gönderemez. Eklemek için kartını tarayın."
+          }
+        }
+      }
+    },
+    "contact_unverify": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Remove verification"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Doğrulamayı kaldır"
+          }
+        }
+      }
+    },
+    "contact_verify": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The numbers match: mark as verified"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Numaralar aynı: doğrulandı olarak işaretle"
+          }
+        }
+      }
+    },
+    "contacts_empty_body": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The people you add by meeting them in person will be listed here."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Yüz yüze görüşerek eklediğiniz kişiler burada listelenecek."
+          }
+        }
+      }
+    },
+    "contacts_empty_title": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No contacts yet"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Henüz kişi yok"
+          }
+        }
+      }
+    },
+    "contacts_mesh_off_body": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The list and the trust levels are available while this device is part of the mesh. A card you add now is kept and added as soon as you join. Join from the home screen."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Liste ve güven düzeyleri bu cihaz ağdayken kullanılabilir. Şimdi eklediğiniz kart saklanır ve ağa katılır katılmaz eklenir. Ana ekrandan ağa katılın."
+          }
+        }
+      }
+    },
+    "contacts_my_card": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Show my card"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kartımı göster"
+          }
+        }
+      }
+    },
+    "contacts_paste": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enter a card as text"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kartı metin olarak gir"
+          }
+        }
+      }
+    },
+    "contacts_scan": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Scan a card"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kart tara"
           }
         }
       }
@@ -457,6 +1065,22 @@
         }
       }
     },
+    "mesh_off_title": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The mesh is off"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ağ kapalı"
+          }
+        }
+      }
+    },
     "mesh_profile_aggressive": {
       "localizations": {
         "en": {
@@ -501,6 +1125,134 @@
           "stringUnit": {
             "state": "translated",
             "value": "Pil tasarrufu"
+          }
+        }
+      }
+    },
+    "mycard_body": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Let the other person scan this code. It holds only your public key, nothing secret. Anyone who has it can write to you."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Karşınızdaki bu kodu taratsın. İçinde yalnızca açık anahtarınız var, gizli bir şey yok. Kartı olan herkes size yazabilir."
+          }
+        }
+      }
+    },
+    "mycard_copied": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copied."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kopyalandı."
+          }
+        }
+      }
+    },
+    "mycard_copy": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copy card as text"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kartı metin olarak kopyala"
+          }
+        }
+      }
+    },
+    "mycard_qr_desc": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "QR code of your contact card"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kişi kartınızın QR kodu"
+          }
+        }
+      }
+    },
+    "mycard_share": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Share card as text"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kartı metin olarak paylaş"
+          }
+        }
+      }
+    },
+    "mycard_title": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your contact card"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kişi kartınız"
+          }
+        }
+      }
+    },
+    "mycard_unavailable": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your card is not available yet. Join the mesh once and it appears here."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kartınız henüz hazır değil. Ağa bir kez katılın, burada görünür."
+          }
+        }
+      }
+    },
+    "name_unknown_node %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Node %@"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Düğüm %@"
           }
         }
       }
@@ -1529,6 +2281,102 @@
         }
       }
     },
+    "paste_clipboard": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Paste from clipboard"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Panodan yapıştır"
+          }
+        }
+      }
+    },
+    "paste_continue": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Continue"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Devam"
+          }
+        }
+      }
+    },
+    "paste_field": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Card text"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kart metni"
+          }
+        }
+      }
+    },
+    "paste_hint": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Paste the card text that the other person sent you."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Karşınızdaki kişinin size gönderdiği kart metnini yapıştırın."
+          }
+        }
+      }
+    },
+    "paste_invalid": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This text is not a valid card."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bu metin geçerli bir kart değil."
+          }
+        }
+      }
+    },
+    "paste_title": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enter a card as text"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kartı metin olarak gir"
+          }
+        }
+      }
+    },
     "ph_announcements_body": {
       "localizations": {
         "en": {
@@ -1593,34 +2441,146 @@
         }
       }
     },
-    "ph_contacts_body": {
+    "scan_allow": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "You will add people by scanning a QR code or pasting a card."
+            "value": "Allow the camera"
           }
         },
         "tr": {
           "stringUnit": {
             "state": "translated",
-            "value": "İnsanları QR kod okutarak veya kart yapıştırarak ekleyeceksiniz."
+            "value": "Kameraya izin ver"
           }
         }
       }
     },
-    "ph_contacts_title": {
+    "scan_denied_body": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Contacts are on the way"
+            "value": "The camera is not allowed. You can allow it in the settings, or enter the card as text."
           }
         },
         "tr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Kişiler yolda"
+            "value": "Kameraya izin verilmedi. Ayarlardan izin verebilir ya da kartı metin olarak girebilirsiniz."
+          }
+        }
+      }
+    },
+    "scan_hint": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Point the camera at the QR code on the other device."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kamerayı diğer cihazdaki QR koduna doğrultun."
+          }
+        }
+      }
+    },
+    "scan_invalid": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "That code is not a Crisis Network card."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bu kod bir Crisis Network kartı değil."
+          }
+        }
+      }
+    },
+    "scan_no_camera": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This device has no camera. You can enter the card as text."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bu cihazda kamera yok. Kartı metin olarak girebilirsiniz."
+          }
+        }
+      }
+    },
+    "scan_permission_body": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The camera is used only to read a QR code. Nothing is recorded or sent anywhere."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kamera yalnızca QR kodunu okumak için kullanılır. Hiçbir şey kaydedilmez ya da bir yere gönderilmez."
+          }
+        }
+      }
+    },
+    "scan_permission_title": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Camera access"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kamera erişimi"
+          }
+        }
+      }
+    },
+    "scan_title": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Scan a card"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kart tara"
+          }
+        }
+      }
+    },
+    "scan_use_text": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enter the card as text"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kartı metin olarak gir"
           }
         }
       }
@@ -1989,6 +2949,54 @@
           "stringUnit": {
             "state": "translated",
             "value": "Tema"
+          }
+        }
+      }
+    },
+    "trust_blocked": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Blocked"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Engellendi"
+          }
+        }
+      }
+    },
+    "trust_unknown": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Not verified"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Doğrulanmadı"
+          }
+        }
+      }
+    },
+    "trust_verified": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Verified"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Doğrulandı"
           }
         }
       }

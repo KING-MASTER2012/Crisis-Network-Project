@@ -120,4 +120,5 @@ enum TypeScale {
     static let bodySmall = Font.footnote
     static let label = Font.subheadline.weight(.medium)
     static let monospace = Font.system(.title3, design: .monospaced)
+    static let monospaceSmall = Font.system(.footnote, design: .monospaced)
 }

@@ -165,6 +165,7 @@ private struct IdentityStep: View {
         Task { @MainActor in
             await IdentityCreator.reset()
             prefs.clearIdentity()
+            ContactsModel.shared.reset()
             failure = nil
         }
     }

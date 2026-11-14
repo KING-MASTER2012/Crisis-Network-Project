@@ -1,3 +1,4 @@
+import CrisisCore
 import CrisisRuntime
 import Foundation
 
@@ -44,6 +45,8 @@ enum IdentityCreator {
             return .failed(failure)
         case let .ready(runtime):
             let result = IdentityResult.created(safetyNumber: runtime.safetyNumber, nodeIdHex: runtime.nodeIdHex)
+            // The card is public; keeping its text lets the card screen work before the mesh has ever run.
+            UiPreferences.shared.saveCardText(encodeCardText(card: runtime.contactCard))
             await runtime.stop()
             return result
         }

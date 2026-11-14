@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Phase I4: the introduction, then the shell (tabs on an iPhone, sidebar on an iPad and a Mac). The Bluetooth test bench
+/// Phases I4 and I5: the introduction, then the shell (tabs on an iPhone, sidebar on an iPad and a Mac). The Bluetooth test bench
 /// and the self-test of the earlier phases moved to the developer section of the settings.
 ///
 /// The node is started in `init`, which also runs when the system relaunches the app in the background for a Bluetooth
@@ -10,7 +10,10 @@ struct CrisisNetworkApp: App {
     @Environment(\.scenePhase) private var scenePhase
 
     init() {
-        Task { @MainActor in BleLinkTestModel.shared.resumeIfEnabled() }
+        Task { @MainActor in
+            BleLinkTestModel.shared.resumeIfEnabled()
+            ContactsModel.shared.observe(BleLinkTestModel.shared)
+        }
     }
 
     var body: some Scene {

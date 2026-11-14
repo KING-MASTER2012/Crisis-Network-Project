@@ -56,6 +56,9 @@ targets:
                 # The reason shown to the person when Bluetooth is first used (phase I2 starts using it).
                 NSBluetoothAlwaysUsageDescription: >-
                     Crisis Network uses Bluetooth to pass messages between nearby phones when there is no network.
+                # The camera reads the QR code of a contact card (phase I5); nothing is recorded or sent.
+                NSCameraUsageDescription: >-
+                    Crisis Network uses the camera only to read the QR code of a contact card. Nothing is recorded or sent anywhere.
                 # Encryption is only used for the content of the app's own protocol; see the export compliance note in
                 # clients/apple/README.md before the first App Store upload.
                 ITSAppUsesNonExemptEncryption: false

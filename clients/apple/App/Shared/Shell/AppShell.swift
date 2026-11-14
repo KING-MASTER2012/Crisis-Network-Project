@@ -77,7 +77,7 @@ struct DestinationView: View {
         case .announcements:
             PlaceholderView(destination: .announcements, title: "ph_announcements_title", message: "ph_announcements_body")
         case .contacts:
-            PlaceholderView(destination: .contacts, title: "ph_contacts_title", message: "ph_contacts_body")
+            ContactsView()
         case .settings:
             SettingsView()
         }

@@ -19,6 +19,7 @@ final class UiPreferences: ObservableObject {
         static let identity = "ui.identity.created"
         static let safety = "ui.identity.safetyNumber"
         static let node = "ui.identity.nodeId"
+        static let card = "ui.identity.cardText"
     }
 
     private let defaults: UserDefaults
@@ -40,6 +41,10 @@ final class UiPreferences: ObservableObject {
     @Published private(set) var safetyNumber: String?
     @Published private(set) var nodeIdHex: String?
 
+    /// This device's contact card as text (`crisis:...`), so that it can be shown while the node is not running. A card
+    /// holds only public data.
+    @Published private(set) var cardText: String?
+
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
         theme = ThemeSettings(
@@ -52,6 +57,7 @@ final class UiPreferences: ObservableObject {
         identityCreated = defaults.bool(forKey: Keys.identity)
         safetyNumber = defaults.string(forKey: Keys.safety)
         nodeIdHex = defaults.string(forKey: Keys.node)
+        cardText = defaults.string(forKey: Keys.card)
     }
 
     /// Remembers that the identity exists, with the public values the screens show.
@@ -64,8 +70,17 @@ final class UiPreferences: ObservableObject {
         self.nodeIdHex = nodeIdHex
     }
 
+    /// Remembers the text form of this device's contact card.
+    func saveCardText(_ text: String) {
+        guard text != cardText else { return }
+        defaults.set(text, forKey: Keys.card)
+        cardText = text
+    }
+
     /// The identity was deleted (explicit reset): forget what was shown of it.
     func clearIdentity() {
+        defaults.removeObject(forKey: Keys.card)
+        cardText = nil
         defaults.removeObject(forKey: Keys.identity)
         defaults.removeObject(forKey: Keys.safety)
         defaults.removeObject(forKey: Keys.node)

@@ -1,3 +1,46 @@
+# Changes: phase I5, contacts on Apple
+
+**New in `App/Shared/Contacts`**
+
+* `ContactBook`: the rules of the list (who is a contact, the order, display names), `Hex`, `CardText`, `NicknameStore`
+  and `PendingCards` on a small `KeyValueStore` (defaults in the app, a dictionary in tests).
+* `ContactsModel`: one holder for the app (the contacts from the running node, add a card, change the trust,
+  nicknames, cards kept while the mesh is off). Uses the node through `ContactsBackend`, which `NodeRuntime` conforms to.
+* `QrCode` (CoreImage draws and reads, no library), `CameraAccess` and `QrScannerView` (AVFoundation, iOS).
+* Screens: `ContactsView`, `ContactDetailView`, `MyCardView`, `ScanCardView` (iOS), `PasteCardView`, `AddContactForm`.
+  Native `NavigationStack` pushes, so the back button and the swipe are the platform's.
+* `Resources/Localizable.xcstrings`: 65 new entries in English and Turkish (the Android keys where they exist); the
+  two placeholder entries of the contacts destination are gone. 186 entries now.
+
+**Changed**
+
+* `AppShell`: the contacts destination shows `ContactsView`.
+* `BleLinkTestModel`: `activeRuntime` (the running node, for the screens that read stored data) and `dataVersion`
+  (counts what the node's data went through).
+* `UiPreferences`: keeps the text of this device's contact card (public data) so that it can be shown while the mesh
+  is off; `IdentityCreator` saves it when the identity is created and `ContactsModel` refreshes it while the mesh runs.
+* `OnboardingView`: deleting the identity also forgets nicknames and pending cards.
+* `TypeScale.monospaceSmall`; `project.yml`: `NSCameraUsageDescription` (iOS).
+
+**Tests**
+
+* `Packages/CrisisCore/Tests/CrisisCoreTests/ConventionVectorTests.swift`: every group of `core/testdata/appcodec.json`
+  (sanitize, announcements, cards, nicknames, short ids, lifetimes, byte budgets, byte counts, message status) against
+  the core through the bindings. Runs with `swift test` on the Mac.
+* `Tests/iOS/ContactsTests.swift`: rules, model against a real in-memory core (add, own card, garbage, kept while off,
+  trust, reset), text form, a QR code drawn and read back, camera readiness table, strings in both languages.
+
+**Not done / not run**
+
+* Nothing was compiled or run (no Swift toolchain where this was written). Likeliest complaints: the generated
+  binding names used in the tests (`ContactInfo(...)`, `CrisisNode.inMemory`, enum cases such as `.verified`), the
+  `ContactsBackend` conformance of the `NodeRuntime` actor, and the QR round trip test (`CIDetector` in the simulator).
+* The live camera was not tried; nor was the scan between an iPhone and an Android phone.
+* Not in I5: the camera and the sandbox on the Mac (I8), the "Send a message" button (I6), any list of contacts while
+  the mesh is off (the node holds the database; the list appears when the mesh runs).
+
+---
+
 # Changes: phase I4, design system, shell and introduction on Apple
 
 **New in `App/Shared`**
