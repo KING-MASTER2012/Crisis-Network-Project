@@ -193,7 +193,7 @@ final class OnboardingTests: XCTestCase {
 
     func testTheStringsOfTheNewScreensAreTranslated() {
         let keys = [
-            "bt_denied_title", "bt_off_title", "onb_nearby_allow", "onb_bg_body", "ph_chats_title",
+            "bt_denied_title", "bt_off_title", "onb_nearby_allow", "onb_bg_body", "chats_empty_title",
             "settings_language", "settings_theme_title", "lang_system", "onb_done_title", "home_join",
         ]
         for key in keys {

@@ -418,8 +418,8 @@ final class MessagingTests: XCTestCase {
     }
 
     func testStringsWithArgumentsAndPluralsAreFilledIn() {
-        XCTAssertEqual(L10n.string("bytes_counter %lld %lld", language: .english, 12, 1024), "12 of 1024 bytes")
-        XCTAssertEqual(L10n.string("bytes_counter %lld %lld", language: .turkish, 12, 1024), "1024 bayttan 12")
+        XCTAssertEqual(L10n.string("bytes_counter %lld %lld", language: .english, 12, 512), "12 of 512 bytes")
+        XCTAssertEqual(L10n.string("bytes_counter %lld %lld", language: .turkish, 12, 512), "512 bayttan 12")
         XCTAssertEqual(L10n.string("chat_preview_mine %@", language: .english, "hi"), "You: hi")
         XCTAssertEqual(L10n.string("ann_confirm_title %@", language: .english, "Emergency"), "Publish as “Emergency”?")
         XCTAssertEqual(L10n.string("duration_minutes %lld", language: .english, 1), "1 minute")

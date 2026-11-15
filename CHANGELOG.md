@@ -30,6 +30,10 @@
   (send, refusals with their reasons, publish with severity, lifetimes, paging back over a page, closing), a private
   message between two runtimes (unread, read, delivered), the navigator, strings and plurals in both languages.
 
+**CI fix after the first run:** `OnboardingTests.testTheStringsOfTheNewScreensAreTranslated` still asked for the removed
+placeholder key `ph_chats_title`; it now asks for `chats_empty_title`. `MessagingTests` used four-digit numbers in the
+byte counter test, but the formatter groups digits by locale ("1,024" / "1.024"); it uses 512 now.
+
 **Not done / not run**
 
 * Nothing was compiled or run (no Swift toolchain where this was written). Likeliest complaints: the plural lookup of
