@@ -5,8 +5,8 @@ import SwiftUI
 /// each other and find them identical know that nobody replaced a card on the way; only then does the contact count as
 /// verified. Changing the trust needs the node, so those buttons wait for the mesh.
 ///
-/// `onMessage` is the way into the conversation with this contact; without it (until the chats exist, phase I6) the
-/// button is not shown.
+/// `onMessage` is the way into the conversation with this contact (the contacts destination opens the chat
+/// destination); without it the button is not shown.
 struct ContactDetailView: View {
     let hex: String
     var onMessage: ((String) -> Void)?

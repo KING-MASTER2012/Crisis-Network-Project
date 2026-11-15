@@ -3,8 +3,7 @@
 SwiftUI clients on top of the Rust core. Plan and phases: `I0` ... `I9` (see `CHANGELOG.md`). This folder holds the
 result of **phase I0** (the toolchain, the core as a Swift package, a placeholder app, CI), **phase I1** (the
 runtime around the core), **phase I2** (the Bluetooth link), **phase I3** (discovery, topology, the background) and
-**phase I4** (design system, shell, introduction) and **phase I5** (contacts). Chats and announcements are still
-placeholders (I6).
+**phase I4** (design system, shell, introduction), **phase I5** (contacts) and **phase I6** (chats and announcements).
 
 ```
 clients/apple/
@@ -232,6 +231,53 @@ strings in both languages). Not tested by a machine: the live camera, which need
 code; compare the safety numbers; add; mark as verified. Repeat the other way round. Then test the text path (copy on A,
 "Enter a card as text" on B), a card added with the mesh off, and an Android phone's card read by an iPhone and the
 other way round (the QR code and the text form are the same on both).
+
+## Chats and announcements (phase I6)
+
+The chats destination lists the private conversations (newest first, with a preview and the unread count) and starts a
+new one (only contacts with a stored card who are not blocked). A **conversation** shows the messages oldest first,
+the "new messages" line above the first one that was unread when it was opened, the state of every sent message
+("Published", then "Delivered" when the acknowledgement came back), and a box that counts **UTF-8 bytes** against what a
+private message can carry. Scrolling up loads older pages. The announcements destination shows the public announcements
+(newest first; important and emergency ones in their own colour, always with the word as well) and the screen to write
+one: text with the byte counter, importance (normal, important, emergency) and how long devices keep it (presets from the
+core, or any time from one second up to the longest the core allows). Important and emergency announcements ask for a
+confirmation first, because they cannot be taken back. Unread counts are the badges of the two destinations. Code in
+`App/Shared/Messaging/`:
+
+| File | Job |
+| --- | --- |
+| `MessageBook.swift` | The rules, no UI and no node: a stored message as a row, the chat list line, previews, `ConversationWindow` (the loaded part of a conversation: paging, read marker, the unread line). |
+| `MessagingModel.swift` | The holder for the whole app (`MessagingModel.shared`): reads chats, the open chat, the feed and the unread counts from the running node, marks an open conversation read, pages backwards, sends and publishes. Talks to the node through the `MessagingBackend` protocol, which `NodeRuntime` conforms to. |
+| `MessageViews.swift` | Bubble, time, byte counter, unread line, labels of severities and states, the lazy scroll column. |
+| `ChatsView`, `ChatView`, `AnnouncementsView` (with `ComposeAnnouncementView`) | The screens. |
+
+`Shell/AppNavigator.swift` holds the path of the chat destination's `NavigationStack`: "Send a message" on a contact
+switches to the chat destination with that conversation open (and a notification will do the same in I7).
+
+**Rules that follow the Android client**
+
+* The node is only open while the mesh runs, so messages are read and sent only then (`ready`); a screen says so.
+* An open conversation is a window over the newest messages that grows backwards one page (40) at a time; a refresh
+  reads the whole window again so that the delivery marks of older messages stay right. While a screen is open, new
+  incoming messages are marked read at once. A chat is only forgotten by its screen disappearing when it is still the
+  one that was opened for that person.
+* Text from other devices is cleaned of control characters and direction tricks by the core (`sanitizeText`) before it
+  is shown. A message that cannot be read says so.
+* Whether a text is too long is decided by the core's byte budgets (`directByteLimit`, `announcementByteLimit`,
+  `budgetStatus`); lifetimes by `lifetimePresets`, `lifetimeIsValid`, `splitLifetime`.
+* The lifetime preselected for a new announcement is one day (the core's default); a setting for it comes with I7.
+
+**Tests.** `MessagingTests` (`Tests/iOS`): the rules, the window and its paging, the model against a real in-memory core
+(send, refuse, publish, page backwards, close), a message that really travels between two runtimes over the in-memory
+link (unread until opened, marked read, acknowledged), the navigator, and the strings in both languages (arguments and
+plurals). Not tested by a machine: the screens themselves and scrolling.
+
+**Exit check of I6 (by hand, two devices).** Add each other's cards, join the mesh on both. A writes to B: B sees the badge
+on the chats tab, the conversation with a preview, opens it (the line above the message, badge gone) and A sees
+"Delivered". Write more than 40 messages and scroll up. Publish a normal, an important and an emergency announcement with
+different lifetimes: the other device shows them with the right colour and word, and they disappear when the time is
+up. Try the same between an iPhone and an Android phone. Turn the mesh off: both destinations say so.
 
 ## Discovery, topology and the background (phase I3)
 

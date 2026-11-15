@@ -13,6 +13,7 @@ struct CrisisNetworkApp: App {
         Task { @MainActor in
             BleLinkTestModel.shared.resumeIfEnabled()
             ContactsModel.shared.observe(BleLinkTestModel.shared)
+            MessagingModel.shared.observe(BleLinkTestModel.shared)
         }
     }
 

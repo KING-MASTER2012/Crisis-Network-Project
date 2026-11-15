@@ -71,7 +71,8 @@ struct ContactsView: View {
                 PasteCardView()
                 #endif
             case .paste: PasteCardView()
-            case let .detail(hex): ContactDetailView(hex: hex)
+            case let .detail(hex):
+                ContactDetailView(hex: hex, onMessage: { AppNavigator.shared.openChat($0) })
             }
         }
     }

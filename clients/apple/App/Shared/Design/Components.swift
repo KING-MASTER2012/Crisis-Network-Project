@@ -7,12 +7,16 @@ enum Tone: Equatable, Sendable {
     case warning
     case error
 
+    /// An emergency announcement: the strongest tone, in its own colour (and always with a word beside it).
+    case emergency
+
     var systemImage: String {
         switch self {
         case .neutral: return "info.circle"
         case .success: return "checkmark.circle"
         case .warning: return "exclamationmark.triangle"
         case .error: return "xmark.octagon"
+        case .emergency: return "exclamationmark.octagon"
         }
     }
 
@@ -22,6 +26,7 @@ enum Tone: Equatable, Sendable {
         case .success: return palette.status.successContainer
         case .warning: return palette.status.warningContainer
         case .error: return palette.errorContainer
+        case .emergency: return palette.status.emergencyContainer
         }
     }
 
@@ -31,6 +36,7 @@ enum Tone: Equatable, Sendable {
         case .success: return palette.status.onSuccessContainer
         case .warning: return palette.status.onWarningContainer
         case .error: return palette.onErrorContainer
+        case .emergency: return palette.status.onEmergencyContainer
         }
     }
 }

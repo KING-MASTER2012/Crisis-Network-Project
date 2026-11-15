@@ -1,3 +1,47 @@
+# Changes: phase I6, chats and announcements on Apple
+
+**New in `App/Shared/Messaging`**
+
+* `MessageBook`: the rules between the node's history and the screens (rows, chat list lines, previews, today's time)
+  and `ConversationWindow`, the loaded part of a conversation with paging, the read marker and the unread line.
+* `MessagingModel`: one holder for the app (chat list, open chat, announcements feed, unread counts; marks an open
+  conversation read; pages backwards; sends private messages and publishes announcements with the core's budgets and
+  lifetime rules). Uses the node through `MessagingBackend`, which `NodeRuntime` conforms to. Overlapping reads are
+  merged by `RefreshCoalescer`, and every caller waits until the data it asked for is read.
+* Screens: `ChatsView` (with `NewChatView`), `ChatView`, `AnnouncementsView`, `ComposeAnnouncementView`; shared pieces in
+  `MessageViews` (bubble, time, byte counter, unread line, `LazyScreenColumn`).
+* `Shell/AppNavigator.swift`: the chat destination's path lives there, so "Send a message" on a contact opens the
+  conversation in the chat destination.
+* `Resources/Localizable.xcstrings`: 55 new entries in English and Turkish (plurals for unread counts and durations
+  included); the four placeholder entries of the chat and announcement destinations are gone. 237 entries now.
+
+**Changed**
+
+* `AppShell`: the badges of the chats and announcements destinations are the unread counts; the chat stack has the
+  navigator's path; the shell switches destination when the navigator asks.
+* `DestinationView`: chats and announcements show their screens; `PlaceholderView` is deleted (nothing used it any more).
+* `ContactsView` / `ContactDetailView`: the "Send a message" button is wired.
+* `Tone.emergency` (the emergency colours of the palette, an icon of its own).
+* `CrisisNetworkApp`: `MessagingModel` observes the node like `ContactsModel`.
+
+**Tests**
+
+* `Tests/iOS/MessagingTests.swift`: rows and previews, the window and its paging, the model against a real in-memory core
+  (send, refusals with their reasons, publish with severity, lifetimes, paging back over a page, closing), a private
+  message between two runtimes (unread, read, delivered), the navigator, strings and plurals in both languages.
+
+**Not done / not run**
+
+* Nothing was compiled or run (no Swift toolchain where this was written). Likeliest complaints: the plural lookup of
+  `L10n.string` for `duration_*` (the strings test checks it), `defaultScrollAnchor` and the scrolling of a long chat,
+  the two-runtime test (timing, 8 s timeout), `NavigationLink` inside a toolbar.
+* Local notifications and the received-in-background notification are I7; so are the setting for the default lifetime
+  and the screenshot rule.
+* Messages are marked read while a conversation screen is open, also when the app is in the background with that
+  screen showing; refining this belongs to the notifications phase.
+
+---
+
 # Changes: phase I5, contacts on Apple
 
 **New in `App/Shared/Contacts`**

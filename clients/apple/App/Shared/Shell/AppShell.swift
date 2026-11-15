@@ -8,8 +8,13 @@ struct AppShell: View {
     @Environment(\.horizontalSizeClass) private var sizeClass
     @SceneStorage("shell.destination") private var storedDestination = Destination.home.rawValue
 
-    /// Unread counts and the like, per destination. Empty until the chats and announcements exist (phase I6).
-    var badges: [Destination: Int] = [:]
+    @ObservedObject private var messaging = MessagingModel.shared
+    @ObservedObject private var navigator = AppNavigator.shared
+
+    /// Unread counts per destination: the chats and the announcements.
+    private var badges: [Destination: Int] {
+        [.chats: messaging.unread.chats, .announcements: messaging.unread.announcements]
+    }
 
     private var selection: Binding<Destination> {
         Binding(
@@ -19,6 +24,17 @@ struct AppShell: View {
     }
 
     var body: some View {
+        content
+            // "Send a message" on a contact (and later a notification) asks for the chat destination.
+            .onChange(of: navigator.destinationRequest) { _, request in
+                guard let request else { return }
+                selection.wrappedValue = request
+                navigator.destinationRequest = nil
+            }
+    }
+
+    @ViewBuilder
+    private var content: some View {
         #if os(macOS)
         splitView
         #else
@@ -30,12 +46,25 @@ struct AppShell: View {
         #endif
     }
 
+    /// The stack of one destination. The chat stack's path is held by the navigator so that other screens can push a
+    /// conversation on it.
+    @ViewBuilder
+    private func stack(for destination: Destination) -> some View {
+        if destination == .chats {
+            NavigationStack(path: $navigator.chatsPath) {
+                DestinationView(destination: destination)
+            }
+        } else {
+            NavigationStack {
+                DestinationView(destination: destination)
+            }
+        }
+    }
+
     private var tabView: some View {
         TabView(selection: selection) {
             ForEach(Destination.allCases) { destination in
-                NavigationStack {
-                    DestinationView(destination: destination)
-                }
+                stack(for: destination)
                 .tabItem { Label(destination.title, systemImage: destination.systemImage) }
                 .badge(badges[destination] ?? 0)
                 .tag(destination)
@@ -55,9 +84,7 @@ struct AppShell: View {
             }
             .navigationTitle("app_name")
         } detail: {
-            NavigationStack {
-                DestinationView(destination: selection.wrappedValue)
-            }
+            stack(for: selection.wrappedValue)
             // A new destination starts with an empty stack.
             .id(selection.wrappedValue)
         }
@@ -73,9 +100,9 @@ struct DestinationView: View {
         case .home:
             HomeView()
         case .chats:
-            PlaceholderView(destination: .chats, title: "ph_chats_title", message: "ph_chats_body")
+            ChatsView()
         case .announcements:
-            PlaceholderView(destination: .announcements, title: "ph_announcements_title", message: "ph_announcements_body")
+            AnnouncementsView()
         case .contacts:
             ContactsView()
         case .settings:
