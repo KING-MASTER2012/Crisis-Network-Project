@@ -67,8 +67,8 @@ struct ContactsView: View {
                 #if os(iOS)
                 ScanCardView()
                 #else
-                // The Mac reads cards as text; its camera comes with the Mac-specific phase (I8).
-                PasteCardView()
+                // The Mac: its camera when there is one, a picture, the clipboard, a drop, and text (I8).
+                MacScanCardView()
                 #endif
             case .paste: PasteCardView()
             case let .detail(hex):
@@ -81,10 +81,8 @@ struct ContactsView: View {
         VStack(spacing: 8) {
             NavigationLink(value: ContactRoute.myCard) { Text("contacts_my_card") }
                 .buttonStyle(CrisisButtonStyle(kind: .primary))
-            #if os(iOS)
             NavigationLink(value: ContactRoute.scan) { Text("contacts_scan") }
                 .buttonStyle(CrisisButtonStyle(kind: .secondary))
-            #endif
             NavigationLink(value: ContactRoute.paste) { Text("contacts_paste") }
                 .buttonStyle(CrisisButtonStyle(kind: .quiet))
         }

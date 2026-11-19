@@ -1,3 +1,57 @@
+# Changes: phase I8, macOS on Apple
+
+**New**
+
+* `App/Shared/Mac/MacApp.swift` (macOS): `MacDesktop` (the window, the Dock icon, "is the app on screen", sleep and wake in the log),
+  `MacAppDelegate` (the mesh goes on when the window is closed, a click on the Dock icon reopens it, a clean stop of the node when
+  the app quits), `MenuBarLabel` and `MenuBarContent` (the menu bar icon and its menu), `MacCommands` (Settings on Cmd-comma, Go on
+  Cmd-1 to Cmd-5, Mesh on Cmd-Shift-J), `MacRootView`, `SMAppServiceLoginItem` (open at login).
+* `App/Shared/Mac/MacShellPolicy.swift`: the rules without AppKit (`MacShellChoices`, `MacPreferences`, `MacPresence`, `MenuBarSummary`,
+  `LoginItemState`, `LoginItemPlan`, `LoginItemService`, `LoginItemModel`).
+* `App/Shared/Mac/MacSettingsSection.swift`: the "Mac" section of the settings (menu bar icon, Dock icon, open at login, start without a window).
+* `Contacts/MacScanCardView`, `Contacts/MacQrScannerView`: scanning on a Mac (camera, picture file, clipboard, drop, text).
+* `Contacts/QrImageImport.swift`: a card from a picture (bounded: 20 MB, 4096 px), PNG of a QR code (`QrCode.pngData`).
+* `scripts/check-mac-app.sh`: reads the sandbox rights and the permission texts back from the built app and fails on a missing or a
+  forbidden entitlement (no network entitlement, no way around the hardened runtime).
+* `scripts/notarize-mac.sh`: archive, Developer ID export, notarization, stapling and a notarized disk image.
+* `Tests/iOS/MacShellTests.swift` (see the README for what it covers).
+* `Resources/Localizable.xcstrings`: 36 new entries in English and Turkish (plurals included). 356 entries now.
+
+**Changed**
+
+* `project.yml`, macOS target: `device.camera` and `files.user-selected.read-write` entitlements next to the sandbox and Bluetooth
+  ones, `NSCameraUsageDescription`, `LSMultipleInstancesProhibited`, `LSApplicationCategoryType`, hardened runtime for the Release
+  configuration.
+* `CrisisNetworkApp`: on a Mac one `Window` scene, the menu bar item, the menus and the delegate; the iOS scene phase code is iOS only.
+* `BleLinkTestModel`: on a Mac the radio is always told "foreground" (`isForeground` only means that the person can see the app, for
+  notifications); `shutdownForQuit()` stops the node and keeps the start-at-launch choice; `noteSystemEvent`.
+* `ContactsView`: the scan button and screen exist on a Mac. `MyCardView`: copy or save the QR code as a picture (Mac).
+  `CameraAccess.captureDevice()` finds built-in, external and Continuity cameras on a Mac. `QrCode.read` also reads a `CIImage`.
+  `Clipboard`: pictures (Mac). `NotificationRouter`: a tap brings the window back (Mac).
+* `.github/workflows/ci.yml`, job `apple`: a Release build of the Mac app, ad-hoc signed, whose entitlements and hardened runtime
+  `scripts/check-mac-app.sh --signed` checks.
+* `README.md` of the Apple client: "The Mac app (phase I8)" with the exit check, the Keychain decision and the notarization steps.
+  `KeychainSecretStore`: comment only (the decision to stay on the login keychain on the Mac).
+
+**Decisions**
+
+* The Mac vault stays on the login keychain (no restricted entitlement, no profile for Developer ID builds); reasons and consequences are in the
+  README. A migration to the data protection keychain is an I9 question.
+* A picture of a QR code is an equal alternative to the camera, not a fallback: a Mac may have no camera and the permission may be refused.
+* `release-apple.yml` (TestFlight, CI notarization with an API key) stays in I9; I8 ships the script it will call.
+
+**Not done / not run**
+
+* Nothing was compiled or run (no Swift toolchain where this was written). Likeliest complaints: `OpenWindowAction` called as
+  `action(id:)`, the `Window` scene with `.windowResizability`, `Commands` holding `@ObservedObject`, the launch-event constants
+  (`kAEOpenApplication`, `keyAEPropData`, `keyAELaunchedAsLogInItem`), `AVCaptureDevice.DeviceType.continuityCamera` and `.external`,
+  `dropDestination(for:action:isTargeted:)`, and the `FakeLoginItem` in the tests.
+* Not testable by a machine: the menu bar, the Dock icon, the login item, the camera, the notarization. The README lists the exit check; the
+  notarization needs your Developer ID certificate and a notary login. Whether a launch by the login item is recognised (and so the window
+  stays closed) depends on what the system sends; if it is not, the window simply opens.
+
+---
+
 # Changes: phase I7, network, settings and notifications on Apple
 
 **New**

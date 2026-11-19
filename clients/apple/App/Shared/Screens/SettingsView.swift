@@ -2,8 +2,8 @@ import CrisisCore
 import CrisisRuntime
 import SwiftUI
 
-/// The settings (phases I4 and I7): appearance (theme, contrast, text size), the language, notifications, privacy (the
-/// app switcher), the power profile, the network screen, the message store and the default lifetime of announcements,
+/// The settings (phases I4, I7 and I8): appearance (theme, contrast, text size), the language, notifications, privacy (the
+/// app switcher), on a Mac how the app sits on the desktop (menu bar, Dock, login), the power profile, the network screen, the message store and the default lifetime of announcements,
 /// the identity, what this build is, and a few developer tools.
 struct SettingsView: View {
     @ObservedObject private var prefs = UiPreferences.shared
@@ -19,6 +19,9 @@ struct SettingsView: View {
             languageSection
             notificationsSection
             privacySection
+            #if os(macOS)
+            MacSettingsSection()
+            #endif
             powerSection
             networkSection
             storageSection

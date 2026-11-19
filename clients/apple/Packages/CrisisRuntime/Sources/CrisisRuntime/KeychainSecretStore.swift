@@ -23,9 +23,12 @@ public struct KeychainSecretStore: SecretStore {
     public let service: String
     public let useDataProtectionKeychain: Bool
 
-    /// iOS always uses the data protection keychain. On macOS it needs an app signed with a team (the entitlement
-    /// comes with the provisioning profile), which an unsigned test run or a local ad-hoc build does not have, so it
-    /// is off by default there. Phase I8 revisits this for the shipping Mac app.
+    /// iOS always uses the data protection keychain. On macOS it needs the restricted `keychain-access-groups`
+    /// entitlement (a provisioning profile), which an unsigned test run, a local ad-hoc build and a Developer ID build
+    /// outside the App Store do not have, so it is off there. Decided in phase I8 to stay off for the Mac app: the items
+    /// live in the login keychain, tied to the code signature (a Developer ID build keeps them across updates), and
+    /// switching later needs a migration, because an item written to one keychain is not found in the other. Revisit
+    /// with the TestFlight build (I9).
     public static var defaultUsesDataProtection: Bool {
         #if os(macOS)
         return false

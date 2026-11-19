@@ -1,4 +1,8 @@
 import SwiftUI
+#if os(macOS)
+import AppKit
+import UniformTypeIdentifiers
+#endif
 
 /// A QR code on a white tile: a code is read as dark on light, so it stays black on white in the dark themes too.
 struct QrCodeView: View {
@@ -30,6 +34,7 @@ struct QrCodeView: View {
 struct MyCardView: View {
     @ObservedObject private var prefs = UiPreferences.shared
     @State private var copied = false
+    @State private var pictureNote: LocalizedStringKey?
 
     var body: some View {
         ScreenColumn {
@@ -51,6 +56,12 @@ struct MyCardView: View {
                 if copied { Text("mycard_copied").font(TypeScale.bodySmall) }
                 ShareLink(item: card) { Text("mycard_share") }
                     .buttonStyle(CrisisButtonStyle(kind: .secondary))
+                #if os(macOS)
+                // The card as a picture, for a person who cannot hold a screen up to a camera: copy it or save it.
+                SecondaryButton("mycard_copy_picture") { copyPicture(of: card) }
+                SecondaryButton("mycard_save_picture") { savePicture(of: card) }
+                if let pictureNote { Text(pictureNote).font(TypeScale.bodySmall) }
+                #endif
             } else {
                 InfoCard(title: "mycard_title", tone: .warning) { Text("mycard_unavailable") }
             }
@@ -58,4 +69,34 @@ struct MyCardView: View {
         .navigationTitle("mycard_title")
         .inlineNavigationTitle()
     }
+
+    #if os(macOS)
+    private func copyPicture(of card: String) {
+        guard let png = QrCode.pngData(of: card) else {
+            pictureNote = "mycard_picture_failed"
+            return
+        }
+        Clipboard.copyPng(png)
+        pictureNote = "mycard_picture_copied"
+    }
+
+    /// The save panel is the system's (outside the app), so the app needs no access to the person's files beyond what
+    /// they pick there (the sandbox entitlement `files.user-selected.read-write`).
+    private func savePicture(of card: String) {
+        guard let png = QrCode.pngData(of: card) else {
+            pictureNote = "mycard_picture_failed"
+            return
+        }
+        let panel = NSSavePanel()
+        panel.allowedContentTypes = [.png]
+        panel.nameFieldStringValue = "crisis-network-card.png"
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+        do {
+            try png.write(to: url, options: .atomic)
+            pictureNote = "mycard_picture_saved"
+        } catch {
+            pictureNote = "mycard_picture_failed"
+        }
+    }
+    #endif
 }

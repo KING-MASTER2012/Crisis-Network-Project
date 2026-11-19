@@ -27,12 +27,18 @@ enum QrCode {
 
     /// The text of the first QR code in `image`, `nil` when there is none.
     static func read(_ image: CGImage) -> String? {
+        read(CIImage(cgImage: image))
+    }
+
+    /// The text of the first QR code in `image`, `nil` when there is none. (The Mac camera reader hands over frames as
+    /// `CIImage`s.)
+    static func read(_ image: CIImage) -> String? {
         let detector = CIDetector(
             ofType: CIDetectorTypeQRCode,
             context: nil,
             options: [CIDetectorAccuracy: CIDetectorAccuracyHigh]
         )
-        let features = detector?.features(in: CIImage(cgImage: image)) ?? []
+        let features = detector?.features(in: image) ?? []
         for case let feature as CIQRCodeFeature in features {
             if let text = feature.messageString { return text }
         }

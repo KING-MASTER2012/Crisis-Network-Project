@@ -95,18 +95,40 @@ targets:
                     - en
                     - tr
                 LSMinimumSystemVersion: "14.0"
+                LSApplicationCategoryType: public.app-category.social-networking
+                # One copy only: the database cannot be opened twice, and a login item and a double click must not
+                # start a second one (phase I8).
+                LSMultipleInstancesProhibited: true
                 NSBluetoothAlwaysUsageDescription: >-
                     Crisis Network uses Bluetooth to pass messages between nearby devices when there is no network.
+                # The camera reads the QR code of a contact card (phase I8); nothing is recorded or sent.
+                NSCameraUsageDescription: >-
+                    Crisis Network uses the camera only to read the QR code of a contact card. Nothing is recorded or sent anywhere.
                 ITSAppUsesNonExemptEncryption: false
+        # The rights of the sandboxed Mac app (phase I8). Exactly these four, and no network entitlement: the app talks
+        # to other devices over Bluetooth only. `scripts/check-mac-app.sh` fails the build when one is missing or when a
+        # forbidden one has appeared.
+        #   app-sandbox                  the sandbox itself
+        #   device.bluetooth             the Bluetooth radio (the permission dialog comes from NSBluetoothAlwaysUsageDescription)
+        #   device.camera                the camera that reads a card's QR code
+        #   files.user-selected.read-write  a picture the person picks or drops to read a card from, and the file the
+        #                                person saves their own card's QR code to
         entitlements:
             path: App/macOS/CrisisNetwork.entitlements
             properties:
                 com.apple.security.app-sandbox: true
                 com.apple.security.device.bluetooth: true
+                com.apple.security.device.camera: true
+                com.apple.security.files.user-selected.read-write: true
         settings:
             base:
                 PRODUCT_BUNDLE_IDENTIFIER: "$(APP_BUNDLE_ID)"
                 GENERATE_INFOPLIST_FILE: NO
+            # The hardened runtime is what notarization requires; Release only, because a debug build is loaded by test
+            # bundles and debuggers that the hardened runtime would refuse.
+            configs:
+                Release:
+                    ENABLE_HARDENED_RUNTIME: YES
 
     CrisisNetworkTests-iOS:
         type: bundle.unit-test

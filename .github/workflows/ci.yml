@@ -1,334 +1,346 @@
 name: ci
 
 on:
-    push:
-    pull_request:
-    workflow_dispatch:
+  push:
+  pull_request:
+  workflow_dispatch:
 
 # A newer push to the same ref makes the older run pointless: cancel it instead of queueing.
 concurrency:
-    group: ci-${{ github.workflow }}-${{ github.ref }}
-    cancel-in-progress: true
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 env:
-    CARGO_TERM_COLOR: always
+  CARGO_TERM_COLOR: always
 
 jobs:
-    fmt:
-        runs-on: ubuntu-latest
-        timeout-minutes: 10
-        steps:
-            - uses: actions/checkout@v4
-            - uses: dtolnay/rust-toolchain@stable
-              with:
-                  components: rustfmt
-            - run: cargo fmt --all --check
+  fmt:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt
+      - run: cargo fmt --all --check
 
-    clippy:
-        runs-on: ubuntu-latest
+  clippy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo clippy --workspace --all-targets -- -D warnings
+
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo test --workspace
+
+  deny:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      # Not EmbarkStudios/cargo-deny-action: it builds a Docker image on every run, and that build failed.
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-deny
+      - run: cargo deny check
+
+  docs:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: peaceiris/actions-mdbook@v2
+        with:
+          mdbook-version: latest
+      - run: mdbook build docs
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo doc --workspace --no-deps
+        env:
+          RUSTDOCFLAGS: -D warnings
+
+  fuzz-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@nightly
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: core/fuzz
+      - run: cargo install cargo-fuzz --locked
+      - name: Run every fuzz target briefly
+        run: |
+          for target in $(cargo fuzz list --fuzz-dir core/fuzz); do
+              cargo fuzz run --fuzz-dir core/fuzz "$target" -- -max_total_time=30 -rss_limit_mb=2048
+          done
+
+  bindings:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: Generate the Kotlin and Swift bindings
+        run: bash scripts/gen-bindings.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: bindings
+          path: target/bindings
+
+  android:
+    # Pinned (not ubuntu-latest) so that a runner image change cannot break the Android toolchain.
+    runs-on: ubuntu-24.04
+    # A hung build used to run until GitHub's 6 h limit; fail early instead. Every Gradle step
+    # below has its own, shorter limit so the log shows which one is stuck.
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      # The Rust target directory (3 ABIs), the Android SDK/NDK and Gradle caches together can
+      # fill the ~14 GB that a hosted runner has free, and a full disk shows up as hangs.
+      - name: Free disk space
+        run: |
+          df -h /
+          sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/.ghcup /usr/local/share/boost \
+              /opt/hostedtoolcache/CodeQL /usr/share/swift /usr/local/share/powershell
+          sudo docker image prune --all --force || true
+          df -h /
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android,armv7-linux-androideabi,x86_64-linux-android
+      - uses: Swatinem/rust-cache@v2
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      # The action's default package list contains `tools`, which no longer exists in the current
+      # command-line tools ("Failed to find package 'tools'"). Name the packages explicitly instead.
+      # Keep the NDK version in sync with clients/android/core/ffi/build.gradle.kts and the
+      # platform / build-tools versions with clients/android/README.md.
+      # Platform packages for API 36+ have a minor suffix: use `platforms;android-37.0`, not `android-37`.
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: "platform-tools platforms;android-37.0 build-tools;36.0.0 ndk;28.2.13676358"
+      - name: Install cargo-ndk
+        run: cargo install cargo-ndk --locked
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Make the Gradle wrapper executable
+        run: chmod +x clients/android/gradlew
+      # CI uses the `dev` Cargo profile: the release profile (fat LTO, one codegen unit) takes
+      # far longer and needs far more memory and disk for three ABIs, and nothing in this job
+      # needs optimised native code. Release builds are made locally / by the release workflow.
+      # (-Pcrisis.rustProfile=dev works in bash; the dot-free alias is for PowerShell.)
+      - name: Build the native core and the Kotlin bindings
+        working-directory: clients/android
+        timeout-minutes: 40
+        run: ./gradlew :core:ffi:syncKotlinBindings :core:ffi:verifyElfAlignment -Pcrisis.rustProfile=dev --console=plain --stacktrace
+      - name: Build the debug APK
+        working-directory: clients/android
+        timeout-minutes: 20
+        run: ./gradlew :app:assembleDebug -Pcrisis.rustProfile=dev --console=plain --stacktrace
+      - name: Lint
+        working-directory: clients/android
+        timeout-minutes: 20
+        run: ./gradlew :app:lintDebug -Pcrisis.rustProfile=dev --console=plain --stacktrace
+      - name: JVM unit tests
+        working-directory: clients/android
+        timeout-minutes: 15
+        run: ./gradlew :core:runtime:testDebugUnitTest :core:ble:testDebugUnitTest :app:testDebugUnitTest -Pcrisis.rustProfile=dev --console=plain --stacktrace
+      # Phase A7: the release variant runs R8 (shrinking and the JNA / UniFFI keep rules) and the release lint,
+      # which the debug build does not. `releaseCheckOnly` allows the fast native core and no SQLCipher: this
+      # APK is never shipped (a real release refuses those settings, see app/build.gradle.kts).
+      - name: Release build check (R8, release lint, unsigned)
+        working-directory: clients/android
+        timeout-minutes: 25
+        run: ./gradlew :app:assembleRelease -Pcrisis.rustProfile=dev -Pcrisis.releaseCheckOnly=true --console=plain --stacktrace
+      # Play requires 16 KB page alignment of native libraries (JNA's and ours) on new devices.
+      - name: Check 16 KB alignment of the release APK
+        run: |
+          apk=$(ls clients/android/app/build/outputs/apk/release/*.apk | head -n 1)
+          "$ANDROID_HOME/build-tools/36.0.0/zipalign" -c -P 16 -v 4 "$apk"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: android-debug-apk
+          path: clients/android/app/build/outputs/apk/debug/*.apk
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: android-reports
+          path: |
+            clients/android/**/build/reports
+            clients/android/**/build/test-results
+            clients/android/app/build/outputs/mapping
+          if-no-files-found: ignore
+
+  # Runs the native core on an emulator (needs KVM, slow), so only on the main branch.
+  android-smoke:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - name: Free disk space
+        run: |
+          df -h /
+          sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/.ghcup /usr/local/share/boost \
+              /opt/hostedtoolcache/CodeQL /usr/share/swift /usr/local/share/powershell
+          sudo docker image prune --all --force || true
+          df -h /
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          # The emulator is x86_64: no other ABI is needed here.
+          targets: x86_64-linux-android
+      - uses: Swatinem/rust-cache@v2
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      # See the comments in the `android` job about the explicit package list.
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: "platform-tools platforms;android-37.0 build-tools;36.0.0 ndk;28.2.13676358"
+      - name: Install cargo-ndk
+        run: cargo install cargo-ndk --locked
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Make the Gradle wrapper executable
+        run: chmod +x clients/android/gradlew
+      - name: Enable KVM for the emulator
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Check that KVM is available
+        run: |
+          ls -l /dev/kvm
+          grep -c -E 'vmx|svm' /proc/cpuinfo || true
+          df -h /
+      # Build everything BEFORE the emulator starts: the emulator then boots on an idle
+      # machine, and it does not sit idle (and time out) while Rust compiles.
+      - name: Build the native core (x86_64 only) and both test APKs
+        working-directory: clients/android
+        timeout-minutes: 40
+        run: ./gradlew :app:assembleDebug :app:assembleDebugAndroidTest :core:runtime:assembleDebugAndroidTest -Pcrisis.rustProfile=dev -Pcrisis.abis=x86_64 --console=plain --stacktrace
+      - uses: reactivecircus/android-emulator-runner@v2
         timeout-minutes: 30
-        steps:
-            - uses: actions/checkout@v4
-            - uses: dtolnay/rust-toolchain@stable
-              with:
-                  components: clippy
-            - uses: Swatinem/rust-cache@v2
-            - run: cargo clippy --workspace --all-targets -- -D warnings
+        with:
+          api-level: 33
+          arch: x86_64
+          emulator-boot-timeout: 900
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim -camera-back none
+          working-directory: clients/android
+          script: ./gradlew :app:connectedDebugAndroidTest :core:runtime:connectedDebugAndroidTest -Pcrisis.rustProfile=dev -Pcrisis.abis=x86_64 --console=plain --stacktrace
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: android-smoke-reports
+          path: |
+            clients/android/**/build/reports
+            clients/android/**/build/outputs/androidTest-results
+          if-no-files-found: ignore
 
-    test:
-        strategy:
-            fail-fast: false
-            matrix:
-                os: [ubuntu-latest, macos-latest, windows-latest]
-        runs-on: ${{ matrix.os }}
-        timeout-minutes: 60
-        steps:
-            - uses: actions/checkout@v4
-            - uses: dtolnay/rust-toolchain@stable
-            - uses: Swatinem/rust-cache@v2
-            - run: cargo test --workspace
+  # Phase I0: the Rust core as an XCFramework, its Swift package, and the placeholder app for iOS and macOS.
+  # Pinned (not macos-latest) so that a runner image change cannot break the Xcode toolchain. Nothing here
+  # needs signing or a device: Bluetooth and real iPhones come in later phases.
+  apple:
+    runs-on: macos-15
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: apple
+      - name: Install XcodeGen
+        run: brew install xcodegen
+      # The `dev` Cargo profile, as for Android: fast, and nothing here needs optimised code.
+      - name: Build the core for iOS, the iOS simulator and macOS
+        run: bash scripts/build-apple.sh --profile dev
+      - name: Swift package tests (on the Mac)
+        run: |
+          swift test --package-path clients/apple/Packages/CrisisCore
+          swift test --package-path clients/apple/Packages/CrisisRuntime
+      - name: Generate the Xcode project
+        working-directory: clients/apple
+        run: xcodegen generate
+      - name: Build the macOS app
+        run: |
+          xcodebuild -project clients/apple/CrisisNetwork.xcodeproj -scheme CrisisNetwork-macOS \
+              -destination 'platform=macOS' CODE_SIGNING_ALLOWED=NO build
+      # Phase I8. The Release configuration turns the hardened runtime on (what notarization needs), and an ad-hoc
+      # signature embeds the entitlements, so what the system would enforce can be read back and checked: the four
+      # rights of the sandbox (Bluetooth, camera, user-selected files) present, no network entitlement, nothing that
+      # weakens the hardened runtime. The notarization itself needs a certificate: scripts/notarize-mac.sh.
+      - name: Build the macOS app (Release, ad-hoc signed) and check its sandbox
+        run: |
+          xcodebuild -project clients/apple/CrisisNetwork.xcodeproj -scheme CrisisNetwork-macOS \
+              -configuration Release -destination 'platform=macOS' -derivedDataPath clients/apple/build/mac-release \
+              CODE_SIGN_IDENTITY=- CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=YES DEVELOPMENT_TEAM= build
+          app=$(ls -d clients/apple/build/mac-release/Build/Products/Release/*.app | head -n 1)
+          echo "App: $app"
+          bash scripts/check-mac-app.sh "$app" --signed
+      # Links the iOS device slice; running it needs a phone and a signing team.
+      - name: Build the iOS app for a device
+        run: |
+          xcodebuild -project clients/apple/CrisisNetwork.xcodeproj -scheme CrisisNetwork-iOS \
+              -destination 'generic/platform=iOS' CODE_SIGNING_ALLOWED=NO build
+      # Not `CODE_SIGNING_ALLOWED=NO`: an unsigned app has no application identifier, and the Keychain then fails
+      # with -34018 ("a required entitlement isn't present"). Ad-hoc signing (`-`) needs no team or certificate.
+      - name: iOS app tests on the simulator
+        run: |
+          udid=$(bash scripts/apple-simulator-udid.sh)
+          echo "Simulator: $udid"
+          xcodebuild -project clients/apple/CrisisNetwork.xcodeproj -scheme CrisisNetwork-iOS \
+              -destination "id=$udid" CODE_SIGN_IDENTITY=- CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=YES \
+              DEVELOPMENT_TEAM= test
+      - uses: actions/upload-artifact@v4
+        with:
+          name: apple-xcframework
+          path: clients/apple/Packages/CrisisCore/CrisisCoreFFI.xcframework
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: apple-logs
+          path: |
+            ~/Library/Logs/DiagnosticReports
+            ~/Library/Developer/Xcode/DerivedData/**/Logs/Test
+          if-no-files-found: ignore
 
-    deny:
-        runs-on: ubuntu-latest
-        timeout-minutes: 10
-        steps:
-            - uses: actions/checkout@v4
-            # Not EmbarkStudios/cargo-deny-action: it builds a Docker image on every run, and that build failed.
-            - uses: dtolnay/rust-toolchain@stable
-            - uses: taiki-e/install-action@v2
-              with:
-                  tool: cargo-deny
-            - run: cargo deny check
-
-    docs:
-        runs-on: ubuntu-latest
-        timeout-minutes: 30
-        steps:
-            - uses: actions/checkout@v4
-            - uses: peaceiris/actions-mdbook@v2
-              with:
-                  mdbook-version: latest
-            - run: mdbook build docs
-            - uses: dtolnay/rust-toolchain@stable
-            - uses: Swatinem/rust-cache@v2
-            - run: cargo doc --workspace --no-deps
-              env:
-                  RUSTDOCFLAGS: -D warnings
-
-    fuzz-smoke:
-        runs-on: ubuntu-latest
-        timeout-minutes: 60
-        steps:
-            - uses: actions/checkout@v4
-            - uses: dtolnay/rust-toolchain@nightly
-            - uses: Swatinem/rust-cache@v2
-              with:
-                  workspaces: core/fuzz
-            - run: cargo install cargo-fuzz --locked
-            - name: Run every fuzz target briefly
-              run: |
-                  for target in $(cargo fuzz list --fuzz-dir core/fuzz); do
-                      cargo fuzz run --fuzz-dir core/fuzz "$target" -- -max_total_time=30 -rss_limit_mb=2048
-                  done
-
-    bindings:
-        runs-on: ubuntu-latest
-        timeout-minutes: 30
-        steps:
-            - uses: actions/checkout@v4
-            - uses: dtolnay/rust-toolchain@stable
-            - uses: Swatinem/rust-cache@v2
-            - name: Generate the Kotlin and Swift bindings
-              run: bash scripts/gen-bindings.sh
-            - uses: actions/upload-artifact@v4
-              with:
-                  name: bindings
-                  path: target/bindings
-
-    android:
-        # Pinned (not ubuntu-latest) so that a runner image change cannot break the Android toolchain.
-        runs-on: ubuntu-24.04
-        # A hung build used to run until GitHub's 6 h limit; fail early instead. Every Gradle step
-        # below has its own, shorter limit so the log shows which one is stuck.
-        timeout-minutes: 90
-        steps:
-            - uses: actions/checkout@v4
-            # The Rust target directory (3 ABIs), the Android SDK/NDK and Gradle caches together can
-            # fill the ~14 GB that a hosted runner has free, and a full disk shows up as hangs.
-            - name: Free disk space
-              run: |
-                  df -h /
-                  sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/.ghcup /usr/local/share/boost \
-                      /opt/hostedtoolcache/CodeQL /usr/share/swift /usr/local/share/powershell
-                  sudo docker image prune --all --force || true
-                  df -h /
-            - uses: dtolnay/rust-toolchain@stable
-              with:
-                  targets: aarch64-linux-android,armv7-linux-androideabi,x86_64-linux-android
-            - uses: Swatinem/rust-cache@v2
-            - uses: actions/setup-java@v4
-              with:
-                  distribution: temurin
-                  java-version: "17"
-            # The action's default package list contains `tools`, which no longer exists in the current
-            # command-line tools ("Failed to find package 'tools'"). Name the packages explicitly instead.
-            # Keep the NDK version in sync with clients/android/core/ffi/build.gradle.kts and the
-            # platform / build-tools versions with clients/android/README.md.
-            # Platform packages for API 36+ have a minor suffix: use `platforms;android-37.0`, not `android-37`.
-            - uses: android-actions/setup-android@v3
-              with:
-                  packages: "platform-tools platforms;android-37.0 build-tools;36.0.0 ndk;28.2.13676358"
-            - name: Install cargo-ndk
-              run: cargo install cargo-ndk --locked
-            - uses: gradle/actions/setup-gradle@v4
-            - name: Make the Gradle wrapper executable
-              run: chmod +x clients/android/gradlew
-            # CI uses the `dev` Cargo profile: the release profile (fat LTO, one codegen unit) takes
-            # far longer and needs far more memory and disk for three ABIs, and nothing in this job
-            # needs optimised native code. Release builds are made locally / by the release workflow.
-            # (-Pcrisis.rustProfile=dev works in bash; the dot-free alias is for PowerShell.)
-            - name: Build the native core and the Kotlin bindings
-              working-directory: clients/android
-              timeout-minutes: 40
-              run: ./gradlew :core:ffi:syncKotlinBindings :core:ffi:verifyElfAlignment -Pcrisis.rustProfile=dev --console=plain --stacktrace
-            - name: Build the debug APK
-              working-directory: clients/android
-              timeout-minutes: 20
-              run: ./gradlew :app:assembleDebug -Pcrisis.rustProfile=dev --console=plain --stacktrace
-            - name: Lint
-              working-directory: clients/android
-              timeout-minutes: 20
-              run: ./gradlew :app:lintDebug -Pcrisis.rustProfile=dev --console=plain --stacktrace
-            - name: JVM unit tests
-              working-directory: clients/android
-              timeout-minutes: 15
-              run: ./gradlew :core:runtime:testDebugUnitTest :core:ble:testDebugUnitTest :app:testDebugUnitTest -Pcrisis.rustProfile=dev --console=plain --stacktrace
-            # Phase A7: the release variant runs R8 (shrinking and the JNA / UniFFI keep rules) and the release lint,
-            # which the debug build does not. `releaseCheckOnly` allows the fast native core and no SQLCipher: this
-            # APK is never shipped (a real release refuses those settings, see app/build.gradle.kts).
-            - name: Release build check (R8, release lint, unsigned)
-              working-directory: clients/android
-              timeout-minutes: 25
-              run: ./gradlew :app:assembleRelease -Pcrisis.rustProfile=dev -Pcrisis.releaseCheckOnly=true --console=plain --stacktrace
-            # Play requires 16 KB page alignment of native libraries (JNA's and ours) on new devices.
-            - name: Check 16 KB alignment of the release APK
-              run: |
-                  apk=$(ls clients/android/app/build/outputs/apk/release/*.apk | head -n 1)
-                  "$ANDROID_HOME/build-tools/36.0.0/zipalign" -c -P 16 -v 4 "$apk"
-            - uses: actions/upload-artifact@v4
-              with:
-                  name: android-debug-apk
-                  path: clients/android/app/build/outputs/apk/debug/*.apk
-            - uses: actions/upload-artifact@v4
-              if: failure()
-              with:
-                  name: android-reports
-                  path: |
-                      clients/android/**/build/reports
-                      clients/android/**/build/test-results
-                      clients/android/app/build/outputs/mapping
-                  if-no-files-found: ignore
-
-    # Runs the native core on an emulator (needs KVM, slow), so only on the main branch.
-    android-smoke:
-        if: github.ref == 'refs/heads/main'
-        runs-on: ubuntu-24.04
-        timeout-minutes: 90
-        steps:
-            - uses: actions/checkout@v4
-            - name: Free disk space
-              run: |
-                  df -h /
-                  sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/.ghcup /usr/local/share/boost \
-                      /opt/hostedtoolcache/CodeQL /usr/share/swift /usr/local/share/powershell
-                  sudo docker image prune --all --force || true
-                  df -h /
-            - uses: dtolnay/rust-toolchain@stable
-              with:
-                  # The emulator is x86_64: no other ABI is needed here.
-                  targets: x86_64-linux-android
-            - uses: Swatinem/rust-cache@v2
-            - uses: actions/setup-java@v4
-              with:
-                  distribution: temurin
-                  java-version: "17"
-            # See the comments in the `android` job about the explicit package list.
-            - uses: android-actions/setup-android@v3
-              with:
-                  packages: "platform-tools platforms;android-37.0 build-tools;36.0.0 ndk;28.2.13676358"
-            - name: Install cargo-ndk
-              run: cargo install cargo-ndk --locked
-            - uses: gradle/actions/setup-gradle@v4
-            - name: Make the Gradle wrapper executable
-              run: chmod +x clients/android/gradlew
-            - name: Enable KVM for the emulator
-              run: |
-                  echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
-                  sudo udevadm control --reload-rules
-                  sudo udevadm trigger --name-match=kvm
-            - name: Check that KVM is available
-              run: |
-                  ls -l /dev/kvm
-                  grep -c -E 'vmx|svm' /proc/cpuinfo || true
-                  df -h /
-            # Build everything BEFORE the emulator starts: the emulator then boots on an idle
-            # machine, and it does not sit idle (and time out) while Rust compiles.
-            - name: Build the native core (x86_64 only) and both test APKs
-              working-directory: clients/android
-              timeout-minutes: 40
-              run: ./gradlew :app:assembleDebug :app:assembleDebugAndroidTest :core:runtime:assembleDebugAndroidTest -Pcrisis.rustProfile=dev -Pcrisis.abis=x86_64 --console=plain --stacktrace
-            - uses: reactivecircus/android-emulator-runner@v2
-              timeout-minutes: 30
-              with:
-                  api-level: 33
-                  arch: x86_64
-                  emulator-boot-timeout: 900
-                  disable-animations: true
-                  emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim -camera-back none
-                  working-directory: clients/android
-                  script: ./gradlew :app:connectedDebugAndroidTest :core:runtime:connectedDebugAndroidTest -Pcrisis.rustProfile=dev -Pcrisis.abis=x86_64 --console=plain --stacktrace
-            - uses: actions/upload-artifact@v4
-              if: failure()
-              with:
-                  name: android-smoke-reports
-                  path: |
-                      clients/android/**/build/reports
-                      clients/android/**/build/outputs/androidTest-results
-                  if-no-files-found: ignore
-
-    # Phase I0: the Rust core as an XCFramework, its Swift package, and the placeholder app for iOS and macOS.
-    # Pinned (not macos-latest) so that a runner image change cannot break the Xcode toolchain. Nothing here
-    # needs signing or a device: Bluetooth and real iPhones come in later phases.
-    apple:
-        runs-on: macos-15
-        timeout-minutes: 60
-        steps:
-            - uses: actions/checkout@v4
-            - uses: dtolnay/rust-toolchain@stable
-            - uses: Swatinem/rust-cache@v2
-              with:
-                  key: apple
-            - name: Install XcodeGen
-              run: brew install xcodegen
-            # The `dev` Cargo profile, as for Android: fast, and nothing here needs optimised code.
-            - name: Build the core for iOS, the iOS simulator and macOS
-              run: bash scripts/build-apple.sh --profile dev
-            - name: Swift package tests (on the Mac)
-              run: |
-                  swift test --package-path clients/apple/Packages/CrisisCore
-                  swift test --package-path clients/apple/Packages/CrisisRuntime
-            - name: Generate the Xcode project
-              working-directory: clients/apple
-              run: xcodegen generate
-            - name: Build the macOS app
-              run: |
-                  xcodebuild -project clients/apple/CrisisNetwork.xcodeproj -scheme CrisisNetwork-macOS \
-                      -destination 'platform=macOS' CODE_SIGNING_ALLOWED=NO build
-            # Links the iOS device slice; running it needs a phone and a signing team.
-            - name: Build the iOS app for a device
-              run: |
-                  xcodebuild -project clients/apple/CrisisNetwork.xcodeproj -scheme CrisisNetwork-iOS \
-                      -destination 'generic/platform=iOS' CODE_SIGNING_ALLOWED=NO build
-            # Not `CODE_SIGNING_ALLOWED=NO`: an unsigned app has no application identifier, and the Keychain then fails
-            # with -34018 ("a required entitlement isn't present"). Ad-hoc signing (`-`) needs no team or certificate.
-            - name: iOS app tests on the simulator
-              run: |
-                  udid=$(bash scripts/apple-simulator-udid.sh)
-                  echo "Simulator: $udid"
-                  xcodebuild -project clients/apple/CrisisNetwork.xcodeproj -scheme CrisisNetwork-iOS \
-                      -destination "id=$udid" CODE_SIGN_IDENTITY=- CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=YES \
-                      DEVELOPMENT_TEAM= test
-            - uses: actions/upload-artifact@v4
-              with:
-                  name: apple-xcframework
-                  path: clients/apple/Packages/CrisisCore/CrisisCoreFFI.xcframework
-            - uses: actions/upload-artifact@v4
-              if: failure()
-              with:
-                  name: apple-logs
-                  path: |
-                      ~/Library/Logs/DiagnosticReports
-                      ~/Library/Developer/Xcode/DerivedData/**/Logs/Test
-                  if-no-files-found: ignore
-
-    # The SQLCipher spike of phase I0: does the encrypted database (vendored OpenSSL, as on Android) build for
-    # all three Apple platforms and work there? `continue-on-error` while this is being found out; remove it, and
-    # make `apple` build with `--sqlcipher`, once this job is green.
-    apple-sqlcipher:
-        runs-on: macos-15
-        continue-on-error: true
-        timeout-minutes: 90
-        steps:
-            - uses: actions/checkout@v4
-            - uses: dtolnay/rust-toolchain@stable
-            - uses: Swatinem/rust-cache@v2
-              with:
-                  key: apple-sqlcipher
-            - name: Build the core with SQLCipher
-              run: bash scripts/build-apple.sh --profile dev --sqlcipher
-            - name: Swift package tests (on the Mac), SQLCipher required
-              env:
-                  CRISIS_EXPECT_SQLCIPHER: "1"
-              run: |
-                  swift test --package-path clients/apple/Packages/CrisisCore
-                  swift test --package-path clients/apple/Packages/CrisisRuntime
+  # The SQLCipher spike of phase I0: does the encrypted database (vendored OpenSSL, as on Android) build for
+  # all three Apple platforms and work there? `continue-on-error` while this is being found out; remove it, and
+  # make `apple` build with `--sqlcipher`, once this job is green.
+  apple-sqlcipher:
+    runs-on: macos-15
+    continue-on-error: true
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: apple-sqlcipher
+      - name: Build the core with SQLCipher
+        run: bash scripts/build-apple.sh --profile dev --sqlcipher
+      - name: Swift package tests (on the Mac), SQLCipher required
+        env:
+          CRISIS_EXPECT_SQLCIPHER: "1"
+        run: |
+          swift test --package-path clients/apple/Packages/CrisisCore
+          swift test --package-path clients/apple/Packages/CrisisRuntime

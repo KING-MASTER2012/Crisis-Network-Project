@@ -3,7 +3,7 @@
 SwiftUI clients on top of the Rust core. Plan and phases: `I0` ... `I9` (see `CHANGELOG.md`). This folder holds the
 result of **phase I0** (the toolchain, the core as a Swift package, a placeholder app, CI), **phase I1** (the
 runtime around the core), **phase I2** (the Bluetooth link), **phase I3** (discovery, topology, the background) and
-**phase I4** (design system, shell, introduction), **phase I5** (contacts) and **phase I6** (chats and announcements) and **phase I7** (network, settings, notifications).
+**phase I4** (design system, shell, introduction), **phase I5** (contacts) and **phase I6** (chats and announcements), **phase I7** (network, settings, notifications) and **phase I8** (macOS).
 
 ```
 clients/apple/
@@ -14,6 +14,8 @@ clients/apple/
   Config/                  Base.xcconfig (shared), Local.xcconfig (yours, not committed)
   project.yml              XcodeGen specification of the Xcode project
 scripts/build-apple.sh     builds the core for Apple platforms and fills the package
+scripts/check-mac-app.sh   checks the Mac app's sandbox rights and permission texts (CI, and before notarizing)
+scripts/notarize-mac.sh    builds, signs (Developer ID), notarizes and packs the Mac app as a disk image
 ```
 
 ## What you need
@@ -188,8 +190,7 @@ again). The rest of the settings (notifications, storage, privacy) is I7.
 ## Contacts (phase I5)
 
 The contacts destination has the list of known people and three ways to add one: **show my card** (a QR code, plus the
-card as text to copy or share), **scan a card** (the camera, iPhone and iPad) and **enter a card as text** (also the way
-on a Mac until I8 brings its camera). Adding a card shows the safety number to compare, takes an optional nickname and
+card as text to copy or share), **scan a card** (the camera, on a Mac also a picture; see phase I8) and **enter a card as text**. Adding a card shows the safety number to compare, takes an optional nickname and
 stores the contact. A contact has a **trust level** (not verified, verified, blocked) and a screen of its own: nickname,
 trust buttons, and the safety numbers (theirs and yours) to read to each other. Blocking asks first. Those screens are
 `App/Shared/Contacts/`:
@@ -220,8 +221,8 @@ Swift package test `ConventionVectorTests` (which runs on the Mac with `swift te
 * The contact screen has a "Send a message" button that appears when the chats exist (`onMessage`, I6).
 
 **Camera.** `NSCameraUsageDescription` is in `project.yml` (iOS). The reader uses `AVCaptureMetadataOutput` with the
-`.qr` type; nothing is recorded or sent. On a device without a camera (a Mac, the simulator) the scan screen says so and
-leads to the text entry. The Mac camera, its sandbox entitlement and an image-based alternative are part of I8.
+`.qr` type; nothing is recorded or sent. On a device without a camera (the simulator) the scan screen says so and
+leads to the text entry. The Mac has its own scan screen with the camera and picture alternatives (phase I8).
 
 **Tests.** `ConventionVectorTests` (package `CrisisCore`, all vector groups), `ContactsTests` (`Tests/iOS`: the
 rules, the model against a real in-memory core, the text form, a QR code drawn and read back, the camera table, the
@@ -375,8 +376,8 @@ central.
   Nothing can be done about that; the I9 device matrix tests it.
 
 **macOS.** No foreground/background difference for the radio and no background modes: the node runs while the app
-runs. An activity assertion (`beginActivity`) keeps App Nap from throttling its timers. Sandbox and Bluetooth
-entitlement are in place; everything else macOS-specific is I8.
+runs (also with its window closed, see "The Mac app (phase I8)"). An activity assertion (`beginActivity`) keeps App Nap
+from throttling its timers.
 
 ### Exit test of I3: three mixed devices and the battery
 
@@ -394,6 +395,101 @@ should be run first: it tells what the mesh does without iOS in it.
 4. **Battery.** Same chain, screen locked, device unplugged: run 30 minutes per profile (saver, balanced, aggressive)
    with one announcement per minute from another device, read the Battery section after unlocking. Compare the drain
    per hour; a measurement that charged is not valid.
+
+## The Mac app (phase I8)
+
+The Mac app is the same SwiftUI code as the iOS app (`App/Shared`), with a Mac-specific layer in `App/Shared/Mac/` and a
+few `#if os(macOS)` places elsewhere. What is different on a Mac:
+
+**One window, and the node outlives it.** The app has a single `Window` scene and a menu bar icon (`MenuBarExtra`).
+Closing the window **never** stops the node: the app goes on in the menu bar, and `applicationShouldTerminateAfterLastWindowClosed`
+says no. Quitting (Cmd-Q or "Quit" in the menu bar menu) stops the node first (`applicationShouldTerminate` waits for it, at most five
+seconds), so the database is closed properly, and keeps the "join the mesh at launch" choice, so the next launch joins again
+(`BleLinkTestModel.shutdownForQuit()`; the plain `stop()` of the Leave button forgets that choice). A second copy cannot start
+(`LSMultipleInstancesProhibited`: the database cannot be opened twice).
+
+| Piece | What it does |
+| --- | --- |
+| `MacApp.swift` | `MacDesktop` (windows, Dock icon, "is the app on screen", sleep and wake in the log), `MacAppDelegate`, the menu bar label and menu, the menus of the app (Settings on Cmd-comma, Go on Cmd-1 to Cmd-5, Mesh on Cmd-Shift-J), `SMAppServiceLoginItem`. Mac only. |
+| `MacShellPolicy.swift` | The rules, no AppKit: `MacShellChoices`, `MacPresence`, `MenuBarSummary`, `LoginItemPlan`, `LoginItemModel`. Compiles everywhere, so the iOS test bundle tests it. |
+| `MacSettingsSection.swift` | The "Mac" section of the settings: menu bar icon, Dock icon, open at login, start without a window. |
+| `Contacts/MacScanCardView.swift`, `MacQrScannerView.swift`, `QrImageImport.swift` | Reading a card on a Mac, below. |
+
+**Menu bar icon.** A symbol for the state of the mesh (the state is also written in the menu, so the symbol never carries the
+meaning alone), the number of unread messages, and a menu: state, unread, "Open Crisis Network", "Join/Leave the mesh", "Quit". It
+is on by default and can be switched off in the settings; the Dock icon can only be hidden while it is shown (`MacShellChoices.effectiveHideDock`),
+so that the app can always be reached. Dragging the icon out of the menu bar switches the choice off and the Dock icon returns.
+
+**Open at login** is `SMAppService.mainApp` (macOS 13 and later): no helper app, no entitlement, visible and revocable in
+System Settings > General > Login Items. A first registration may ask for the person's approval there; the settings show that state and a button
+for it. The system does not register an app that runs from a build folder or a disk image: the settings say to move it to Applications.
+With "start without a window" on (the default) and the menu bar icon shown, a launch **by the login item** closes the first window
+at once, so nothing opens while the person is logging in; the system's launch event tells the two kinds of launch apart, and if it does
+not, the window just opens.
+
+**The radio and "foreground".** On iOS the transport is told whether the app is in the foreground, because the system treats a
+background app differently. On a Mac there is no such difference, so the radio is **always** told "foreground" (the tie-break that yields to a
+neighbour that can connect needs the full advertisement, which a Mac always sends); `isForeground` then only means "the person
+can see the app" (active app **and** an open window, `MacPresence`) and decides about notifications: with the window closed or another app in front, a
+message makes a notification, and a tap on it opens the window again (`NotificationRouter`). The activity assertion of I3 keeps App Nap from throttling the
+timers; sleep and wake are written to the log of the test bench.
+
+**Sandbox and rights.** The app is sandboxed; `project.yml` gives it exactly these entitlements:
+
+| Entitlement | Why |
+| --- | --- |
+| `com.apple.security.app-sandbox` | The sandbox. The node's files live in the app's container (`Application Support/Crisis`). |
+| `com.apple.security.device.bluetooth` | The Bluetooth radio. The permission dialog shows `NSBluetoothAlwaysUsageDescription`. |
+| `com.apple.security.device.camera` | The camera that reads a card's QR code (`NSCameraUsageDescription`). |
+| `com.apple.security.files.user-selected.read-write` | A picture the person chooses or drops to read a card from, and the file they save their own card's QR code to. |
+
+There is **no network entitlement**: the app talks to other devices over Bluetooth only, and a sandbox that forbids sockets is a property worth keeping
+for the threat model. `scripts/check-mac-app.sh` reads the entitlements back and fails when one of the four is missing or when a
+forbidden one appears (network, all files, a way around the hardened runtime, a temporary exception, `get-task-allow` in a signed
+build), and checks the permission texts in `Info.plist`. CI runs it on a Release build that is ad-hoc signed with the hardened runtime on
+(`ENABLE_HARDENED_RUNTIME` is set for the Release configuration only), so what the system would enforce is what is checked.
+
+**Keychain on the Mac.** The vault keeps using the file-based (login) keychain on the Mac (`KeychainSecretStore.defaultUsesDataProtection` stays
+`false` there). The data protection keychain needs the `keychain-access-groups` entitlement, which is a restricted one: it comes with a
+provisioning profile, which a Developer ID build outside the App Store does not otherwise need, and moving items from one keychain to the other without
+losing an identity needs a migration of its own. Consequences: an item is tied to the code signature, so a **Developer ID** build keeps its
+items across updates (an ad-hoc build asks again after every rebuild); and a Mac with automatic login leaves the login keychain locked, so the first
+read may show the system's password prompt. Revisit this with the TestFlight build (I9), where a profile exists anyway.
+
+**Reading a card without a camera.** `Contacts` > "Scan a card" on a Mac (`MacScanCardView`) shows the camera when there is one (built-in,
+USB, or an iPhone as a camera) and it is allowed, with the same permission explanations as on iOS. The Mac reader takes the frames itself (`AVCaptureVideoDataOutput`, four a
+second) and gives them to the CoreImage detector, because a Mac's cameras do not all offer QR metadata. **Always** offered, camera or not: a **picture file** (a panel), a **picture from the
+clipboard** (a screenshot), a picture **dropped** on the window, and the card as text. All three picture paths go through `QrImageImport`: files over 20 MB are refused, a
+picture over 4096 pixels on a side is decoded at that size, and the result is a card, "not a card", "no QR code", "not a picture" or "too large", each with its sentence. In the
+other direction, "Show my card" has **Copy the QR code as a picture** and **Save the QR code as a picture** next to the text forms.
+
+### Distributing the Mac app outside the App Store: notarization
+
+`scripts/notarize-mac.sh` does the whole path: the core for Apple silicon and Intel (release profile, encrypted database), the archive (Release, hardened runtime,
+manual signing with a **Developer ID Application** certificate), the export, `scripts/check-mac-app.sh --signed`, the notarization of the app, stapling, a disk image with an
+Applications shortcut, its signature, its notarization and stapling, and the `spctl` assessments. Run it on a Mac that has the certificate in its keychain:
+
+```sh
+export TEAM_ID=ABCDE12345
+export NOTARY_PROFILE=crisis-notary   # xcrun notarytool store-credentials crisis-notary --apple-id YOU --team-id $TEAM_ID --password <app-specific password>
+bash scripts/notarize-mac.sh          # build/mac-release/CrisisNetwork.dmg, with its SHA-256
+```
+
+A CI job uses an App Store Connect API key instead (`NOTARY_KEY_PATH`, `NOTARY_KEY_ID`, `NOTARY_ISSUER`); that job belongs to the release pipeline of I9 (`release-apple.yml`), together with the
+TestFlight upload. If Apple refuses the app, the script prints the notary log. The usual reasons: the hardened runtime is off, a library is not signed with a timestamp, or an entitlement
+that is not allowed was added. The bundle identifier in `Config/Base.xcconfig` is a placeholder: use your own (`APP_BUNDLE_ID`) before the first real build.
+
+### Exit check of I8 (by hand, on Macs)
+
+1. **Window and menu bar.** Start the app, finish the introduction, join the mesh. Close the window: the menu bar icon stays, the menu says "Mesh on", and a message from another device makes a
+   notification; a tap on it opens the window with the chat. "Quit" stops the app; starting it again joins the mesh without a click.
+2. **Dock icon.** Settings > Mac: hide the Dock icon (the app leaves the Dock, the menu bar icon stays); switch the menu bar icon off (the Dock icon returns by itself).
+3. **Open at login.** Switch it on, log out and in: the app is running with no window and the mesh is joined; "Open Crisis Network" shows the window. System Settings > Login Items shows the app, and switching it
+   off there is seen by the app's switch. Try an app that runs from the disk image: the settings explain that it cannot.
+4. **Cards without a camera.** On a Mac with a camera: scan the code on a phone. Refuse the camera permission once: the explanation and "Open Settings" appear. Then without the camera: choose a screenshot of
+   a card, paste one, drop one on the window; a picture of something else says "No QR code"; "Show my card" > copy as a picture and paste it into another app, and save it as a file.
+5. **Mixed links.** Mac with an iPhone and an Android phone next to each other: one link each, not two (the tie-break), a message each way, also with the Mac's lid closed and opened again (the log shows sleep and wake).
+6. **The signed build.** `bash scripts/notarize-mac.sh`, copy the disk image to another Mac (not the build machine), open it from the Downloads folder: no warning, the permission dialogs for Bluetooth and the camera show the texts of `project.yml`.
 
 ## `scripts/build-apple.sh`
 

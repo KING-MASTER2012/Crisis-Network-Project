@@ -148,7 +148,7 @@ final class BleLinkTestModel: ObservableObject {
         config.profile = effectiveProfile
         if let info = try? CoreRuntime.verify() { config.minLinkMtu = Int(info.minLinkMtu) }
         let transport = BleTransport.coreBluetooth(config: config)
-        transport.setAppForeground(foreground)
+        transport.setAppForeground(radioForeground)
 
         let root: URL
         do {
@@ -191,9 +191,21 @@ final class BleLinkTestModel: ObservableObject {
     }
 
     func stop() async {
+        await teardown(forgetAutoStart: true)
+    }
+
+    /// Stops the node because the process is about to end (macOS: Cmd-Q), so that the database is closed properly. Unlike
+    /// ``stop()`` it keeps the "start at every launch" choice: the person did not leave the mesh, the app was quit.
+    func shutdownForQuit() async {
+        await teardown(forgetAutoStart: false)
+    }
+
+    private func teardown(forgetAutoStart: Bool) async {
         guard running, let runtime else { return }
-        autoStart = false
-        defaults.set(false, forKey: Keys.autoStart)
+        if forgetAutoStart {
+            autoStart = false
+            defaults.set(false, forKey: Keys.autoStart)
+        }
         for task in tasks { task.cancel() }
         tasks.removeAll()
         await runtime.stop()
@@ -218,15 +230,33 @@ final class BleLinkTestModel: ObservableObject {
         lowPowerMode ? .saver : profile
     }
 
+    /// What the radio is told about the app. On iOS the real state: the system treats a background app differently (the
+    /// scan, the advertisement), and the transport follows. On a Mac there is no such difference: the node runs the same
+    /// with the window closed, hidden or behind other apps, so the radio is always told "foreground" (the tie-break
+    /// that yields to a neighbour that can connect needs the full advertisement, which a Mac always sends). What the
+    /// Mac's `isForeground` means is only "the person can see the app", which decides about notifications.
+    private var radioForeground: Bool {
+        #if os(macOS)
+        return true
+        #else
+        return foreground
+        #endif
+    }
+
     func appForegroundChanged(_ isForeground: Bool) {
         foreground = isForeground
-        transport?.setAppForeground(isForeground)
+        transport?.setAppForeground(radioForeground)
         if isForeground {
             endBackgroundTask()
         } else {
             beginBackgroundTask()
         }
         if running { appendLog(isForeground ? "app in the foreground" : "app in the background") }
+    }
+
+    /// A line in the log for something the system did (the Mac going to sleep, waking up).
+    func noteSystemEvent(_ text: String) {
+        if running { appendLog(text) }
     }
 
     private func applyPower() {

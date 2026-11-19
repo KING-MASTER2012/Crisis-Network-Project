@@ -159,6 +159,12 @@ final class NotificationRouter: NSObject, UNUserNotificationCenterDelegate, @unc
             AppNavigator.shared.openChat(peer)
         } else if open == "announcements" {
             AppNavigator.shared.openAnnouncements()
+        } else {
+            return
         }
+        #if os(macOS)
+        // The window may be closed (the mesh runs on in the menu bar): a tap brings it back.
+        MacDesktop.shared.showMainWindow()
+        #endif
     }
 }

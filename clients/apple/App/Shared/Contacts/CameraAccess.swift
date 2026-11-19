@@ -71,6 +71,22 @@ final class CameraAccess: ObservableObject {
     }
 
     private static var hasCamera: Bool {
-        AVCaptureDevice.default(for: .video) != nil
+        captureDevice() != nil
+    }
+
+    /// The camera that reads QR codes. On an iPhone or iPad the default one. A Mac may have the built-in camera, a USB
+    /// or other external one, or an iPhone as a camera (Continuity Camera), and `default(for:)` does not always find
+    /// the last two, so the Mac looks at all of them.
+    static func captureDevice() -> AVCaptureDevice? {
+        #if os(macOS)
+        let discovery = AVCaptureDevice.DiscoverySession(
+            deviceTypes: [.builtInWideAngleCamera, .external, .continuityCamera],
+            mediaType: .video,
+            position: .unspecified
+        )
+        return discovery.devices.first ?? AVCaptureDevice.default(for: .video)
+        #else
+        return AVCaptureDevice.default(for: .video)
+        #endif
     }
 }

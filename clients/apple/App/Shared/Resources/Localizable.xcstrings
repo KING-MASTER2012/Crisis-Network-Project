@@ -1761,6 +1761,206 @@
         }
       }
     },
+    "menu_go": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Go"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Git"
+          }
+        }
+      }
+    },
+    "menu_mesh": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mesh"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ağ"
+          }
+        }
+      }
+    },
+    "menu_settings": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Settings…"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ayarlar…"
+          }
+        }
+      }
+    },
+    "menubar_busy": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mesh is starting or stopping…"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ağ başlıyor veya duruyor…"
+          }
+        }
+      }
+    },
+    "menubar_join": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Join the mesh"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ağa katıl"
+          }
+        }
+      }
+    },
+    "menubar_leave": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Leave the mesh"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ağdan ayrıl"
+          }
+        }
+      }
+    },
+    "menubar_off": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mesh off"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ağ kapalı"
+          }
+        }
+      }
+    },
+    "menubar_on %lld": {
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Mesh on, %lld neighbour"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Mesh on, %lld neighbours"
+                }
+              }
+            }
+          }
+        },
+        "tr": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Ağ açık, %lld komşu"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Ağ açık, %lld komşu"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "menubar_open": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open Crisis Network"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Crisis Network’ü aç"
+          }
+        }
+      }
+    },
+    "menubar_quit": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quit Crisis Network"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Crisis Network’ten çık"
+          }
+        }
+      }
+    },
+    "menubar_setup": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Finish the setup in the app window"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kurulumu uygulama penceresinde tamamlayın"
+          }
+        }
+      }
+    },
     "mesh_off_body": {
       "localizations": {
         "en": {
@@ -1905,6 +2105,70 @@
         }
       }
     },
+    "mycard_copy_picture": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copy the QR code as a picture"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "QR kodunu resim olarak kopyala"
+          }
+        }
+      }
+    },
+    "mycard_picture_copied": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The picture is on the clipboard."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Resim panoda."
+          }
+        }
+      }
+    },
+    "mycard_picture_failed": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The picture could not be made or saved."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Resim oluşturulamadı ya da kaydedilemedi."
+          }
+        }
+      }
+    },
+    "mycard_picture_saved": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The picture was saved."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Resim kaydedildi."
+          }
+        }
+      }
+    },
     "mycard_qr_desc": {
       "localizations": {
         "en": {
@@ -1917,6 +2181,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Kişi kartınızın QR kodu"
+          }
+        }
+      }
+    },
+    "mycard_save_picture": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Save the QR code as a picture…"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "QR kodunu resim olarak kaydet…"
           }
         }
       }
@@ -3286,13 +3566,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "On a Mac the app keeps running while it is open. Closing its window does not stop it; quitting the app does."
+            "value": "On a Mac the app keeps running while it is open. Closing its window does not stop it: the icon in the menu bar brings the window back. Quitting the app stops it."
           }
         },
         "tr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Mac’te uygulama açık kaldığı sürece çalışmaya devam eder. Penceresini kapatmak onu durdurmaz; uygulamadan çıkmak durdurur."
+            "value": "Mac’te uygulama açık kaldığı sürece çalışmaya devam eder. Penceresini kapatmak onu durdurmaz: menü çubuğundaki simge pencereyi geri getirir. Uygulamadan çıkmak durdurur."
           }
         }
       }
@@ -4241,6 +4521,54 @@
         }
       }
     },
+    "scan_image_no_qr": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No QR code was found in that picture."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bu resimde QR kodu bulunamadı."
+          }
+        }
+      }
+    },
+    "scan_image_too_large": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "That picture is too large (the limit is 20 MB)."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bu resim çok büyük (sınır 20 MB)."
+          }
+        }
+      }
+    },
+    "scan_image_unreadable": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "That file could not be opened as a picture."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bu dosya resim olarak açılamadı."
+          }
+        }
+      }
+    },
     "scan_invalid": {
       "localizations": {
         "en": {
@@ -4253,6 +4581,118 @@
           "stringUnit": {
             "state": "translated",
             "value": "Bu kod bir Crisis Network kartı değil."
+          }
+        }
+      }
+    },
+    "scan_mac_choose": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choose a picture…"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Resim seç…"
+          }
+        }
+      }
+    },
+    "scan_mac_clipboard_empty": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "There is no picture on the clipboard."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Panoda resim yok."
+          }
+        }
+      }
+    },
+    "scan_mac_drop": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Or drop a picture of the card here"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ya da kartın resmini buraya bırakın"
+          }
+        }
+      }
+    },
+    "scan_mac_no_camera": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This Mac has no camera that can be used. Use a picture of the card, or enter the card as text."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bu Mac’te kullanılabilir bir kamera yok. Kartın bir resmini kullanın ya da kartı metin olarak girin."
+          }
+        }
+      }
+    },
+    "scan_mac_paste": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Paste a picture from the clipboard"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Panodaki resmi yapıştır"
+          }
+        }
+      }
+    },
+    "scan_mac_picture_hint": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A screenshot or a photo of the other person’s QR code works as well as the camera."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Karşı tarafın QR kodunun ekran görüntüsü ya da fotoğrafı da kamera kadar iş görür."
+          }
+        }
+      }
+    },
+    "scan_mac_picture_title": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "From a picture"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Resimden"
           }
         }
       }
@@ -4605,6 +5045,166 @@
           "stringUnit": {
             "state": "translated",
             "value": "Duyuru ömrü"
+          }
+        }
+      }
+    },
+    "settings_mac": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mac"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mac"
+          }
+        }
+      }
+    },
+    "settings_mac_dock": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hide the Dock icon"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dock simgesini gizle"
+          }
+        }
+      }
+    },
+    "settings_mac_hidden": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Start without a window at login"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Oturum açılışında pencere olmadan başlat"
+          }
+        }
+      }
+    },
+    "settings_mac_hint": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Closing the window does not stop the mesh: the app keeps running in the menu bar. Quitting the app (Cmd-Q) stops it. The Dock icon can only be hidden while the menu bar icon is shown, so that the app can always be reached."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pencereyi kapatmak ağı durdurmaz: uygulama menü çubuğunda çalışmaya devam eder. Uygulamadan çıkmak (Cmd-Q) onu durdurur. Uygulamaya her zaman ulaşılabilsin diye Dock simgesi yalnızca menü çubuğu simgesi görünürken gizlenebilir."
+          }
+        }
+      }
+    },
+    "settings_mac_login": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open at login"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Oturum açıldığında aç"
+          }
+        }
+      }
+    },
+    "settings_mac_login_approval": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Allow Crisis Network in System Settings > General > Login Items to finish."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bitirmek için Sistem Ayarları > Genel > Oturum Açma Öğeleri’nde Crisis Network’e izin verin."
+          }
+        }
+      }
+    },
+    "settings_mac_login_error %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The setting could not be changed: %@"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ayar değiştirilemedi: %@"
+          }
+        }
+      }
+    },
+    "settings_mac_login_open": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open Login Items settings"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Oturum Açma Öğeleri ayarlarını aç"
+          }
+        }
+      }
+    },
+    "settings_mac_login_unavailable": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Opening at login is not possible from here. Move the app to the Applications folder and open it from there."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Oturum açılışında açma buradan mümkün değil. Uygulamayı Uygulamalar klasörüne taşıyıp oradan açın."
+          }
+        }
+      }
+    },
+    "settings_mac_menubar": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Show the icon in the menu bar"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Simgeyi menü çubuğunda göster"
           }
         }
       }
