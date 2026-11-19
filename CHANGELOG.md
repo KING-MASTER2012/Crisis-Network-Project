@@ -1,3 +1,45 @@
+# Changes: phase I7, network, settings and notifications on Apple
+
+**New**
+
+* `Network/NetworkView`: neighbours, storage, Bluetooth radio and the node's counters; `Network/ByteSizes` (sizes and
+  counters as people read them, `NetworkBook.statGroups`); `Network/PrivacyCoverView`.
+* `Prefs/NodePreferences`: `StoreLimits`, `DefaultLifetimes`, `NodeChoices` (turned into the `NodeSettings` the node opens
+  with) and `NodePreferences` (saves a choice at once).
+* `Notifications/NotificationLogic`: `NotificationAccessPlan`, `AlertGate`, `MessageNotificationPlanner` (a received
+  message becomes a notification: pure, testable), `PrivacyCover`.
+* `Notifications/MessageNotifier`: local notifications for messages that arrive while the app is not on screen,
+  `NotificationAccess` (the permission), `AppBadge`, `NotificationRouter` (taps).
+* `Resources/Localizable.xcstrings`: 83 new entries in English and Turkish (plurals included). 320 entries now.
+
+**Changed**
+
+* `SettingsView`: notifications, privacy (cover of the app switcher), network, message store size, default announcement
+  lifetime, about.
+* `HomeView`: "Neighbours and network details" while the mesh runs.
+* `BleLinkTestModel`: opens the node with the chosen settings, keeps what it was opened with (`openedChoices`,
+  `settingsPending`), tells `isForeground`, and hands every notification of the node to `MessageNotifier`.
+* `MessagingModel`: tells the total of unread messages (the app icon badge). `ChatView` and `AnnouncementsView` remove
+  their notifications when they open; the composer preselects the default lifetime of the settings.
+* `AppNavigator.openAnnouncements()`; `AppShell` takes a destination that was asked for before it existed (a tap that
+  started the app).
+* `UiPreferences.hideInSwitcher`; `RootView` draws the cover; `CrisisNetworkApp` sets the notification delegate at launch.
+
+**Tests**
+
+* `Tests/iOS/NetworkAndNotificationsTests.swift` (see the README for what it covers).
+
+**Not done / not run**
+
+* Nothing was compiled or run (no Swift toolchain where this was written). Likeliest complaints: the `NodeStats` and
+  `NodeSettings` member names used in the tests, `UNNotificationCategory(hiddenPreviewsBodyPlaceholder:)`,
+  `setBadgeCount`, and the number formats of the strings tests.
+* Whether the system wakes the app for a Bluetooth message with the screen locked, and what the notification looks like
+  there, can only be seen on devices (device matrix of I9). Time-sensitive and critical notifications need entitlements
+  and are not used. The Background App Refresh status belongs to I9, with the rest of the device matrix.
+
+---
+
 # Changes: phase I6, chats and announcements on Apple
 
 **New in `App/Shared/Messaging`**

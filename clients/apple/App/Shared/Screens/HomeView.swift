@@ -53,6 +53,8 @@ struct HomeView: View {
                 Text("home_offline_hint")
             }
             if mesh.running {
+                NavigationLink { NetworkView() } label: { Text("home_network_details") }
+                    .buttonStyle(CrisisButtonStyle(kind: .quiet))
                 SecondaryButton("home_leave") { Task { await mesh.stop() } }.disabled(mesh.busy)
             } else {
                 PrimaryButton("home_join") { join() }.disabled(mesh.busy)

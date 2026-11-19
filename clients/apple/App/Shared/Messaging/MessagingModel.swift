@@ -76,7 +76,7 @@ final class RefreshCoalescer {
 /// * The node is only open while the mesh runs, so messages can only be read and sent then (`ready`).
 @MainActor
 final class MessagingModel: ObservableObject {
-    static let shared = MessagingModel(backend: { BleLinkTestModel.shared.activeRuntime })
+    static let shared = MessagingModel(backend: { BleLinkTestModel.shared.activeRuntime }, badge: { AppBadge.set($0) })
 
     /// How many conversations the list holds at most.
     static let chatLimit: UInt32 = 500
@@ -102,9 +102,17 @@ final class MessagingModel: ObservableObject {
     private var loadingOlderChat = false
     private var loadingOlderFeed = false
 
-    init(backend: @escaping @MainActor () -> (any MessagingBackend)?, limits: Limits = .fromCore()) {
+    /// Told the total of unread messages whenever it is read (the badge of the app icon).
+    private let badge: @MainActor (Int) -> Void
+
+    init(
+        backend: @escaping @MainActor () -> (any MessagingBackend)?,
+        limits: Limits = .fromCore(),
+        badge: @escaping @MainActor (Int) -> Void = { _ in }
+    ) {
         backendProvider = backend
         self.limits = limits
+        self.badge = badge
     }
 
     // MARK: Observing the node
@@ -201,6 +209,7 @@ final class MessagingModel: ObservableObject {
                 chats: MessageBook.saturatedInt(counts.direct),
                 announcements: MessageBook.saturatedInt(counts.announcements)
             )
+            badge(unread.chats + unread.announcements)
         } catch {
             // A failed read leaves the previous state on screen; the next change tries again.
         }

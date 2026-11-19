@@ -64,6 +64,20 @@ final class BleLinkTestModel: ObservableObject {
     @Published private(set) var autoStart: Bool
 
     @Published private(set) var running = false
+
+    /// What the user had chosen for the node (store size, default lifetime) when it was opened; `nil` while it is stopped.
+    /// The core takes these when it opens, so a different choice only applies at the next start.
+    @Published private(set) var openedChoices: NodeChoices?
+
+    /// `true` while the node runs with choices that are no longer the user's (see ``openedChoices``).
+    var settingsPending: Bool {
+        guard running, let opened = openedChoices else { return false }
+        return opened != NodePreferences.shared.choices
+    }
+
+    /// Whether the app is on screen (not in the background). Notifications are only shown for messages that arrive while
+    /// it is not.
+    var isForeground: Bool { foreground }
     @Published private(set) var busy = false
     @Published private(set) var errorText: String?
     @Published private(set) var stats: BleStats?
@@ -143,7 +157,14 @@ final class BleLinkTestModel: ObservableObject {
             errorText = "No storage directory: \(error)"
             return
         }
-        switch await NodeBootstrap.open(rootDirectory: root, transport: transport, encryption: .forBuild, secrets: KeychainSecretStore()) {
+        let choices = NodePreferences.shared.choices
+        switch await NodeBootstrap.open(
+            rootDirectory: root,
+            transport: transport,
+            encryption: .forBuild,
+            secrets: KeychainSecretStore(),
+            settings: choices.nodeSettings()
+        ) {
         case let .failed(failure):
             errorText = "The node did not open: \(failure)"
         case let .ready(runtime):
@@ -158,6 +179,7 @@ final class BleLinkTestModel: ObservableObject {
             self.transport = transport
             nodeId = String(runtime.nodeIdHex.prefix(16))
             runningIdentity = (runtime.safetyNumber, runtime.nodeIdHex)
+            openedChoices = choices
             running = true
             autoStart = true
             defaults.set(true, forKey: Keys.autoStart)
@@ -176,6 +198,7 @@ final class BleLinkTestModel: ObservableObject {
         tasks.removeAll()
         await runtime.stop()
         self.runtime = nil
+        openedChoices = nil
         transport = nil
         running = false
         runningIdentity = nil
@@ -324,6 +347,7 @@ final class BleLinkTestModel: ObservableObject {
 
     private func handle(_ notification: CoreNotification) {
         dataVersion &+= 1
+        MessageNotifier.shared.handle(notification)
         guard case let .messageReceived(_, _, _, body) = notification else { return }
         let now = ProcessInfo.processInfo.systemUptime
         counters.messages += 1

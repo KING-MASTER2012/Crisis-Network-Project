@@ -1,24 +1,137 @@
+import CrisisCore
 import CrisisRuntime
 import SwiftUI
 
-/// The settings of phase I4: appearance (theme, contrast, text size), the language, the power profile, the identity and a
-/// few developer tools. Notifications, storage and the rest come with I7.
+/// The settings (phases I4 and I7): appearance (theme, contrast, text size), the language, notifications, privacy (the
+/// app switcher), the power profile, the network screen, the message store and the default lifetime of announcements,
+/// the identity, what this build is, and a few developer tools.
 struct SettingsView: View {
     @ObservedObject private var prefs = UiPreferences.shared
     @ObservedObject private var mesh = BleLinkTestModel.shared
+    @ObservedObject private var nodePrefs = NodePreferences.shared
+    @StateObject private var notifications = NotificationAccess()
     @Environment(\.palette) private var palette
+    @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
         Form {
             appearanceSection
             languageSection
+            notificationsSection
+            privacySection
             powerSection
+            networkSection
+            storageSection
+            lifetimeSection
             identitySection
+            aboutSection
             developerSection
         }
         .scrollContentBackground(.hidden)
         .background(palette.background.color)
         .navigationTitle("nav_settings")
+        .task { await notifications.refresh() }
+        // Back from the system's settings: the permission may have changed there.
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .active { Task { await notifications.refresh() } }
+        }
+    }
+
+    // MARK: Notifications
+
+    private var notificationsSection: some View {
+        Section {
+            switch notifications.action {
+            case .none:
+                Text("settings_notifications_on")
+            case .askInApp:
+                Text("settings_notifications_ask")
+                Button("settings_notifications_allow") { Task { await notifications.request() } }
+            case .openSettings:
+                Text("settings_notifications_off")
+                Button("bt_open_settings") { notifications.openSettings() }
+            }
+        } header: {
+            Text("settings_notifications")
+        } footer: {
+            Text("settings_notifications_hint")
+        }
+        .listRowBackground(palette.container.color)
+    }
+
+    // MARK: Privacy
+
+    @ViewBuilder
+    private var privacySection: some View {
+        #if os(iOS)
+        Section {
+            Toggle("settings_hide_switcher", isOn: $prefs.hideInSwitcher)
+        } header: {
+            Text("settings_privacy")
+        } footer: {
+            Text("settings_hide_switcher_hint")
+        }
+        .listRowBackground(palette.container.color)
+        #endif
+    }
+
+    // MARK: Network, storage, lifetime
+
+    private var networkSection: some View {
+        Section {
+            NavigationLink("settings_open_network") { NetworkView() }
+        } header: {
+            Text("net_title")
+        }
+        .listRowBackground(palette.container.color)
+    }
+
+    private var storageSection: some View {
+        Section {
+            Picker("settings_storage_title", selection: $nodePrefs.storeLimitMb) {
+                ForEach(StoreLimits.presetsMb, id: \.self) { mb in
+                    Text("settings_storage_option \(mb)").tag(mb)
+                }
+            }
+            if mesh.settingsPending { Text("settings_pending").font(TypeScale.bodySmall) }
+        } header: {
+            Text("settings_storage_title")
+        } footer: {
+            Text("settings_storage_hint")
+        }
+        .listRowBackground(palette.container.color)
+    }
+
+    private var lifetimeSection: some View {
+        Section {
+            Picker("settings_lifetime_title", selection: $nodePrefs.defaultLifetimeSecs) {
+                ForEach(DefaultLifetimes.options(), id: \.self) { secs in
+                    DurationLabel(secs: secs).tag(secs)
+                }
+            }
+            if mesh.settingsPending { Text("settings_pending").font(TypeScale.bodySmall) }
+        } header: {
+            Text("settings_lifetime_title")
+        } footer: {
+            Text("settings_lifetime_hint")
+        }
+        .listRowBackground(palette.container.color)
+    }
+
+    // MARK: About
+
+    private var aboutSection: some View {
+        let info = Bundle.main.infoDictionary
+        let version = info?["CFBundleShortVersionString"] as? String ?? "?"
+        let build = info?["CFBundleVersion"] as? String ?? "?"
+        let core = coreInfo()
+        return Section {
+            Text("settings_about_app \(version) \(build)")
+            Text("settings_about_core \(core.crateVersion) \(Int(core.apiVersion)) \(Int(core.protocolVersion))")
+        } header: {
+            Text("settings_about")
+        }
+        .listRowBackground(palette.container.color)
     }
 
     // MARK: Appearance

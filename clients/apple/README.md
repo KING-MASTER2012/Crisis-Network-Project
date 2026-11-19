@@ -3,7 +3,7 @@
 SwiftUI clients on top of the Rust core. Plan and phases: `I0` ... `I9` (see `CHANGELOG.md`). This folder holds the
 result of **phase I0** (the toolchain, the core as a Swift package, a placeholder app, CI), **phase I1** (the
 runtime around the core), **phase I2** (the Bluetooth link), **phase I3** (discovery, topology, the background) and
-**phase I4** (design system, shell, introduction), **phase I5** (contacts) and **phase I6** (chats and announcements).
+**phase I4** (design system, shell, introduction), **phase I5** (contacts) and **phase I6** (chats and announcements) and **phase I7** (network, settings, notifications).
 
 ```
 clients/apple/
@@ -278,6 +278,55 @@ on the chats tab, the conversation with a preview, opens it (the line above the 
 "Delivered". Write more than 40 messages and scroll up. Publish a normal, an important and an emergency announcement with
 different lifetimes: the other device shows them with the right colour and word, and they disappear when the time is
 up. Try the same between an iPhone and an Android phone. Turn the mesh off: both destinations say so.
+
+## Network, settings and notifications (phase I7)
+
+**Network screen** (`Network/NetworkView.swift`, opened from the settings and the home screen): the neighbours (the last
+characters of each link's address, who connected to whom, traffic both ways, packet size, what waits to be sent, packets
+dropped, more devices in range), how full the message store is, the Bluetooth radio (central and peripheral state,
+scanning, advertising, connections, devices backed off, failed attempts) and the node's counters in three groups
+(traffic, refused and dropped, delivery trouble). The links and the radio are the ones `BleLinkTestModel` already
+refreshes every second; the node's counters are read every two seconds while the screen is open.
+
+**Settings** gained: notifications (the permission, with a button to ask or to open the system settings), privacy, the
+network screen, the size of the message store (8 to 256 MB), the default lifetime of announcements, and an about card
+(app, core, API and protocol versions). A new size or lifetime is remembered at once and applies **the next time the mesh
+starts** (the core reads them when it opens), which the screens say while the mesh runs with other values.
+`Prefs/NodePreferences.swift` holds the choices (`StoreLimits`, `DefaultLifetimes`, `NodeChoices`); `NodeChoices` turns
+them into the `NodeSettings` the node opens with (the pinned share stays a quarter of the store).
+
+**Notifications** (`Notifications/`). iOS has no push for this app: messages arrive over Bluetooth. When the system lets
+the app run to receive one (Bluetooth background modes, state restoration) and the app is not on screen,
+`MessageNotifier` shows a local notification:
+
+* A private message: one notification per person (the next one replaces it), titled with the nickname or the short
+  address, with one line of cleaned text. Announcements: one notification that says how many there are; its title names
+  the importance.
+* A burst makes one sound per three seconds (and per importance); the rest arrive silently.
+* While the app is on screen nothing is shown (the tab badges say it). Opening a chat or the announcements removes
+  their notifications. The unread count is the badge of the app icon.
+* The categories carry a placeholder text for the lock screen when the system hides previews.
+* A tap opens the chat of the sender or the announcements (`NotificationRouter`, set as the center's delegate at launch,
+  so a tap that starts the app is not lost; `AppNavigator` remembers the request until the shell exists).
+* The permission is asked from the settings, not at launch (the person should know why). `NotificationAccessPlan` says
+  what to offer: nothing, ask, or open the system settings.
+
+**Privacy.** iOS has no way to block screenshots. Instead the window is covered whenever the app is not active, so that
+the app switcher shows no messages (on by default, like the screenshot block on Android; iOS only: a Mac has no switcher
+snapshot).
+
+**Tests.** `NetworkAndNotificationsTests`: store sizes, lifetimes and how they become `NodeSettings`, remembered and
+corrected choices, sizes and counters (units, decimal separators of both languages, the three groups of counters and
+that none is lost), the permission plan, the alert gate, what a received message becomes as a notification (name, text,
+replacement, sound, announcements counting, both languages), the cover, the router, and the strings (arguments and
+plurals). Not tested by a machine: the notification center, the screens, and what the system does in the background.
+
+**Exit check of I7 (by hand, real devices).** Join the mesh on two devices and open the network screen: neighbours,
+traffic and the counters move. Change the store size while joined: the screen says it applies at the next start; leave and
+join again, and the storage card shows the new size. Allow notifications in the settings, send a message from the other
+device while this app is in the background (then locked): a notification appears, a second message replaces it, a tap
+opens the chat. Publish an announcement of each importance. Check the app switcher shows the cover, and that turning the
+option off shows the real window.
 
 ## Discovery, topology and the background (phase I3)
 

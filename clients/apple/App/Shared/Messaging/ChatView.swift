@@ -42,7 +42,10 @@ struct ChatView: View {
                 NavigationLink(value: ChatRoute.contact(peerHex)) { Text("chat_details") }
             }
         }
-        .onAppear { messaging.openChat(peerHex) }
+        .onAppear {
+            messaging.openChat(peerHex)
+            MessageNotifier.shared.chatOpened(peerHex)
+        }
         .onDisappear { messaging.closeChat(peerHex) }
         .task { await contacts.refresh() }
     }

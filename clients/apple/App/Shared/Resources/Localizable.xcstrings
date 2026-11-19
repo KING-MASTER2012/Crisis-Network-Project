@@ -1553,6 +1553,22 @@
         }
       }
     },
+    "home_network_details": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Neighbours and network details"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Komşular ve ağ ayrıntıları"
+          }
+        }
+      }
+    },
     "home_offline_hint": {
       "localizations": {
         "en": {
@@ -2049,6 +2065,926 @@
         }
       }
     },
+    "net_candidates %lld": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld more devices in range, not connected yet"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Menzilde %lld cihaz daha var, henüz bağlı değil"
+          }
+        }
+      }
+    },
+    "net_group_refused": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Refused and dropped"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reddedilen ve atılan"
+          }
+        }
+      }
+    },
+    "net_group_traffic": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Traffic"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Trafik"
+          }
+        }
+      }
+    },
+    "net_group_trouble": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delivery trouble"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Teslimat sorunları"
+          }
+        }
+      }
+    },
+    "net_link_active": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Connected"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bağlı"
+          }
+        }
+      }
+    },
+    "net_link_connecting": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Connecting"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bağlanıyor"
+          }
+        }
+      }
+    },
+    "net_link_dropped %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ packets dropped"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ paket atıldı"
+          }
+        }
+      }
+    },
+    "net_link_mtu %lld": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Packet size %lld bytes"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Paket boyutu %lld bayt"
+          }
+        }
+      }
+    },
+    "net_link_queued %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ waiting to be sent"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ gönderilmeyi bekliyor"
+          }
+        }
+      }
+    },
+    "net_link_role_client": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This device connected to it"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bu cihaz ona bağlandı"
+          }
+        }
+      }
+    },
+    "net_link_role_server": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "It connected to this device"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O bu cihaza bağlandı"
+          }
+        }
+      }
+    },
+    "net_link_title %lld %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Neighbour %1$lld (…%2$@)"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Komşu %1$lld (…%2$@)"
+          }
+        }
+      }
+    },
+    "net_link_traffic %@ %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Received %1$@ · sent %2$@"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alınan %1$@ · gönderilen %2$@"
+          }
+        }
+      }
+    },
+    "net_loading": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reading…"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Okunuyor…"
+          }
+        }
+      }
+    },
+    "net_neighbours_none": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No device is connected yet. The radio keeps looking."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Henüz bağlı cihaz yok. Radyo aramaya devam ediyor."
+          }
+        }
+      }
+    },
+    "net_neighbours_title": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Neighbours"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Komşular"
+          }
+        }
+      }
+    },
+    "net_no": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hayır"
+          }
+        }
+      }
+    },
+    "net_not_running": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The mesh is off. Join it from the home screen to see the neighbours and the radio."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ağ kapalı. Komşuları ve radyoyu görmek için ana ekrandan ağa katılın."
+          }
+        }
+      }
+    },
+    "net_radio_advertising": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Advertising"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Yayın yapılıyor"
+          }
+        }
+      }
+    },
+    "net_radio_backed_off": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Devices waiting after a failed connection"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Başarısız bağlantı sonrası bekleyen cihazlar"
+          }
+        }
+      }
+    },
+    "net_radio_central": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Scanner (central)"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tarayıcı (central)"
+          }
+        }
+      }
+    },
+    "net_radio_connect_failures": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Failed connection attempts"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Başarısız bağlantı denemeleri"
+          }
+        }
+      }
+    },
+    "net_radio_connections": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Connections"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bağlantılar"
+          }
+        }
+      }
+    },
+    "net_radio_off": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Off"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kapalı"
+          }
+        }
+      }
+    },
+    "net_radio_on": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "On"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Açık"
+          }
+        }
+      }
+    },
+    "net_radio_peripheral": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Advertiser (peripheral)"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Yayıncı (peripheral)"
+          }
+        }
+      }
+    },
+    "net_radio_scanning": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Scanning"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Taranıyor"
+          }
+        }
+      }
+    },
+    "net_radio_title": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bluetooth radio"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bluetooth radyosu"
+          }
+        }
+      }
+    },
+    "net_radio_unauthorized": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Not allowed"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "İzin verilmedi"
+          }
+        }
+      }
+    },
+    "net_radio_unknown": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Starting"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Başlıyor"
+          }
+        }
+      }
+    },
+    "net_radio_unsupported": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Not supported"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Desteklenmiyor"
+          }
+        }
+      }
+    },
+    "net_stat_acks_sent": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Acknowledgements sent"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gönderilen onay"
+          }
+        }
+      }
+    },
+    "net_stat_blocked": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "From blocked contacts"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Engellenen kişilerden"
+          }
+        }
+      }
+    },
+    "net_stat_duplicates": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Duplicates"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tekrarlar"
+          }
+        }
+      }
+    },
+    "net_stat_expired_transfers": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Transfers that timed out"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zaman aşımına uğrayan aktarım"
+          }
+        }
+      }
+    },
+    "net_stat_fragments_rejected": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fragments rejected"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reddedilen parça"
+          }
+        }
+      }
+    },
+    "net_stat_frames_accepted": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Messages accepted"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kabul edilen mesaj"
+          }
+        }
+      }
+    },
+    "net_stat_inflight_full": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Transfers waiting for room"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Yer bekleyen aktarım"
+          }
+        }
+      }
+    },
+    "net_stat_invalid_signatures": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Invalid signatures"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Geçersiz imza"
+          }
+        }
+      }
+    },
+    "net_stat_malformed": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Malformed packets"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bozuk paket"
+          }
+        }
+      }
+    },
+    "net_stat_packets_received": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Packets received"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alınan paket"
+          }
+        }
+      }
+    },
+    "net_stat_packets_sent": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Packets sent"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gönderilen paket"
+          }
+        }
+      }
+    },
+    "net_stat_peers_banned": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Devices banned"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Yasaklanan cihaz"
+          }
+        }
+      }
+    },
+    "net_stat_queue_full": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Send queue full"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gönderim kuyruğu dolu"
+          }
+        }
+      }
+    },
+    "net_stat_quota_rejected": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Refused for lack of space"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Yer yokluğundan reddedilen"
+          }
+        }
+      }
+    },
+    "net_stat_rate_limited": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Limited by rate"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hız sınırına takılan"
+          }
+        }
+      }
+    },
+    "net_stat_sender_rate_limited": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Senders limited by rate"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hız sınırına takılan gönderen"
+          }
+        }
+      }
+    },
+    "net_stat_tombstoned": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Already deleted"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zaten silinmiş"
+          }
+        }
+      }
+    },
+    "net_stat_undecryptable": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Could not be decrypted"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Çözülemeyen"
+          }
+        }
+      }
+    },
+    "net_stat_unknown_peer": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "From unknown devices"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bilinmeyen cihazlardan"
+          }
+        }
+      }
+    },
+    "net_stat_want_gave_up": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Requests given up"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vazgeçilen istek"
+          }
+        }
+      }
+    },
+    "net_storage_messages %lld": {
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld message"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld messages"
+                }
+              }
+            }
+          }
+        },
+        "tr": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld mesaj"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld mesaj"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "net_storage_title": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Message storage"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mesaj depolama"
+          }
+        }
+      }
+    },
+    "net_storage_used %@ %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ of %2$@ used"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%2$@ içinden %1$@ kullanıldı"
+          }
+        }
+      }
+    },
+    "net_title": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Network"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ağ"
+          }
+        }
+      }
+    },
+    "net_yes": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Yes"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Evet"
+          }
+        }
+      }
+    },
     "newchat_none": {
       "localizations": {
         "en": {
@@ -2066,6 +3002,142 @@
       }
     },
     "newchat_title": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "New message"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Yeni mesaj"
+          }
+        }
+      }
+    },
+    "notif_broadcast_emergency": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "EMERGENCY announcement"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ACİL DURUM duyurusu"
+          }
+        }
+      }
+    },
+    "notif_broadcast_important": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Important announcement"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Önemli duyuru"
+          }
+        }
+      }
+    },
+    "notif_broadcast_many %lld": {
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld new announcements"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld new announcements"
+                }
+              }
+            }
+          }
+        },
+        "tr": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld yeni duyuru"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld yeni duyuru"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "notif_broadcast_normal": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "New announcement"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Yeni duyuru"
+          }
+        }
+      }
+    },
+    "notif_broadcast_public": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "New announcement"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Yeni duyuru"
+          }
+        }
+      }
+    },
+    "notif_direct_no_text": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "New message"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Yeni mesaj"
+          }
+        }
+      }
+    },
+    "notif_direct_public": {
       "localizations": {
         "en": {
           "stringUnit": {
@@ -3345,6 +4417,54 @@
         }
       }
     },
+    "settings_about": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "About"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hakkında"
+          }
+        }
+      }
+    },
+    "settings_about_app %@ %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "App version %1$@ (%2$@)"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Uygulama sürümü %1$@ (%2$@)"
+          }
+        }
+      }
+    },
+    "settings_about_core %@ %lld %lld": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Core %1$@, API %2$lld, protocol %3$lld"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Çekirdek %1$@, API %2$lld, protokol %3$lld"
+          }
+        }
+      }
+    },
     "settings_appearance": {
       "localizations": {
         "en": {
@@ -3373,6 +4493,38 @@
           "stringUnit": {
             "state": "translated",
             "value": "Geliştirici araçları"
+          }
+        }
+      }
+    },
+    "settings_hide_switcher": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hide the app in the app switcher"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Uygulamayı uygulama değiştiricide gizle"
+          }
+        }
+      }
+    },
+    "settings_hide_switcher_hint": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iOS does not let an app block screenshots. Instead, the window is covered whenever the app is not in use, so that the app switcher shows no messages."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iOS bir uygulamanın ekran görüntüsünü engellemesine izin vermez. Bunun yerine uygulama kullanılmadığında pencere örtülür; böylece uygulama değiştirici hiçbir mesaj göstermez."
           }
         }
       }
@@ -3425,6 +4577,38 @@
         }
       }
     },
+    "settings_lifetime_hint": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "How long a new announcement stays, unless you choose another time when writing it."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Yeni bir duyurunun, yazarken başka bir süre seçmezseniz ne kadar kalacağı."
+          }
+        }
+      }
+    },
+    "settings_lifetime_title": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Announcement lifetime"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Duyuru ömrü"
+          }
+        }
+      }
+    },
     "settings_node_id": {
       "localizations": {
         "en": {
@@ -3441,6 +4625,102 @@
         }
       }
     },
+    "settings_notifications": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Notifications"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bildirimler"
+          }
+        }
+      }
+    },
+    "settings_notifications_allow": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Allow notifications"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bildirimlere izin ver"
+          }
+        }
+      }
+    },
+    "settings_notifications_ask": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Notifications are off. Allow them to hear about a message when the app is not open."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bildirimler kapalı. Uygulama açık değilken bir mesajdan haberdar olmak için izin verin."
+          }
+        }
+      }
+    },
+    "settings_notifications_hint": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "There is no server to push messages: they arrive over Bluetooth, and the notification appears when the system lets this app run to receive one. Keep the mesh on and Bluetooth allowed in the background."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mesajları itecek bir sunucu yok: Bluetooth ile gelirler ve bildirim, sistem bu uygulamayı mesajı almak için çalıştırdığında görünür. Ağı açık tutun ve Bluetooth'a arka planda izin verin."
+          }
+        }
+      }
+    },
+    "settings_notifications_off": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Notifications are blocked in the system settings. Allow them there to hear about messages when the app is not open."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bildirimler sistem ayarlarında engellenmiş. Uygulama açık değilken mesajlardan haberdar olmak için oradan izin verin."
+          }
+        }
+      }
+    },
+    "settings_notifications_on": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Notifications are on. A message that arrives while the app is not open is shown on the lock screen."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bildirimler açık. Uygulama açık değilken gelen mesaj kilit ekranında gösterilir."
+          }
+        }
+      }
+    },
     "settings_open_bluetooth_test": {
       "localizations": {
         "en": {
@@ -3453,6 +4733,38 @@
           "stringUnit": {
             "state": "translated",
             "value": "Bluetooth test tezgâhı"
+          }
+        }
+      }
+    },
+    "settings_open_network": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Neighbours, radio and storage"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Komşular, radyo ve depolama"
+          }
+        }
+      }
+    },
+    "settings_pending": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The change applies the next time you join the mesh."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Değişiklik ağa bir sonraki katılışınızda uygulanır."
           }
         }
       }
@@ -3505,6 +4817,22 @@
         }
       }
     },
+    "settings_privacy": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Privacy"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gizlilik"
+          }
+        }
+      }
+    },
     "settings_selftest": {
       "localizations": {
         "en": {
@@ -3533,6 +4861,54 @@
           "stringUnit": {
             "state": "translated",
             "value": "Tanıtımı yeniden göster"
+          }
+        }
+      }
+    },
+    "settings_storage_hint": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "How much this device keeps of other people's messages to pass them on. More helps the mesh, and takes space."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bu cihazın, başkalarının mesajlarını iletmek için ne kadarını sakladığı. Daha fazlası ağa yardım eder, yer kaplar."
+          }
+        }
+      }
+    },
+    "settings_storage_option %lld": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld MB"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld MB"
+          }
+        }
+      }
+    },
+    "settings_storage_title": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Message storage"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mesaj depolama"
           }
         }
       }

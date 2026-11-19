@@ -25,6 +25,13 @@ struct AppShell: View {
 
     var body: some View {
         content
+            // A tap on a notification that started the app asked for a destination before this view was there.
+            .onAppear {
+                if let request = navigator.destinationRequest {
+                    selection.wrappedValue = request
+                    navigator.destinationRequest = nil
+                }
+            }
             // "Send a message" on a contact (and later a notification) asks for the chat destination.
             .onChange(of: navigator.destinationRequest) { _, request in
                 guard let request else { return }

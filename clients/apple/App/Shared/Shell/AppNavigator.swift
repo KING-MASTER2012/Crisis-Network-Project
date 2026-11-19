@@ -20,6 +20,11 @@ final class AppNavigator: ObservableObject {
     /// A destination the shell should switch to; the shell clears it once it has.
     @Published var destinationRequest: Destination?
 
+    /// Shows the announcements.
+    func openAnnouncements() {
+        destinationRequest = .announcements
+    }
+
     /// Shows the chat with `peerHex`: the chat destination, the list below, the conversation on top.
     func openChat(_ peerHex: String) {
         chatsPath = [.chat(peerHex)]

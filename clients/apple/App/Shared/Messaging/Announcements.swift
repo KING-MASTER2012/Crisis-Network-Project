@@ -45,7 +45,10 @@ struct AnnouncementsView: View {
             }
         }
         .navigationTitle("nav_announcements")
-        .onAppear { messaging.openFeed() }
+        .onAppear {
+            messaging.openFeed()
+            MessageNotifier.shared.announcementsOpened()
+        }
         .onDisappear { messaging.closeFeed() }
         .navigationDestination(for: AnnouncementRoute.self) { _ in ComposeAnnouncementView() }
     }
@@ -102,7 +105,8 @@ struct ComposeAnnouncementView: View {
         // One day is preselected, or the longest lifetime there is when the core allows less.
         let limits = Limits.fromCore()
         let presets = lifetimePresets(maxSecs: limits.maxLifetimeSecs)
-        let wanted = conventionInfo().defaultLifetimeSecs
+        // The default lifetime chosen in the settings (read from the defaults: a view's init is not the place for the holder).
+        let wanted = NodeChoices.load().defaultLifetimeSecs
         let initial = presets.contains(wanted) ? wanted : presets.last
         _choice = State(initialValue: initial.map(LifetimeChoice.preset) ?? .custom)
     }

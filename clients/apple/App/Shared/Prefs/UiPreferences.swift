@@ -20,6 +20,7 @@ final class UiPreferences: ObservableObject {
         static let safety = "ui.identity.safetyNumber"
         static let node = "ui.identity.nodeId"
         static let card = "ui.identity.cardText"
+        static let hideInSwitcher = "ui.privacy.hideInSwitcher"
     }
 
     private let defaults: UserDefaults
@@ -34,6 +35,12 @@ final class UiPreferences: ObservableObject {
 
     @Published var language: AppLanguage {
         didSet { defaults.set(language.rawValue, forKey: Keys.language) }
+    }
+
+    /// Covers the app's window while the app is not in use, so that the app switcher shows no messages (iOS has no way to
+    /// block screenshots; this is its counterpart). On by default, like the screenshot block of the Android client.
+    @Published var hideInSwitcher: Bool {
+        didSet { defaults.set(hideInSwitcher, forKey: Keys.hideInSwitcher) }
     }
 
     @Published private(set) var onboardingDone: Bool
@@ -53,6 +60,7 @@ final class UiPreferences: ObservableObject {
             textScale: ThemeSettings.nearestTextScale(defaults.object(forKey: Keys.textScale) as? Double ?? 1.0)
         )
         language = AppLanguage(rawValue: defaults.string(forKey: Keys.language) ?? "") ?? .system
+        hideInSwitcher = defaults.object(forKey: Keys.hideInSwitcher) as? Bool ?? true
         onboardingDone = defaults.bool(forKey: Keys.onboarded)
         identityCreated = defaults.bool(forKey: Keys.identity)
         safetyNumber = defaults.string(forKey: Keys.safety)
