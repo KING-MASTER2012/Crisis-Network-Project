@@ -28,6 +28,8 @@
 * `ContactsView`: the scan button and screen exist on a Mac. `MyCardView`: copy or save the QR code as a picture (Mac).
   `CameraAccess.captureDevice()` finds built-in, external and Continuity cameras on a Mac. `QrCode.read` also reads a `CIImage`.
   `Clipboard`: pictures (Mac). `NotificationRouter`: a tap brings the window back (Mac).
+* Fix: the Release build of the Mac app no longer carries `get-task-allow` (`CODE_SIGN_INJECT_BASE_ENTITLEMENTS: NO` for the Release
+  configuration in `project.yml`, and on the command line of the CI step): Xcode adds it to locally signed builds, and notarization refuses it.
 * `.github/workflows/ci.yml`, job `apple`: a Release build of the Mac app, ad-hoc signed, whose entitlements and hardened runtime
   `scripts/check-mac-app.sh --signed` checks.
 * `README.md` of the Apple client: "The Mac app (phase I8)" with the exit check, the Keychain decision and the notarization steps.

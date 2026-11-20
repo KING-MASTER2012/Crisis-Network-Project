@@ -125,10 +125,13 @@ targets:
                 PRODUCT_BUNDLE_IDENTIFIER: "$(APP_BUNDLE_ID)"
                 GENERATE_INFOPLIST_FILE: NO
             # The hardened runtime is what notarization requires; Release only, because a debug build is loaded by test
-            # bundles and debuggers that the hardened runtime would refuse.
+            # bundles and debuggers that the hardened runtime would refuse. A Release build must not be debuggable either:
+            # Xcode adds `com.apple.security.get-task-allow` to a locally signed build unless told not to, and notarization
+            # refuses an app that has it. The entitlements the app needs are all declared above, so nothing is lost.
             configs:
                 Release:
                     ENABLE_HARDENED_RUNTIME: YES
+                    CODE_SIGN_INJECT_BASE_ENTITLEMENTS: NO
 
     CrisisNetworkTests-iOS:
         type: bundle.unit-test
