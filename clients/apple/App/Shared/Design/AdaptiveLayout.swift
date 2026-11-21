@@ -39,14 +39,12 @@ private struct LineLimitUnlessLargeText: ViewModifier {
 /// A width that grows with the text size and is given up (the view is as wide as it can be) at the accessibility sizes.
 private struct ScaledFixedWidth: ViewModifier {
     @Environment(\.dynamicTypeSize) private var typeSize
-    @ScaledMetric(relativeTo: .body) private var scaled: CGFloat
-
-    init(base: CGFloat) {
-        _scaled = ScaledMetric(wrappedValue: base, relativeTo: .body)
-    }
+    /// 1 at the default text size, larger with larger text: the width is `base` times it.
+    @ScaledMetric(relativeTo: .body) private var scale: CGFloat = 1
+    let base: CGFloat
 
     func body(content: Content) -> some View {
-        content.frame(width: typeSize.isAccessibilitySize ? nil : scaled)
+        content.frame(width: typeSize.isAccessibilitySize ? nil : base * scale)
     }
 }
 
