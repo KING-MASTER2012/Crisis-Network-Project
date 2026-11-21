@@ -542,7 +542,8 @@ upload; the build number is the number of the workflow run, the version is the t
 
 `App/Shared/Resources/PrivacyInfo.xcprivacy` (iOS and macOS): **no tracking, no collected data**, and a reason for each
 "required reason" API the app calls: UserDefaults (`CA92.1`), file timestamps in the app's own container (`C617.1`, the Rust core and
-SQLite) and the system boot time for measuring elapsed time (`35F9.1`). In App Store Connect, answer "Data Not Collected". The list of
+SQLite), the system boot time for measuring elapsed time (`35F9.1`) and disk space (`E174.1`: the core and SQLite write the node's
+database and ask the system about the volume; the first Release build of I9 found this one, the Swift code never asks for free space). In App Store Connect, answer "Data Not Collected". The list of
 APIs that Apple checks grows: `scripts/check-privacy-manifest.sh` reads the imports of the built binary and fails when it finds a
 category that the manifest lacks, which is the mail that App Store Connect would otherwise send after the upload (ITMS-91053). Run
 on the Mac app and the iOS app; if it names a category, add it with the reason that is true for the app (Apple's list of reasons

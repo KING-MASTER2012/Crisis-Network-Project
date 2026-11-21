@@ -32,6 +32,13 @@
 * `docs/src/threat-model.md`: the device and the clients (storage, a stolen or a nearby device, the Mac sandbox, builds, limits).
 * `clients/android/RELEASING.md`, `clients/apple/README.md`: the release workflows, the secrets, the exit check of I9.
 
+**Fixed after the first CI runs of I9**
+
+* `Design/AdaptiveLayout.swift`: `ScaledMetric` needs a default value (the scaled width is now `base * scale`).
+* `PrivacyInfo.xcprivacy`: `scripts/check-privacy-manifest.sh` found that the Mac binary imports disk-space calls (from the Rust core and
+  SQLite, not from the Swift code); the manifest now declares `NSPrivacyAccessedAPICategoryDiskSpace` with the reason `E174.1`.
+  `ReleaseReadinessTests` expects the four categories.
+
 **Decisions**
 
 * Export compliance is answered `true` instead of the placeholder `false`: the app implements encryption beyond the system's. The legal

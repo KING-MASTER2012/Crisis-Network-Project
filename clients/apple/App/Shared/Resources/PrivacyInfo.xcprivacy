@@ -48,6 +48,20 @@
 				<string>35F9.1</string>
 			</array>
 		</dict>
+		<!-- Disk space: the binary imports the system's file-system statistics calls (statfs and the like). The Swift code of
+		     the app never asks for free space or shows it; the calls come from the Rust core and SQLite, which write the
+		     node's database in the app's own container and ask the system about the volume while doing it.
+		     E174.1 = writing or deleting files on the device and checking that there is room. Found by
+		     scripts/check-privacy-manifest.sh in the first Release build of phase I9. If the code that makes the call
+		     ever turns out to be something else, change the reason here to the one that is true. -->
+		<dict>
+			<key>NSPrivacyAccessedAPIType</key>
+			<string>NSPrivacyAccessedAPICategoryDiskSpace</string>
+			<key>NSPrivacyAccessedAPITypeReasons</key>
+			<array>
+				<string>E174.1</string>
+			</array>
+		</dict>
 	</array>
 </dict>
 </plist>

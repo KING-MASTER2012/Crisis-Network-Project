@@ -63,12 +63,13 @@ final class ReleaseReadinessTests: XCTestCase {
             let category = try XCTUnwrap(type["NSPrivacyAccessedAPIType"] as? String)
             reasons[category] = type["NSPrivacyAccessedAPITypeReasons"] as? [String]
         }
-        // The APIs the app calls: its settings, the files of the node, the clock of the node. Keep in step with
-        // scripts/check-privacy-manifest.sh, which compares the manifest with the built binary.
+        // The APIs the app calls: its settings, the files of the node, the clock of the node, the volume the node writes
+        // to. Keep in step with scripts/check-privacy-manifest.sh, which compares the manifest with the built binary.
         XCTAssertEqual(reasons["NSPrivacyAccessedAPICategoryUserDefaults"], ["CA92.1"])
         XCTAssertEqual(reasons["NSPrivacyAccessedAPICategoryFileTimestamp"], ["C617.1"])
         XCTAssertEqual(reasons["NSPrivacyAccessedAPICategorySystemBootTime"], ["35F9.1"])
-        XCTAssertEqual(reasons.count, 3)
+        XCTAssertEqual(reasons["NSPrivacyAccessedAPICategoryDiskSpace"], ["E174.1"])
+        XCTAssertEqual(reasons.count, 4)
     }
 
     // MARK: What the system shows when it asks for a permission
