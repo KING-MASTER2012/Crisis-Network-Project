@@ -45,11 +45,24 @@ CRISIS_SIGNING_KEY_ALIAS=crisis CRISIS_SIGNING_KEY_PASSWORD=... \
 
 ## The release workflow
 
-`.github/workflows/release-android.yml` runs for a tag `android-v1.2.3` (or by hand with the version). Secrets:
-`ANDROID_KEYSTORE_BASE64` (`base64 -w0 crisis-release.jks`), `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`,
-`ANDROID_KEY_PASSWORD`. It builds APK and bundle, verifies the signature with `apksigner` and the 16 KB
-alignment with `zipalign`, and uploads them with `mapping.txt`. **Keep the mapping file of every release**: stack
-traces from that version cannot be read without it.
+Pushing a tag that starts with `android-` (`android-v1.2.3`, or `android-1.2.3-rc1` for a pre-release) runs
+`.github/workflows/release-android.yml`, which builds the debug and the release app and **puts the files straight into the GitHub
+release of that tag**:
+
+| Asset | What it is |
+| --- | --- |
+| `crisis-network-<version>-android-universal-<debug\|release>.apk` | One APK with all three processor types (arm64-v8a, armeabi-v7a, x86_64). |
+| `crisis-network-<version>-android-<arm64-v8a\|armeabi-v7a\|x86_64>-<debug\|release>.apk` | The same app for one processor type (smaller). Built by `-Pcrisis.abis=<abi>` on the same native core. |
+| `crisis-network-<version>-android-release.aab` | The bundle for Google Play (only when the real signing key is set). |
+| `crisis-network-<version>-android-mapping.txt` | The R8 mapping of the release build. **Keep it with every release**: stack traces from that version cannot be read without it. |
+| `SHA256SUMS.txt` | Checksums of every file. |
+
+Secrets: `ANDROID_KEYSTORE_BASE64` (`base64 -w0 crisis-release.jks`), `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`,
+`ANDROID_KEY_PASSWORD`. **Without them the workflow does not fail**: it signs the release with a throw-away key made for the run, the
+files end in `-testkey` and there is no bundle (the APKs install, but cannot update an app signed with another key; the release notes
+say so). Every release APK is verified with `apksigner` and the 16 KB alignment with `zipalign`. The debug APKs are built on the
+optimised core with SQLCipher too, so a debug file behaves like the release one apart from being debuggable and debug-signed.
+Started by hand (Run workflow, with an optional version) the same files are made and kept as one workflow artifact, no release.
 
 ## Before a release
 

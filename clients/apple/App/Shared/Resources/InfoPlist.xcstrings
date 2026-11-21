@@ -1,0 +1,57 @@
+{
+  "sourceLanguage": "en",
+  "strings": {
+    "CFBundleDisplayName": {
+      "comment": "The name under the icon.",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Crisis Network"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kriz Ağı"
+          }
+        }
+      }
+    },
+    "NSBluetoothAlwaysUsageDescription": {
+      "comment": "Shown by the system when the app asks for Bluetooth for the first time.",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Crisis Network uses Bluetooth to pass messages between nearby devices when there is no network."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kriz Ağı, internet yokken yakındaki cihazlar arasında mesaj iletmek için Bluetooth kullanır."
+          }
+        }
+      }
+    },
+    "NSCameraUsageDescription": {
+      "comment": "Shown by the system when the app asks for the camera for the first time.",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Crisis Network uses the camera only to read the QR code of a contact card. Nothing is recorded or sent anywhere."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kriz Ağı kamerayı yalnızca bir kişi kartının QR kodunu okumak için kullanır. Hiçbir şey kaydedilmez ve hiçbir yere gönderilmez."
+          }
+        }
+      }
+    }
+  },
+  "version": "1.0"
+}

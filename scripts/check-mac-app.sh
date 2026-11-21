@@ -52,7 +52,9 @@ for key in NSBluetoothAlwaysUsageDescription NSCameraUsageDescription; do
 done
 [ "$(info_value LSMinimumSystemVersion)" = "14.0" ] || fail "LSMinimumSystemVersion is not 14.0"
 [ "$(info_value LSMultipleInstancesProhibited)" = "true" ] || fail "LSMultipleInstancesProhibited is not true (the database cannot be opened twice)"
-[ "$(info_value ITSAppUsesNonExemptEncryption)" = "false" ] || fail "ITSAppUsesNonExemptEncryption is not false (see the export compliance note in clients/apple/README.md)"
+# The answer to the export compliance question is a decision (clients/apple/EXPORT_COMPLIANCE.md); the script checks that the
+# app says what the decision is: true unless EXPECT_NON_EXEMPT_ENCRYPTION=false.
+[ "$(info_value ITSAppUsesNonExemptEncryption)" = "${EXPECT_NON_EXEMPT_ENCRYPTION:-true}" ] || fail "ITSAppUsesNonExemptEncryption is not ${EXPECT_NON_EXEMPT_ENCRYPTION:-true} (see clients/apple/EXPORT_COMPLIANCE.md)"
 [ -n "$(info_value CFBundleIdentifier)" ] || fail "no CFBundleIdentifier"
 
 # --- Entitlements ----------------------------------------------------------------------------------------------------

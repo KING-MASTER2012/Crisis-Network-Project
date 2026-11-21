@@ -114,3 +114,9 @@ coverage/
 core/fuzz/artifacts/
 core/fuzz/corpus/
 core/fuzz/target/
+
+# Release builds made by scripts/package-apple.sh and scripts/notarize-mac.sh (phase I9)
+/build/
+/dist/
+/release-notes.md
+clients/apple/build/

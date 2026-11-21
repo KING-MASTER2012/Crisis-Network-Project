@@ -3,7 +3,7 @@
 SwiftUI clients on top of the Rust core. Plan and phases: `I0` ... `I9` (see `CHANGELOG.md`). This folder holds the
 result of **phase I0** (the toolchain, the core as a Swift package, a placeholder app, CI), **phase I1** (the
 runtime around the core), **phase I2** (the Bluetooth link), **phase I3** (discovery, topology, the background) and
-**phase I4** (design system, shell, introduction), **phase I5** (contacts) and **phase I6** (chats and announcements), **phase I7** (network, settings, notifications) and **phase I8** (macOS).
+**phase I4** (design system, shell, introduction), **phase I5** (contacts) and **phase I6** (chats and announcements), **phase I7** (network, settings, notifications), **phase I8** (macOS) and **phase I9** (release, privacy, accessibility).
 
 ```
 clients/apple/
@@ -16,6 +16,9 @@ clients/apple/
 scripts/build-apple.sh     builds the core for Apple platforms and fills the package
 scripts/check-mac-app.sh   checks the Mac app's sandbox rights and permission texts (CI, and before notarizing)
 scripts/notarize-mac.sh    builds, signs (Developer ID), notarizes and packs the Mac app as a disk image
+scripts/package-apple.sh   builds every flavour of the app that a release carries (macOS/iOS, debug/release, each processor type)
+scripts/apple-version.sh   the version of a release from its git tag (apple-v1.2.3)
+scripts/check-privacy-manifest.sh  compares the privacy manifest with what the built binary imports
 ```
 
 ## What you need
@@ -491,6 +494,103 @@ that is not allowed was added. The bundle identifier in `Config/Base.xcconfig` i
 5. **Mixed links.** Mac with an iPhone and an Android phone next to each other: one link each, not two (the tie-break), a message each way, also with the Mac's lid closed and opened again (the log shows sleep and wake).
 6. **The signed build.** `bash scripts/notarize-mac.sh`, copy the disk image to another Mac (not the build machine), open it from the Downloads folder: no warning, the permission dialogs for Bluetooth and the camera show the texts of `project.yml`.
 
+## Release, privacy and accessibility (phase I9)
+
+### Tag a release, get the files as assets
+
+Pushing a tag that starts with `apple-` builds the app and **puts the files straight into the GitHub release of that tag**:
+
+```sh
+git tag apple-v1.0.0 && git push origin apple-v1.0.0     # a tag with a hyphen in its version (apple-v1.0.0-rc1) is a pre-release
+git tag android-v1.0.0 && git push origin android-v1.0.0 # the Android release works the same way (clients/android/RELEASING.md)
+```
+
+`.github/workflows/release-apple.yml` builds the core once (release profile, encrypted database, every processor type), then the
+macOS app and the iOS app from it in parallel, then publishes. Each Debug and Release build is made for each processor type and
+every file says which:
+
+| Asset | What it is |
+| --- | --- |
+| `CrisisNetwork-<version>-macos-<debug\|release>-<arm64\|x86_64\|universal>.zip` | The Mac app, signed ad hoc (the sandbox is in force; Gatekeeper asks on the first start: right-click > Open). `universal` has both processor types; the other two are smaller. |
+| `CrisisNetwork-<version>-macos-release-universal-notarized.dmg` | Signed with a Developer ID and notarized: opens without a warning. **Only with the signing secrets** (below). |
+| `CrisisNetwork-<version>-ios-device-<debug\|release>-arm64-unsigned.ipa` | iPhone and iPad (arm64), not signed: sign it with your own Apple ID (Xcode, AltStore, Sideloadly). |
+| `CrisisNetwork-<version>-ios-simulator-<debug\|release>-<arm64\|x86_64>.zip` | For the iOS simulator of a Mac with Apple silicon or Intel (`xcrun simctl install booted CrisisNetwork-iOS.app`). |
+| `SHA256SUMS.txt` | Checksums of every file. |
+
+A "debug" file is the Debug configuration of the app (assertions, debug symbols, debuggable) on the **same optimised core with
+the encrypted database** as the release one: the core takes most of the build time and is the same code in both. Started by hand
+(Actions > Apple release > Run workflow) the same files are made and kept as one workflow artifact, with no release and no
+upload to TestFlight: that is the way to try the pipeline from a branch.
+
+What is checked on the way, and stops the release: the Swift package tests with SQLCipher required; for the Mac app the
+sandbox rights (`scripts/check-mac-app.sh`), the privacy manifest against the binary (`scripts/check-privacy-manifest.sh`) and
+that every file has exactly the processor types its name says; for iOS the privacy manifest as well.
+
+**Signing and TestFlight need repository secrets; without them the workflow still produces everything above.**
+
+| Secret | For |
+| --- | --- |
+| `APPLE_TEAM_ID` | Your 10-character team identifier. |
+| `ASC_KEY_P8_BASE64`, `ASC_KEY_ID`, `ASC_ISSUER_ID` | An App Store Connect API key (App Store Connect > Users and Access > Integrations; the `.p8` file as `base64 -i AuthKey_XXXX.p8`). **iOS:** Xcode signs by itself with it (automatic signing), archives the Release app and uploads it to TestFlight (the step is `continue-on-error`: a failure there is a warning and does not hold back the assets). **macOS:** the notary service login. |
+| `MAC_DEVELOPER_ID_P12_BASE64`, `MAC_DEVELOPER_ID_P12_PASSWORD` | The "Developer ID Application" certificate with its private key, exported from Keychain Access as `.p12` (`base64 -i cert.p12`). With the five above, `scripts/notarize-mac.sh` makes the notarized disk image. |
+
+The app record in App Store Connect (with the bundle identifier of `Config/Base.xcconfig`) must exist before the first TestFlight
+upload; the build number is the number of the workflow run, the version is the tag (`apple-v1.2.3` is 1.2.3). Builds wait at
+"Missing Compliance" until the export questions are answered once: `EXPORT_COMPLIANCE.md`.
+
+### Privacy manifest and App Privacy
+
+`App/Shared/Resources/PrivacyInfo.xcprivacy` (iOS and macOS): **no tracking, no collected data**, and a reason for each
+"required reason" API the app calls: UserDefaults (`CA92.1`), file timestamps in the app's own container (`C617.1`, the Rust core and
+SQLite) and the system boot time for measuring elapsed time (`35F9.1`). In App Store Connect, answer "Data Not Collected". The list of
+APIs that Apple checks grows: `scripts/check-privacy-manifest.sh` reads the imports of the built binary and fails when it finds a
+category that the manifest lacks, which is the mail that App Store Connect would otherwise send after the upload (ITMS-91053). Run
+on the Mac app and the iOS app; if it names a category, add it with the reason that is true for the app (Apple's list of reasons
+is linked in the script).
+
+### Permission texts in every language
+
+`App/Shared/Resources/InfoPlist.xcstrings` has the Bluetooth and camera texts (and the name under the icon) in English and Turkish,
+next to the English ones in `project.yml`. Adding a language means adding it to `Localizable.xcstrings`, to this catalog and to
+`CFBundleLocalizations`.
+
+### Export compliance
+
+`ITSAppUsesNonExemptEncryption` is now `true`: the app has encryption of its own. What it uses, the choices and the questions App Store
+Connect asks are in `EXPORT_COMPLIANCE.md`. This is a legal answer: ask a lawyer.
+
+### VoiceOver and Dynamic Type
+
+The text styles, the headings, the combined rows and the tone icons came with I4 to I7. I9 adds what an audit of the screens
+turned up: **the home screen announces** when the mesh connects, searches or goes offline (`HomeStatus`, not the two states that only
+mean "wait"); **large text** (`Design/AdaptiveLayout.swift`): at the accessibility sizes the chat composer stacks (the send button
+under the field, full width) and its width grows with the text before that, names and previews are not cut to one or two lines,
+and the empty-state icon scales. The walkthrough with expected results is in `DEVICE_MATRIX.md`, sections 3.
+
+### Device matrix and threat model
+
+`DEVICE_MATRIX.md` is the plan and the table for the round on real devices (iPhone models, Low Power Mode, Background App Refresh off,
+the Bluetooth permission denied, VoiceOver, Dynamic Type, mixed pairs). `docs/src/threat-model.md` has a new section on the clients: what
+is on the device and how it is protected, what a stolen or a nearby device can reach, the Mac sandbox and the builds.
+
+### Exit check of I9 (by hand)
+
+1. Push `apple-v0.0.1-rc1` from a branch you can delete: the release has the assets of the table above, `SHA256SUMS.txt` matches
+   (`shasum -a 256 -c`), the release is marked pre-release. Install the Mac `universal` zip on both an Apple silicon and an Intel Mac,
+   an iOS simulator zip on a simulator, the unsigned `.ipa` on a phone through your signing tool.
+2. With the secrets set: the `-notarized.dmg` opens on another Mac without a warning; a build appears in TestFlight (after the
+   compliance question) and installs on a phone.
+3. `DEVICE_MATRIX.md`: sections 2 to 4 on the devices you have, written into the table.
+4. VoiceOver and the two largest text sizes through the whole app in both languages.
+
+### What was not run
+
+Written without a Swift toolchain and without GitHub: neither workflow has run. The likeliest first-run problems: the privacy check
+naming a category that is not in the manifest (add it, with its reason); the Intel simulator or Intel Mac slice not linking if a
+processor type is missing from the core build; `xcodebuild` refusing `ARCHS` on `generic/platform` destinations; App Store Connect refusing the
+automatic signing with an API key that lacks the "App Manager" role or higher; the export step's `app-store-connect` method name on older Xcode
+versions (`app-store`). The tests of this phase (`ReleaseReadinessTests`) are the first thing to run.
+
 ## `scripts/build-apple.sh`
 
 | Option | Meaning |
@@ -528,7 +628,6 @@ them is committed. After every change to the Rust core (or to a UniFFI signature
 * **Licence.** The repository is GPL-3.0-only. Apple's App Store terms are widely held to be incompatible with
   the GPL for code you do not hold the copyright of. As the only copyright holder you may distribute your own
   code under other terms, but outside contributions change that. Decide this (and ask a lawyer) before I9.
-* **Export compliance.** The app uses encryption (ChaCha20, Ed25519, SQLCipher). `ITSAppUsesNonExemptEncryption`
-  is set to `false` in `project.yml` as a placeholder: App Store Connect asks the question again and the answer
-  needs a deliberate decision, not a default.
-* **Privacy manifest** (`PrivacyInfo.xcprivacy`) and the Bluetooth usage text in every language: I9.
+* **Export compliance.** Decided in I9: `ITSAppUsesNonExemptEncryption` is `true`, see `EXPORT_COMPLIANCE.md` and
+  "Release, privacy and accessibility (phase I9)".
+* **Privacy manifest** and the permission texts in every language: done in I9.

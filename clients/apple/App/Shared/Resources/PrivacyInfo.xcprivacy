@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- The privacy manifest of the app (phase I9), for iOS and macOS. What it says, and why:
+	     Tracking: none. The app has no server, no account, no analytics and no advertising identifier.
+	     Collected data: none. Messages and contact cards go from one device to the devices of the people they are for,
+	     over Bluetooth; nothing is sent to the developer or to a third party, so there is nothing to declare as collected.
+	     Required-reason APIs: the ones the app (the Swift code, the Rust core and SQLite inside it) really calls.
+	     scripts/check-privacy-manifest.sh compares this file with the imports of the built binary. -->
+	<key>NSPrivacyTracking</key>
+	<false/>
+	<key>NSPrivacyTrackingDomains</key>
+	<array/>
+	<key>NSPrivacyCollectedDataTypes</key>
+	<array/>
+	<key>NSPrivacyAccessedAPITypes</key>
+	<array>
+		<!-- UserDefaults: the settings of the app and the small lists it keeps (contacts' names), read and written only
+		     by the app itself. CA92.1 = access to information that the app itself wrote. -->
+		<dict>
+			<key>NSPrivacyAccessedAPIType</key>
+			<string>NSPrivacyAccessedAPICategoryUserDefaults</string>
+			<key>NSPrivacyAccessedAPITypeReasons</key>
+			<array>
+				<string>CA92.1</string>
+			</array>
+		</dict>
+		<!-- File timestamps: the Rust core and SQLite ask for the size and the modification time of the files of the node
+		     (the database, its journal, the install marker), which all live in the app's own container.
+		     C617.1 = files inside the app container. The app never looks at files of other apps or of the user. -->
+		<dict>
+			<key>NSPrivacyAccessedAPIType</key>
+			<string>NSPrivacyAccessedAPICategoryFileTimestamp</string>
+			<key>NSPrivacyAccessedAPITypeReasons</key>
+			<array>
+				<string>C617.1</string>
+			</array>
+		</dict>
+		<!-- System boot time: the time since start-up, used to measure how long something took (timers, the clock that
+		     cannot be set back, the pace of the radio) inside the app. 35F9.1 = measuring time that has passed between
+		     events in the app. It is never sent anywhere and never used to tell devices apart. -->
+		<dict>
+			<key>NSPrivacyAccessedAPIType</key>
+			<string>NSPrivacyAccessedAPICategorySystemBootTime</string>
+			<key>NSPrivacyAccessedAPITypeReasons</key>
+			<array>
+				<string>35F9.1</string>
+			</array>
+		</dict>
+	</array>
+</dict>
+</plist>

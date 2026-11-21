@@ -46,14 +46,14 @@ struct ChatsView: View {
                 Text(contacts.displayName(hex: chat.peerHex, language: prefs.language))
                     .font(TypeScale.titleSmall)
                     .fontWeight(chat.unread > 0 ? .bold : .regular)
-                    .lineLimit(1)
+                    .lineLimit(unlessLargeText: 1)
                 Spacer(minLength: 0)
                 TimeLabel(ms: chat.lastTimeMs).font(TypeScale.bodySmall)
             }
             preview(chat)
                 .font(TypeScale.body)
                 .foregroundStyle(palette.onSurfaceVariant.color)
-                .lineLimit(2)
+                .lineLimit(unlessLargeText: 2)
             if chat.unread > 0 {
                 StatusPill("chat_unread \(chat.unread)", tone: .warning)
             }

@@ -297,6 +297,9 @@ jobs:
           app=$(ls -d clients/apple/build/mac-release/Build/Products/Release/*.app | head -n 1)
           echo "App: $app"
           bash scripts/check-mac-app.sh "$app" --signed
+          # Phase I9: App Store Connect refuses an upload whose binary uses a "required reason" API that the privacy
+          # manifest does not declare, and says so by mail after the upload. This says it before.
+          bash scripts/check-privacy-manifest.sh "$app"
       # Links the iOS device slice; running it needs a phone and a signing team.
       - name: Build the iOS app for a device
         run: |

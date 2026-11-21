@@ -59,9 +59,13 @@ targets:
                 # The camera reads the QR code of a contact card (phase I5); nothing is recorded or sent.
                 NSCameraUsageDescription: >-
                     Crisis Network uses the camera only to read the QR code of a contact card. Nothing is recorded or sent anywhere.
-                # Encryption is only used for the content of the app's own protocol; see the export compliance note in
-                # clients/apple/README.md before the first App Store upload.
-                ITSAppUsesNonExemptEncryption: false
+                # Export compliance (phase I9): the app has encryption of its own (end-to-end encryption of messages,
+                # signatures, an encrypted database), so the honest answer to "does it use encryption beyond what the
+                # operating system provides" is yes: `true` makes App Store Connect ask the follow-up questions once per
+                # version instead of the app claiming an exemption nobody has checked. What the app uses and what the
+                # choices are: clients/apple/EXPORT_COMPLIANCE.md. When the answers are settled and Apple has given a
+                # compliance code, add `ITSEncryptionExportComplianceCode: <code>` here.
+                ITSAppUsesNonExemptEncryption: true
         # The Keychain group of the app. An item is only usable with an application identifier; the simulator takes
         # it from the (ad-hoc) signature, see the iOS test step in .github/workflows/ci.yml.
         entitlements:
@@ -104,7 +108,8 @@ targets:
                 # The camera reads the QR code of a contact card (phase I8); nothing is recorded or sent.
                 NSCameraUsageDescription: >-
                     Crisis Network uses the camera only to read the QR code of a contact card. Nothing is recorded or sent anywhere.
-                ITSAppUsesNonExemptEncryption: false
+                # See the iOS target above and clients/apple/EXPORT_COMPLIANCE.md.
+                ITSAppUsesNonExemptEncryption: true
         # The rights of the sandboxed Mac app (phase I8). Exactly these four, and no network entitlement: the app talks
         # to other devices over Bluetooth only. `scripts/check-mac-app.sh` fails the build when one is missing or when a
         # forbidden one has appeared.

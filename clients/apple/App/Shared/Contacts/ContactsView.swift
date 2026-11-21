@@ -102,7 +102,7 @@ struct ContactsView: View {
         VStack(alignment: .leading, spacing: 6) {
             Text(model.displayName(hex: contact.hex, language: prefs.language))
                 .font(TypeScale.titleSmall)
-                .lineLimit(1)
+                .lineLimit(unlessLargeText: 1)
             HStack(spacing: 8) {
                 StatusPill(contact.trust.label, tone: contact.trust.tone)
                 if !contact.hasCard { StatusPill("contact_no_card_pill", tone: .warning) }

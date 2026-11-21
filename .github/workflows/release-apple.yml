@@ -1,0 +1,247 @@
+# The Apple release (phase I9). Pushing a tag `apple-<version>` (for example `apple-v1.2.3` or `apple-1.2.3-rc1`) builds the
+# app for macOS and iOS, debug and release, one file per processor type, and puts the files straight into the GitHub
+# release of that tag, as assets, so that nobody has to dig through workflow artifacts:
+#
+#   CrisisNetwork-<version>-macos-<debug|release>-<arm64|x86_64|universal>.zip      the Mac app, signed ad hoc
+#   CrisisNetwork-<version>-macos-release-universal-notarized.dmg                    only with the signing secrets below
+#   CrisisNetwork-<version>-ios-device-<debug|release>-arm64-unsigned.ipa            iPhone/iPad, not signed (sideload)
+#   CrisisNetwork-<version>-ios-simulator-<debug|release>-<arm64|x86_64>.zip         the iOS simulator
+#   SHA256SUMS.txt
+#
+# The Rust core is built once (release profile, encrypted database, every processor type) and handed to the macOS and the
+# iOS job; both Debug and Release app builds use it, so a "debug" file is the debug build of the app on the same core.
+# The "unsigned" and "ad hoc" files need no secrets. With these repository secrets the workflow also signs and ships:
+#
+#   APPLE_TEAM_ID, ASC_KEY_P8_BASE64 (base64 of the App Store Connect API key, a .p8 file), ASC_KEY_ID, ASC_ISSUER_ID
+#       iOS: the Release app is archived, signed by Xcode with that key (automatic signing) and uploaded to TestFlight.
+#   MAC_DEVELOPER_ID_P12_BASE64 (base64 of the "Developer ID Application" certificate, .p12), MAC_DEVELOPER_ID_P12_PASSWORD
+#       (and the four above): macOS: scripts/notarize-mac.sh signs, has Apple notarize and staples a disk image, which
+#       becomes the `-notarized.dmg` asset.
+#
+# A tag with a hyphen in its version (`apple-v1.2.3-rc1`) makes a pre-release. Started by hand (Run workflow) the same builds
+# are made and kept as one workflow artifact instead of a release; nothing is uploaded to TestFlight then.
+# What is checked on the way: the Swift package tests with SQLCipher required, the sandbox rights and the privacy manifest
+# of the Mac app, the processor types in every file (see scripts/package-apple.sh).
+name: Apple release
+
+on:
+  push:
+    tags:
+      - "apple-*"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: apple-release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  # The core for every Apple platform and processor type. Built once.
+  core:
+    runs-on: macos-15
+    timeout-minutes: 150
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: apple-release
+      - name: Build the core (release profile, encrypted database, every processor type)
+        run: bash scripts/build-apple.sh --profile release --sqlcipher --universal
+      - name: Swift package tests, SQLCipher required
+        env:
+          CRISIS_EXPECT_SQLCIPHER: "1"
+        run: |
+          swift test --package-path clients/apple/Packages/CrisisCore
+          swift test --package-path clients/apple/Packages/CrisisRuntime
+      # A hand-over between the jobs of this run, not a result: the results are the assets of the release.
+      - uses: actions/upload-artifact@v4
+        with:
+          name: apple-core
+          path: |
+            clients/apple/Packages/CrisisCore/CrisisCoreFFI.xcframework
+            clients/apple/Packages/CrisisCore/Sources/CrisisCore/Generated
+          retention-days: 1
+          if-no-files-found: error
+
+  macos:
+    needs: core
+    runs-on: macos-15
+    timeout-minutes: 120
+    env:
+      HAS_DEVID: ${{ secrets.MAC_DEVELOPER_ID_P12_BASE64 != '' && secrets.MAC_DEVELOPER_ID_P12_PASSWORD != '' && secrets.APPLE_TEAM_ID != '' && secrets.ASC_KEY_P8_BASE64 != '' && secrets.ASC_KEY_ID != '' && secrets.ASC_ISSUER_ID != '' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: apple-core
+          path: clients/apple/Packages/CrisisCore
+      - name: Install XcodeGen and generate the project
+        run: |
+          brew install xcodegen
+          (cd clients/apple && xcodegen generate)
+      - name: Work out the version
+        run: bash scripts/apple-version.sh | tee -a "$GITHUB_ENV"
+      - name: Build and pack the Mac app (debug and release, every processor type)
+        run: bash scripts/package-apple.sh macos dist
+      # Signed with a Developer ID certificate that exists only in a keychain made for this job, notarized by Apple,
+      # stapled, packed as a disk image. Failing here stops the release: a notarized file that was asked for must exist.
+      - name: Notarized disk image
+        if: env.HAS_DEVID == 'true' && env.IS_TAG == 'true'
+        env:
+          CERT_P12: ${{ secrets.MAC_DEVELOPER_ID_P12_BASE64 }}
+          CERT_PASSWORD: ${{ secrets.MAC_DEVELOPER_ID_P12_PASSWORD }}
+          TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          KEY_P8: ${{ secrets.ASC_KEY_P8_BASE64 }}
+          NOTARY_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          NOTARY_ISSUER: ${{ secrets.ASC_ISSUER_ID }}
+        run: |
+          set -euo pipefail
+          keychain="$RUNNER_TEMP/release.keychain-db"
+          password="$(openssl rand -hex 16)"
+          security create-keychain -p "$password" "$keychain"
+          security set-keychain-settings -lut 21600 "$keychain"
+          security unlock-keychain -p "$password" "$keychain"
+          echo "$CERT_P12" | base64 --decode > "$RUNNER_TEMP/developer-id.p12"
+          security import "$RUNNER_TEMP/developer-id.p12" -P "$CERT_PASSWORD" -A -t cert -f pkcs12 -k "$keychain"
+          security set-key-partition-list -S apple-tool:,apple: -k "$password" "$keychain" > /dev/null
+          security list-keychains -d user -s "$keychain" $(security list-keychains -d user | tr -d '"')
+          echo "$KEY_P8" | base64 --decode > "$RUNNER_TEMP/AuthKey.p8"
+          export TEAM_ID NOTARY_KEY_ID NOTARY_ISSUER
+          export NOTARY_KEY_PATH="$RUNNER_TEMP/AuthKey.p8"
+          export MARKETING BUILD
+          bash scripts/notarize-mac.sh --skip-core --out build/mac-release
+          cp build/mac-release/CrisisNetwork.dmg "dist/CrisisNetwork-$NAME-macos-release-universal-notarized.dmg"
+      - name: Remove the keys
+        if: always()
+        run: |
+          security delete-keychain "$RUNNER_TEMP/release.keychain-db" || true
+          rm -f "$RUNNER_TEMP/developer-id.p12" "$RUNNER_TEMP/AuthKey.p8"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: apple-assets-macos
+          path: dist/*
+          retention-days: 1
+          if-no-files-found: error
+
+  ios:
+    needs: core
+    runs-on: macos-15
+    timeout-minutes: 120
+    env:
+      HAS_ASC: ${{ secrets.APPLE_TEAM_ID != '' && secrets.ASC_KEY_P8_BASE64 != '' && secrets.ASC_KEY_ID != '' && secrets.ASC_ISSUER_ID != '' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: apple-core
+          path: clients/apple/Packages/CrisisCore
+      - name: Install XcodeGen and generate the project
+        run: |
+          brew install xcodegen
+          (cd clients/apple && xcodegen generate)
+      - name: Work out the version
+        run: bash scripts/apple-version.sh | tee -a "$GITHUB_ENV"
+      - name: Build and pack the iOS app (device and both simulators, debug and release)
+        run: bash scripts/package-apple.sh ios dist
+      - uses: actions/upload-artifact@v4
+        with:
+          name: apple-assets-ios
+          path: dist/*
+          retention-days: 1
+          if-no-files-found: error
+      # Xcode signs by itself with the API key (automatic signing: it finds or makes the certificate and the profile)
+      # and the export uploads the build to App Store Connect. A failure (no app record yet, a name taken, a build
+      # number used) is shown as a warning and does not hold back the release assets above.
+      - name: Archive and upload to TestFlight
+        if: env.HAS_ASC == 'true' && env.IS_TAG == 'true'
+        continue-on-error: true
+        env:
+          TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          KEY_P8: ${{ secrets.ASC_KEY_P8_BASE64 }}
+          KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ISSUER: ${{ secrets.ASC_ISSUER_ID }}
+        run: |
+          set -euo pipefail
+          key="$RUNNER_TEMP/AuthKey_$KEY_ID.p8"
+          echo "$KEY_P8" | base64 --decode > "$key"
+          auth=(-allowProvisioningUpdates -authenticationKeyPath "$key" -authenticationKeyID "$KEY_ID" -authenticationKeyIssuerID "$ISSUER")
+          mkdir -p build
+          xcodebuild -project clients/apple/CrisisNetwork.xcodeproj -scheme CrisisNetwork-iOS -configuration Release \
+              -destination 'generic/platform=iOS' -archivePath build/CrisisNetwork-iOS.xcarchive \
+              DEVELOPMENT_TEAM="$TEAM_ID" CODE_SIGN_STYLE=Automatic \
+              MARKETING_VERSION="$MARKETING" CURRENT_PROJECT_VERSION="$BUILD" \
+              "${auth[@]}" archive
+          cat > build/ExportOptions-ios.plist <<PLIST
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+              <key>method</key><string>app-store-connect</string>
+              <key>destination</key><string>upload</string>
+              <key>teamID</key><string>$TEAM_ID</string>
+              <key>signingStyle</key><string>automatic</string>
+              <key>uploadSymbols</key><true/>
+          </dict>
+          </plist>
+          PLIST
+          xcodebuild -exportArchive -archivePath build/CrisisNetwork-iOS.xcarchive \
+              -exportOptionsPlist build/ExportOptions-ios.plist -exportPath build/ios-export "${auth[@]}"
+          echo "Uploaded build $MARKETING ($BUILD) to App Store Connect: it shows in TestFlight after processing."
+      - name: Remove the key
+        if: always()
+        run: rm -f "$RUNNER_TEMP"/AuthKey_*.p8
+
+  # The files of both jobs become the assets of the release of the tag.
+  publish:
+    needs: [macos, ios]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Work out the version
+        run: bash scripts/apple-version.sh | tee -a "$GITHUB_ENV"
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: apple-assets-*
+          merge-multiple: true
+          path: dist
+      - name: Checksums and release notes
+        run: |
+          cd dist
+          sha256sum * > SHA256SUMS.txt
+          cat > ../release-notes.md <<NOTES
+          Crisis Network for Apple $NAME (version $MARKETING, build $BUILD).
+          
+          | File | What it is |
+          | --- | --- |
+          | \`*-macos-*-universal.zip\`, \`*-arm64.zip\`, \`*-x86_64.zip\` | The Mac app (macOS 14 or later) for Apple silicon and Intel together, or for one of them (smaller). Signed ad hoc: the first time, right-click > Open (or \`xattr -dr com.apple.quarantine CrisisNetwork-macOS.app\`). |
+          | \`*-macos-release-universal-notarized.dmg\` | The same Mac app, signed with a Developer ID and notarized by Apple: opens without a warning. Only when the repository has the signing secrets. |
+          | \`*-ios-device-*-arm64-unsigned.ipa\` | The iPhone and iPad app (iOS 17 or later), not signed. Install it with a tool that signs with your own Apple ID (Xcode, AltStore, Sideloadly). |
+          | \`*-ios-simulator-*-arm64.zip\`, \`*-x86_64.zip\` | The app for the iOS simulator of Macs with Apple silicon or Intel: \`xcrun simctl install booted CrisisNetwork-iOS.app\`. |
+          | \`*-release-*\` | The optimised app. Release builds only open an encrypted database. |
+          | \`*-debug-*\` | The debug build (assertions, debug symbols, debuggable): for testing and bug reports. |
+          | \`SHA256SUMS.txt\` | Checksums of every file. |
+          
+          The iOS build for TestFlight is uploaded by the same workflow when the repository has the App Store Connect secrets; it is not a file here.
+          NOTES
+          ls -l
+      - name: Publish the release assets
+        if: env.IS_TAG == 'true'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: Apple ${{ env.NAME }}
+          body_path: release-notes.md
+          generate_release_notes: true
+          prerelease: ${{ contains(env.NAME, '-') }}
+          files: dist/*
+          fail_on_unmatched_files: true
+      - uses: actions/upload-artifact@v4
+        if: env.IS_TAG != 'true'
+        with:
+          name: apple-release-${{ env.NAME }}
+          path: dist/*
+          if-no-files-found: error

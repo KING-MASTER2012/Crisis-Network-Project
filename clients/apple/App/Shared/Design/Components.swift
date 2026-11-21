@@ -212,6 +212,7 @@ struct QuietButton: View {
 /// What a screen shows when it has nothing to show yet.
 struct EmptyState: View {
     @Environment(\.palette) private var palette
+    @ScaledMetric(relativeTo: .largeTitle) private var iconSize: CGFloat = 44
     private let systemImage: String
     private let title: LocalizedStringKey
     private let message: LocalizedStringKey
@@ -225,7 +226,7 @@ struct EmptyState: View {
     var body: some View {
         VStack(spacing: 12) {
             Image(systemName: systemImage)
-                .font(.system(size: 44))
+                .font(.system(size: iconSize))
                 .foregroundStyle(palette.secondary.color)
                 .accessibilityHidden(true)
             Text(title).font(TypeScale.title).multilineTextAlignment(.center)

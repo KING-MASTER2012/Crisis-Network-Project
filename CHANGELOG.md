@@ -1,3 +1,54 @@
+# Changes: phase I9, release, privacy and accessibility on Apple (and release assets for Android)
+
+**New**
+
+* `.github/workflows/release-apple.yml`: a tag `apple-*` builds the app and puts the files **into the assets of the release of that
+  tag**: macOS (debug and release; arm64, x86_64 and universal; ad-hoc signed zips), iOS (debug and release; an unsigned device `.ipa`
+  and simulator zips for arm64 and x86_64), `SHA256SUMS.txt`. The core is built once (release, SQLCipher, every processor type) and handed
+  to a macOS and an iOS job. With the secrets `APPLE_TEAM_ID`, `ASC_KEY_*` and `MAC_DEVELOPER_ID_P12_*` it also makes a notarized disk
+  image and uploads the Release iOS build to TestFlight (automatic signing with the API key). A manual run makes one workflow artifact.
+* `scripts/package-apple.sh` (every flavour, with a check of the processor types of each file), `scripts/apple-version.sh` (version
+  from the tag), `scripts/check-privacy-manifest.sh` (the manifest against the imports of the built binary).
+* `App/Shared/Resources/PrivacyInfo.xcprivacy`: no tracking, no collected data, reasons for UserDefaults (CA92.1), file timestamps
+  (C617.1) and system boot time (35F9.1). `InfoPlist.xcstrings`: Bluetooth and camera texts and the display name in English and Turkish.
+* `App/Shared/Screens/HomeStatus.swift` (the mesh status as one value; VoiceOver announces a state that lasts),
+  `App/Shared/Design/AdaptiveLayout.swift` (a row that is a column at the accessibility text sizes, a line limit and a width that give way
+  to large text).
+* `clients/apple/EXPORT_COMPLIANCE.md` (what the app does with encryption, the answer, the follow-up questions),
+  `clients/apple/DEVICE_MATRIX.md` (devices, system conditions, VoiceOver, Dynamic Type, mixed pairs, with expected results).
+* `Tests/iOS/ReleaseReadinessTests.swift`.
+
+**Changed**
+
+* `.github/workflows/release-android.yml`: tag `android-*`; builds **debug and release**, universal and one per processor type
+  (`-Pcrisis.abis`), the bundle and the mapping file, and attaches them to the release of the tag with `SHA256SUMS.txt`. Without the signing
+  secrets it no longer fails: a throw-away key signs the release and the assets end in `-testkey`. Permissions `contents: write`.
+* `project.yml`: `ITSAppUsesNonExemptEncryption` is now `true` (the app has encryption of its own; see `EXPORT_COMPLIANCE.md`).
+  `scripts/check-mac-app.sh` checks the value (`EXPECT_NON_EXEMPT_ENCRYPTION`).
+* `scripts/notarize-mac.sh`: `--skip-core`, `MARKETING` and `BUILD`.
+* The chat composer stacks at the accessibility sizes and its button width scales; names and previews of chats, contacts and announcements are
+  not cut at the accessibility sizes; the empty-state icon scales. The home card announces its state to VoiceOver.
+* `.github/workflows/ci.yml`: the privacy check on the Release Mac build.
+* `docs/src/threat-model.md`: the device and the clients (storage, a stolen or a nearby device, the Mac sandbox, builds, limits).
+* `clients/android/RELEASING.md`, `clients/apple/README.md`: the release workflows, the secrets, the exit check of I9.
+
+**Decisions**
+
+* Export compliance is answered `true` instead of the placeholder `false`: the app implements encryption beyond the system's. The legal
+  follow-up (exemption route, France, the compliance code) is the publisher's; TestFlight builds wait at "Missing Compliance" until then.
+* A "debug" asset is the Debug app configuration on the same release core with the encrypted database, not a debug core: one core build
+  serves all files, and a debug file then behaves like the release one apart from being debuggable.
+* iOS device files are **unsigned** (the repository cannot hold a personal signing identity); signed iOS builds go to TestFlight with the API key.
+* Android is one universal APK plus one APK per processor type, built from the same native core one after the other.
+
+**Not done / not run**
+
+* Nothing was run: no Swift or Android toolchain and no GitHub here. The README lists the likeliest first-run problems. Not done: the Mac App Store
+  build (the Mac ships as a notarized disk image), the migration to the data protection keychain, localization beyond English and Turkish.
+* The device matrix and the VoiceOver and Dynamic Type walkthrough are written, not performed.
+
+---
+
 # Changes: phase I8, macOS on Apple
 
 **New**

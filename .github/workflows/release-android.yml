@@ -1,91 +1,197 @@
-# Builds the signed Android release (phase A7). Runs for a tag `android-v<version>` or by hand.
-# Needs these repository secrets (see clients/android/RELEASING.md):
-#   ANDROID_KEYSTORE_BASE64, ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_ALIAS, ANDROID_KEY_PASSWORD
+# The Android release (phases A7 and I9). Pushing a tag `android-<version>` (for example `android-v1.2.3` or
+# `android-1.2.3-rc1`) builds the debug and the release app and puts the files straight into the GitHub release of that
+# tag, as assets, so that nobody has to dig through workflow artifacts:
+#
+#   crisis-network-<version>-android-<abi>-<debug|release>.apk   <abi> = universal (all three), arm64-v8a, armeabi-v7a, x86_64
+#   crisis-network-<version>-android-release.aab                 the bundle for Google Play (signed with the real key only)
+#   crisis-network-<version>-android-mapping.txt                 R8 mapping of the release build: keep it, stack traces need it
+#   SHA256SUMS.txt
+#
+# Secrets (see clients/android/RELEASING.md): ANDROID_KEYSTORE_BASE64, ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_ALIAS,
+# ANDROID_KEY_PASSWORD. Without them the release is signed with a throw-away key made for this run: the APKs install, but
+# they cannot update a build signed with another key, their file names end in `-testkey`, and there is no bundle.
+# A tag with a hyphen in its version (`android-v1.2.3-rc1`) makes a pre-release.
+# Started by hand (Run workflow) the same builds are made, and kept as one workflow artifact instead of a release.
 name: Android release
 
 on:
-    push:
-        tags:
-            - "android-v*"
-    workflow_dispatch:
-        inputs:
-            version_name:
-                description: "versionName (for example 0.7.0)"
-                required: true
-            version_code:
-                description: "versionCode (a number that is higher than that of every earlier release)"
-                required: true
+  push:
+    tags:
+      - "android-*"
+  workflow_dispatch:
+    inputs:
+      version_name:
+        description: "versionName (for example 0.7.0); empty: 0.0.0-dev"
+        required: false
+      version_code:
+        description: "versionCode (higher than that of every earlier release); empty: the run number"
+        required: false
 
 permissions:
-    contents: read
+  contents: write
+
+concurrency:
+  group: android-release-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
-    release:
-        runs-on: ubuntu-24.04
-        timeout-minutes: 120
+  release:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    env:
+      HAS_KEYSTORE: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' }}
+    steps:
+      - uses: actions/checkout@v4
+      # The tag android-v1.2.3 gives the version 1.2.3; a manual run takes the inputs.
+      - name: Work out the version
         env:
-            # The tag android-v1.2.3 gives versionName 1.2.3; the code is the run number unless it is given by hand.
-            VERSION_NAME: ${{ github.event.inputs.version_name || github.ref_name }}
-            VERSION_CODE: ${{ github.event.inputs.version_code || github.run_number }}
-        steps:
-            - uses: actions/checkout@v4
-            - name: Free disk space
-              run: |
-                  sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/.ghcup /usr/local/share/boost \
-                      /opt/hostedtoolcache/CodeQL /usr/share/swift /usr/local/share/powershell
-                  sudo docker image prune --all --force || true
-            - uses: dtolnay/rust-toolchain@stable
-              with:
-                  targets: aarch64-linux-android,armv7-linux-androideabi,x86_64-linux-android
-            - uses: Swatinem/rust-cache@v2
-            - uses: actions/setup-java@v4
-              with:
-                  distribution: temurin
-                  java-version: "17"
-            - uses: android-actions/setup-android@v3
-              with:
-                  packages: "platform-tools platforms;android-37.0 build-tools;36.0.0 ndk;28.2.13676358"
-            - name: Install cargo-ndk
-              run: cargo install cargo-ndk --locked
-            - uses: gradle/actions/setup-gradle@v4
-            - name: Make the Gradle wrapper executable
-              run: chmod +x clients/android/gradlew
-            # The keystore only exists on the runner for this job; the secrets are never printed.
-            - name: Restore the signing key
-              env:
-                  KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
-              run: |
-                  test -n "$KEYSTORE_BASE64" || { echo "ANDROID_KEYSTORE_BASE64 is not set"; exit 1; }
-                  echo "$KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/release.jks"
-            # Release native core (LTO) with SQLCipher: the app refuses to open a plaintext database in a release.
-            - name: Build the signed APK and bundle
-              working-directory: clients/android
-              timeout-minutes: 90
-              env:
-                  CRISIS_SIGNING_STORE_FILE: ${{ runner.temp }}/release.jks
-                  CRISIS_SIGNING_STORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-                  CRISIS_SIGNING_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
-                  CRISIS_SIGNING_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
-              run: |
-                  name="${VERSION_NAME#android-v}"
-                  ./gradlew :app:assembleRelease :app:bundleRelease \
-                      -Pcrisis.sqlcipher=true -Pcrisis.rustProfile=release \
-                      -Pcrisis.versionName="$name" -Pcrisis.versionCode="$VERSION_CODE" \
-                      --console=plain --stacktrace
-            - name: Verify the signature and the alignment
-              run: |
-                  apk=$(ls clients/android/app/build/outputs/apk/release/*.apk | head -n 1)
-                  "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose --print-certs "$apk"
-                  "$ANDROID_HOME/build-tools/36.0.0/zipalign" -c -P 16 -v 4 "$apk"
-            - name: Remove the signing key
-              if: always()
-              run: rm -f "$RUNNER_TEMP/release.jks"
-            # The mapping file is needed to read stack traces of this exact build: keep it with the release.
-            - uses: actions/upload-artifact@v4
-              with:
-                  name: android-release
-                  path: |
-                      clients/android/app/build/outputs/apk/release/*.apk
-                      clients/android/app/build/outputs/bundle/release/*.aab
-                      clients/android/app/build/outputs/mapping/release/mapping.txt
-                  if-no-files-found: error
+          INPUT_NAME: ${{ github.event.inputs.version_name }}
+          INPUT_CODE: ${{ github.event.inputs.version_code }}
+        run: |
+          if [[ "$GITHUB_REF" == refs/tags/android-* ]]; then
+              name="${GITHUB_REF#refs/tags/android-}"
+              name="${name#v}"
+              is_tag=true
+          else
+              name="${INPUT_NAME:-0.0.0-dev}"
+              is_tag=false
+          fi
+          echo "VERSION_NAME=$name" >> "$GITHUB_ENV"
+          echo "VERSION_CODE=${INPUT_CODE:-$GITHUB_RUN_NUMBER}" >> "$GITHUB_ENV"
+          echo "IS_TAG=$is_tag" >> "$GITHUB_ENV"
+          echo "Version $name, code ${INPUT_CODE:-$GITHUB_RUN_NUMBER}, tag: $is_tag"
+      - name: Free disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/.ghcup /usr/local/share/boost \
+              /opt/hostedtoolcache/CodeQL /usr/share/swift /usr/local/share/powershell
+          sudo docker image prune --all --force || true
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android,armv7-linux-androideabi,x86_64-linux-android
+      - uses: Swatinem/rust-cache@v2
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: "platform-tools platforms;android-37.0 build-tools;36.0.0 ndk;28.2.13676358"
+      - name: Install cargo-ndk
+        run: cargo install cargo-ndk --locked
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Make the Gradle wrapper executable
+        run: chmod +x clients/android/gradlew
+      # The key only exists on the runner for this job; the secrets are never printed. Without the secrets a key is
+      # made for this run (see the top of this file).
+      - name: Prepare the signing key
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          STORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          if [ "$HAS_KEYSTORE" = "true" ]; then
+              echo "$KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/release.jks"
+              echo "CRISIS_SIGNING_STORE_PASSWORD=$STORE_PASSWORD" >> "$GITHUB_ENV"
+              echo "CRISIS_SIGNING_KEY_ALIAS=$KEY_ALIAS" >> "$GITHUB_ENV"
+              echo "CRISIS_SIGNING_KEY_PASSWORD=$KEY_PASSWORD" >> "$GITHUB_ENV"
+              echo "SUFFIX=" >> "$GITHUB_ENV"
+          else
+              echo "::warning::No signing secrets: this release is signed with a throw-away key (assets end in -testkey)."
+              password="$(openssl rand -hex 16)"
+              keytool -genkeypair -keystore "$RUNNER_TEMP/release.jks" -storepass "$password" -keypass "$password" \
+                  -alias testkey -keyalg RSA -keysize 2048 -validity 3650 -dname "CN=Crisis Network CI test key"
+              echo "::add-mask::$password"
+              echo "CRISIS_SIGNING_STORE_PASSWORD=$password" >> "$GITHUB_ENV"
+              echo "CRISIS_SIGNING_KEY_ALIAS=testkey" >> "$GITHUB_ENV"
+              echo "CRISIS_SIGNING_KEY_PASSWORD=$password" >> "$GITHUB_ENV"
+              echo "SUFFIX=-testkey" >> "$GITHUB_ENV"
+          fi
+          echo "CRISIS_SIGNING_STORE_FILE=$RUNNER_TEMP/release.jks" >> "$GITHUB_ENV"
+      # One build with the three ABIs in one APK ("universal"), then one per ABI: the same native core, so the later
+      # runs only pack. The debug build gets the optimised core with SQLCipher too, so a debug asset behaves like the
+      # release one. Debug builds are signed with Android's debug key by Gradle.
+      - name: Build the APKs and the bundle
+        working-directory: clients/android
+        timeout-minutes: 120
+        run: |
+          set -euo pipefail
+          mkdir -p "$GITHUB_WORKSPACE/dist"
+          build_tools="$ANDROID_HOME/build-tools/36.0.0"
+          common=(-Pcrisis.sqlcipher=true -Pcrisis.rustProfile=release
+                  -Pcrisis.versionName="$VERSION_NAME" -Pcrisis.versionCode="$VERSION_CODE" --console=plain --stacktrace)
+          
+          collect() { # abi label
+              for variant in debug release; do
+                  apk="$(ls app/build/outputs/apk/$variant/*.apk | head -n 1)"
+                  suffix=""
+                  if [ "$variant" = "release" ]; then
+                      "$build_tools/apksigner" verify --print-certs "$apk"
+                      "$build_tools/zipalign" -c -P 16 4 "$apk"
+                      suffix="$SUFFIX"
+                  fi
+                  cp "$apk" "$GITHUB_WORKSPACE/dist/crisis-network-$VERSION_NAME-android-$1-$variant$suffix.apk"
+              done
+          }
+          
+          if [ "$HAS_KEYSTORE" = "true" ]; then
+              ./gradlew :app:assembleDebug :app:assembleRelease :app:bundleRelease "${common[@]}"
+              cp app/build/outputs/bundle/release/*.aab "$GITHUB_WORKSPACE/dist/crisis-network-$VERSION_NAME-android-release.aab"
+          else
+              ./gradlew :app:assembleDebug :app:assembleRelease "${common[@]}"
+          fi
+          # The mapping file is needed to read stack traces of this exact build: it goes with the release.
+          cp app/build/outputs/mapping/release/mapping.txt "$GITHUB_WORKSPACE/dist/crisis-network-$VERSION_NAME-android-mapping.txt"
+          collect universal
+          
+          for abi in arm64-v8a armeabi-v7a x86_64; do
+              rm -rf app/build/outputs/apk
+              ./gradlew :app:assembleDebug :app:assembleRelease "${common[@]}" -Pcrisis.abis="$abi"
+              collect "$abi"
+          done
+      - name: Remove the signing key
+        if: always()
+        run: rm -f "$RUNNER_TEMP/release.jks"
+      - name: Checksums and release notes
+        run: |
+          cd dist
+          sha256sum * > SHA256SUMS.txt
+          cat > ../release-notes.md <<NOTES
+          Android $VERSION_NAME (versionCode $VERSION_CODE).
+          
+          | File | What it is |
+          | --- | --- |
+          | \`*-android-universal-*.apk\` | One APK for every phone (arm64-v8a, armeabi-v7a and x86_64 inside). Install this one if unsure. |
+          | \`*-android-arm64-v8a-*.apk\`, \`*-armeabi-v7a-*.apk\`, \`*-x86_64-*.apk\` | The same app for one processor type only (smaller). Most phones are arm64-v8a; x86_64 is for emulators. |
+          | \`*-release.apk\` | The optimised app. Release builds only open an encrypted database. |
+          | \`*-debug.apk\` | The debug build (debuggable, signed with the debug key): for testing and bug reports. |
+          | \`*-release.aab\` | The bundle for Google Play. |
+          | \`*-mapping.txt\` | R8 mapping of the release build, to read its stack traces. |
+          | \`SHA256SUMS.txt\` | Checksums of every file. |
+          NOTES
+          if [ "$HAS_KEYSTORE" != "true" ]; then
+              cat >> ../release-notes.md <<NOTES
+          
+          **Signed with a throw-away test key** (the repository has no signing secrets): these APKs install, but they cannot update an app signed with another key. Files end in \`-testkey\`.
+          NOTES
+          fi
+          ls -l
+      # A tag: the files become assets of the release of that tag (it is created, or updated when it exists).
+      - name: Publish the release assets
+        if: env.IS_TAG == 'true'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: Android ${{ env.VERSION_NAME }}
+          body_path: release-notes.md
+          generate_release_notes: true
+          prerelease: ${{ contains(env.VERSION_NAME, '-') }}
+          files: dist/*
+          fail_on_unmatched_files: true
+      # Started by hand: no release, one artifact to download.
+      - uses: actions/upload-artifact@v4
+        if: env.IS_TAG != 'true'
+        with:
+          name: android-release-${{ env.VERSION_NAME }}
+          path: dist/*
+          if-no-files-found: error

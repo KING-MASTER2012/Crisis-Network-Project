@@ -2,9 +2,12 @@
 # Builds the Mac app, signs it with a Developer ID certificate, has Apple notarize it and packs it as a disk image that
 # opens on any Mac without a warning (phase I8). The App Store / TestFlight build is a different path (phase I9).
 #
-# Usage: scripts/notarize-mac.sh [--skip-build] [--out DIR]
+# Usage: scripts/notarize-mac.sh [--skip-build] [--skip-core] [--out DIR]
 #
 #   --skip-build   Use the archive from an earlier run (DIR/CrisisNetwork.xcarchive) instead of building again.
+#   --skip-core    Build the app, but not the Rust core: it is already in clients/apple/Packages/CrisisCore, made by
+#                  scripts/build-apple.sh with the release profile, SQLCipher and --universal (the release workflow
+#                  builds it once for all its jobs).
 #   --out DIR      Where the archive, the exported app and the disk image go (default: build/mac-release).
 #
 # Environment (nothing secret is kept in the repository):
@@ -12,6 +15,7 @@
 #   TEAM_ID          Your 10-character Apple developer team identifier (required).
 #   SIGN_IDENTITY    The signing certificate (default: "Developer ID Application"; use the full name when you have several).
 #   APP_BUNDLE_ID    The bundle identifier to build with (default: the one in clients/apple/Config/Base.xcconfig).
+#   MARKETING, BUILD The version the system shows and the build number (default: the ones in Base.xcconfig).
 #
 #   How to log in to the notary service, one of:
 #   NOTARY_PROFILE   A keychain profile made once with
@@ -27,12 +31,14 @@ cd "$(dirname "$0")/.."
 root="$PWD"
 
 skip_build="false"
+skip_core="false"
 out="build/mac-release"
 while [ $# -gt 0 ]; do
     case "$1" in
         --skip-build) skip_build="true"; shift ;;
+        --skip-core) skip_core="true"; shift ;;
         --out) out="${2:?--out needs a directory}"; shift 2 ;;
-        -h|--help) sed -n '2,24p' "$0"; exit 0 ;;
+        -h|--help) sed -n '2,30p' "$0"; exit 0 ;;
         *) echo "unknown option: $1" >&2; exit 2 ;;
     esac
 done
@@ -83,8 +89,10 @@ notarize() {
 # --- Build, sign ---------------------------------------------------------------------------------------------------------
 
 if [ "$skip_build" = "false" ]; then
-    echo "==> The core, for Macs with Apple silicon and Intel, release profile, encrypted database"
-    bash scripts/build-apple.sh --profile release --sqlcipher --universal --platforms mac
+    if [ "$skip_core" = "false" ]; then
+        echo "==> The core, for Macs with Apple silicon and Intel, release profile, encrypted database"
+        bash scripts/build-apple.sh --profile release --sqlcipher --universal --platforms mac
+    fi
 
     echo "==> The Xcode project"
     (cd clients/apple && xcodegen generate)
@@ -93,6 +101,8 @@ if [ "$skip_build" = "false" ]; then
     rm -rf "$archive" "$export_dir"
     extra=()
     if [ -n "${APP_BUNDLE_ID:-}" ]; then extra+=("APP_BUNDLE_ID=$APP_BUNDLE_ID"); fi
+    if [ -n "${MARKETING:-}" ]; then extra+=("MARKETING_VERSION=$MARKETING"); fi
+    if [ -n "${BUILD:-}" ]; then extra+=("CURRENT_PROJECT_VERSION=$BUILD"); fi
     xcodebuild -project "$project" -scheme CrisisNetwork-macOS -configuration Release \
         -destination 'generic/platform=macOS' -archivePath "$archive" \
         DEVELOPMENT_TEAM="$TEAM_ID" CODE_SIGN_STYLE=Manual CODE_SIGN_IDENTITY="$sign_identity" \

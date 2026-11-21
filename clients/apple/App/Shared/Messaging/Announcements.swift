@@ -71,7 +71,7 @@ struct AnnouncementsView: View {
     @ViewBuilder
     private func sender(_ message: MessageRow) -> some View {
         if let hex = message.senderHex {
-            Text(contacts.displayName(hex: hex, language: prefs.language)).lineLimit(1)
+            Text(contacts.displayName(hex: hex, language: prefs.language)).lineLimit(unlessLargeText: 1)
         } else {
             Text("you")
         }

@@ -116,7 +116,7 @@ struct ChatView: View {
                     .foregroundStyle(palette.error.color)
                     .accessibilityAddTraits(.updatesFrequently)
             }
-            HStack(alignment: .bottom, spacing: 8) {
+            AdaptiveStack(spacing: 8) {
                 TextField("chat_input_hint", text: $text, axis: .vertical)
                     .lineLimit(1...5)
                     .textFieldStyle(.roundedBorder)
@@ -124,7 +124,7 @@ struct ChatView: View {
                     .onChange(of: text) { _, _ in error = nil }
                 Button { send() } label: { Text("chat_send") }
                     .buttonStyle(CrisisButtonStyle(kind: .primary))
-                    .frame(width: 104)
+                    .scaledWidth(104)
                     .disabled(!canSend)
             }
             ByteCounter(count: count)

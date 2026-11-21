@@ -21,6 +21,12 @@ struct HomeView: View {
         }
         .navigationTitle("app_name")
         .onAppear { access.refresh() }
+        // A screen reader is told when the mesh connects, loses its neighbours or goes offline: the card changes on
+        // its own, and a person who cannot see it would not notice.
+        .onChange(of: status) { _, new in
+            guard new.isAnnounced else { return }
+            AccessibilityNotification.Announcement(L10n.string(new.key, language: prefs.language)).post()
+        }
         .onChange(of: access.readiness) { _, readiness in
             // The permission was just given (or Bluetooth just switched on): go on with what the person asked for.
             if joinAfterPermission, readiness == .ready {
@@ -34,15 +40,13 @@ struct HomeView: View {
         mesh.links.filter(\.active).count
     }
 
-    private var status: (key: LocalizedStringKey, tone: Tone) {
-        if mesh.busy { return (mesh.running ? "home_status_stopping" : "home_status_starting", .neutral) }
-        guard mesh.running else { return ("home_status_offline", .neutral) }
-        return neighbours > 0 ? ("home_status_connected", .success) : ("home_status_searching", .neutral)
+    private var status: HomeStatus {
+        HomeStatus.make(busy: mesh.busy, running: mesh.running, neighbours: neighbours)
     }
 
     private var meshCard: some View {
         InfoCard(title: "home_mesh_title") {
-            StatusPill(status.key, tone: status.tone)
+            StatusPill(LocalizedStringKey(status.key), tone: status.tone)
             if mesh.running, neighbours > 0 {
                 Text("home_neighbours \(neighbours)").font(TypeScale.titleSmall)
             }
