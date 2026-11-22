@@ -1,3 +1,27 @@
+# Changes: Android fix, one scan is enough to become contacts
+
+**New**
+
+* `messaging/IntroCodec.kt`: the introduction. When a contact is added (QR scan, pasted text, picture), the app sends the person a private message that
+  carries its own card in the text form of a card. The receiving phone adds that card and never shows the message. Only a card that belongs to the
+  sender counts, so nobody can introduce somebody else.
+* `IntroCodecTest.kt`: unit tests for the cheap recognition of an introduction.
+
+**Changed**
+
+* `Messaging.kt`: sends the introduction after `addContact` (and after cards that were queued while the mesh was off), accepts introductions only while the
+  "My QR code" screen is open and for 10 minutes after (otherwise strangers could add themselves), hides introductions from chats, previews and the
+  "new messages" line, and marks them read.
+* `MessageNotifier.kt`: an introduction makes no notification. `MyCardScreen.kt`: opens and closes the pairing window and says who was added.
+* `strings.xml` (en, tr): the new texts, and `add_done` now says that the card was sent as well.
+
+**Decisions**
+
+* Writing to a person still needs their card; nothing changed there. The Apple client does not send or recognise introductions yet: an iPhone that is added
+  by an Android phone shows the introduction as a text starting with `crisis:`.
+
+---
+
 # Changes: app icons (phase I9, part 2)
 
 **New**

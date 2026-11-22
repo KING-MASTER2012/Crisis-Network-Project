@@ -14,6 +14,7 @@ import org.crisisnetwork.android.MainActivity
 import org.crisisnetwork.android.R
 import org.crisisnetwork.android.messaging.AnnouncementCodec
 import org.crisisnetwork.android.messaging.Hex
+import org.crisisnetwork.android.messaging.IntroCodec
 import org.crisisnetwork.android.messaging.Messaging
 import org.crisisnetwork.android.messaging.Names
 import org.crisisnetwork.android.messaging.Severity
@@ -86,6 +87,8 @@ object MessageNotifier {
     // ----- private messages ----------------------------------------------------------------------
 
     private fun direct(context: Context, note: CoreNotification.MessageReceived) {
+        // An introduction (a contact card sent by the person who scanned our code) is not a message to announce.
+        if (IntroCodec.parse(note.body, note.sender) != null) return
         val peerHex = Hex.encode(note.sender)
         val now = System.currentTimeMillis()
         val text = cleanText(note.body).ifEmpty { context.getString(R.string.notif_direct_no_text) }

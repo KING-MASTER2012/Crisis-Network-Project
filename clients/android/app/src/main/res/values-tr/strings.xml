@@ -199,6 +199,9 @@
     <string name="mycard_unavailable">Kartınız henüz hazır değil. Ağa bir kez katılın, burada görünür.</string>
     <string name="mycard_copy">Kartı metin olarak kopyala</string>
     <string name="mycard_copied">Kopyalandı.</string>
+    <string name="mycard_pairing_hint">Karşınızdaki tararken bu ekranı açık tutun. Kişilerinize otomatik eklenir, yani tek tarama yeter.</string>
+    <string name="mycard_introduced_title">Kişi eklendi</string>
+    <string name="mycard_introduced_body">%1$s kodunuzu taradı ve kişilerinize eklendi. Artık birbirinize yazabilirsiniz.</string>
     <string name="mycard_share">Kartı metin olarak paylaş</string>
     <string name="scan_title">Kart tara</string>
     <string name="scan_hint">Kamerayı diğer telefondaki QR koduna doğrultun.</string>
@@ -222,7 +225,7 @@
     <string name="add_confirm">Kişiyi ekle</string>
     <string name="add_cancel">Vazgeç</string>
     <string name="add_finish">Tamam</string>
-    <string name="add_done">Kişi eklendi.</string>
+    <string name="add_done">Kişi eklendi. Kartınız da ona gönderildi, böylece tarama yapmadan size yazabilir.</string>
     <string name="add_queued">Kart kaydedildi. Ağa katılır katılmaz kişi eklenecek.</string>
     <string name="add_own">Bu sizin kendi kartınız.</string>
     <string name="add_invalid">Bu geçerli bir kart değil.</string>

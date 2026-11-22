@@ -148,6 +148,9 @@ object Messaging {
     private const val PREFS_NICKNAMES = "nicknames"
     private const val REFRESH_DELAY_MS = 80L
 
+    /** How long after leaving the "my QR code" screen a scan of that code still adds the scanner (late delivery over the mesh). */
+    private const val PAIRING_GRACE_MS = 10 * 60 * 1_000L
+
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private val lock = Mutex()
 
@@ -163,6 +166,14 @@ object Messaging {
     private val unreadFlow = MutableStateFlow(Unread())
     private val chatFlow = MutableStateFlow(ChatState())
     private val feedFlow = MutableStateFlow(FeedState())
+    private val introducedFlow = MutableStateFlow<String?>(null)
+
+    // The person's own QR code is on screen, or was a moment ago: introductions are accepted (see [setPairingScreen]).
+    @Volatile
+    private var pairingOpen = false
+
+    @Volatile
+    private var pairingUntilMs = 0L
 
     /** `true` while the node is open: messages can be read and sent. */
     val ready: StateFlow<Boolean> = readyFlow.asStateFlow()
@@ -177,6 +188,9 @@ object Messaging {
     val unread: StateFlow<Unread> = unreadFlow.asStateFlow()
     val chat: StateFlow<ChatState> = chatFlow.asStateFlow()
     val feed: StateFlow<FeedState> = feedFlow.asStateFlow()
+
+    /** Node id (hexadecimal) of the person who just added this phone by scanning its code, or `null`. */
+    val introduced: StateFlow<String?> = introducedFlow.asStateFlow()
 
     // Opening and closing a screen only swap these references (on the main thread, in order, so that a
     // rotation, which closes and opens the same screen, cannot end up closed). The work on a window
@@ -212,6 +226,19 @@ object Messaging {
                 limitsFlow.value = Limits(info.maxPayloadBytes.toInt(), info.maxLifetimeSecs.toLong())
             } catch (t: Throwable) {
                 MeshController.log("messaging: limits unavailable (${t.message})")
+            }
+        }
+        scope.launch {
+            MeshController.notifications.collect { note ->
+                if (note is CoreNotification.MessageReceived && note.kind == MessageKind.DIRECT) {
+                    try {
+                        onDirectReceived(note)
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (t: Throwable) {
+                        MeshController.log("messaging: introduction failed (${t.message})")
+                    }
+                }
             }
         }
         scope.launch {
@@ -324,7 +351,7 @@ object Messaging {
         when (val ref = conversation) {
             is ConversationRef.Direct -> {
                 val newest = last
-                ChatRow(
+                if (newest != null && isIntro(newest)) null else ChatRow(
                     peerHex = Hex.encode(ref.peer),
                     preview = newest?.body?.let { previewOf(it) },
                     lastTimeMs = newest?.receivedAtMs?.toLong() ?: 0L,
@@ -355,7 +382,7 @@ object Messaging {
         if (!window.loaded) {
             window.loaded = true
             // What was unread when the screen opened: the "new messages" line stays there until it closes.
-            window.firstUnreadSeq = page.entries.firstOrNull { it.direction == MessageDirection.INCOMING && it.seq > page.readUpToSeq }?.seq
+            window.firstUnreadSeq = page.entries.firstOrNull { it.direction == MessageDirection.INCOMING && it.seq > page.readUpToSeq && !isIntro(it) }?.seq
         }
         val hasUnread = page.entries.any { it.direction == MessageDirection.INCOMING && it.seq > window.readUpTo }
         if (hasUnread) window.readUpTo = rt.markConversationRead(window.ref, null)
@@ -364,7 +391,7 @@ object Messaging {
     private fun chatStateOf(window: Window): ChatState =
         ChatState(
             peerHex = window.peerHex,
-            messages = window.entries.map { it.toRow() },
+            messages = window.entries.filter { !isIntro(it) }.map { it.toRow() },
             hasOlder = window.olderBefore != null,
             loading = false,
             firstUnreadSeq = window.firstUnreadSeq?.toLong(),
@@ -379,6 +406,18 @@ object Messaging {
             firstUnreadSeq = window.firstUnreadSeq?.toLong(),
             loaded = window.loaded,
         )
+
+    /**
+     * `true` for an introduction (see [IntroCodec]): a protocol message that carries a contact card and
+     * is never shown as a message. For a received one the card must belong to the sender, for a sent one to this phone.
+     */
+    private fun isIntro(item: HistoryItem): Boolean {
+        if (item.kind != MessageKind.DIRECT) return false
+        val raw = item.body ?: return false
+        if (!IntroCodec.looksLikeIntro(raw)) return false
+        val owner = (if (item.direction == MessageDirection.OUTGOING) MeshController.runtime?.nodeId else item.counterpart) ?: return false
+        return IntroCodec.parse(raw, owner) != null
+    }
 
     private fun HistoryItem.toRow(): MessageRow {
         val outgoing = direction == MessageDirection.OUTGOING
@@ -433,6 +472,57 @@ object Messaging {
         } catch (t: Throwable) {
             MeshController.log("messaging: older page failed (${t.message})")
             false
+        }
+    }
+
+    // ----- introductions: one scan is enough -------------------------------------------------------------------------
+
+    /**
+     * The screen with this phone's own QR code opened ([open] = `true`) or closed. While it is open, and for a
+     * while after, a person who scanned the code is added back automatically ([onDirectReceived]); otherwise
+     * strangers could add themselves to the contacts by sending introductions.
+     */
+    fun setPairingScreen(open: Boolean) {
+        pairingOpen = open
+        if (open) {
+            introducedFlow.value = null
+        } else {
+            pairingUntilMs = System.currentTimeMillis() + PAIRING_GRACE_MS
+        }
+    }
+
+    private fun acceptingIntroductions(): Boolean = pairingOpen || System.currentTimeMillis() < pairingUntilMs
+
+    /**
+     * A private message arrived. When it is an introduction, the sender's card is added to the contacts
+     * (if the pairing window is open and the card is not known yet) and the message is marked read, so that
+     * it neither shows up as unread nor makes a notification.
+     */
+    private suspend fun onDirectReceived(note: CoreNotification.MessageReceived) {
+        val card = IntroCodec.parse(note.body, note.sender) ?: return
+        val rt = runningRuntime() ?: return
+        if (acceptingIntroductions()) {
+            val known = rt.contacts(CONTACT_LIMIT).any { it.nodeId.contentEquals(note.sender) && it.card != null }
+            if (!known) {
+                rt.addContact(card)
+                introducedFlow.value = Hex.encode(note.sender)
+            }
+        }
+        // The introduction itself is not a message: do not leave it counted as unread (only when nothing else is unread there).
+        val chat = rt.conversations(CHAT_LIMIT).firstOrNull { (it.conversation as? ConversationRef.Direct)?.peer?.contentEquals(note.sender) == true }
+        if (chat != null && chat.unread <= 1uL) rt.markConversationRead(ConversationRef.Direct(note.sender), null)
+        MeshController.notifyDataChanged()
+    }
+
+    /** Sends this phone's own card to a person that was just added, so that they can write back without scanning. */
+    private suspend fun sendIntroduction(rt: NodeRuntime, peer: ByteArray) {
+        try {
+            rt.publishDirect(peer, IntroCodec.encode(rt.contactCard))
+            MeshController.notifyDataChanged()
+        } catch (e: CancellationException) {
+            throw e
+        } catch (t: Throwable) {
+            MeshController.log("messaging: introduction not sent (${t.message})")
         }
     }
 
@@ -508,6 +598,7 @@ object Messaging {
         return try {
             rt.addContact(card)
             MeshController.notifyDataChanged()
+            sendIntroduction(rt, details.nodeId)
             AddResult.Added(hex)
         } catch (e: CancellationException) {
             throw e
@@ -528,8 +619,9 @@ object Messaging {
                 continue
             }
             try {
-                rt.addContact(card)
+                val added = rt.addContact(card)
                 PendingCards.remove(appContext, text)
+                sendIntroduction(rt, added.nodeId)
             } catch (e: CancellationException) {
                 throw e
             } catch (t: Throwable) {

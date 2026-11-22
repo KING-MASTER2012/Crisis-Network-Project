@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -21,6 +22,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import org.crisisnetwork.android.R
+import org.crisisnetwork.android.messaging.Messaging
+import org.crisisnetwork.android.messaging.Names
 import org.crisisnetwork.android.ui.UiPreferences
 import org.crisisnetwork.android.ui.components.InfoCard
 import org.crisisnetwork.android.ui.components.ScreenColumn
@@ -37,7 +40,15 @@ import org.crisisnetwork.android.ui.onboarding.OnboardingFlow
 @Composable
 fun MyCardScreen(onBack: () -> Unit) {
     val ui by UiPreferences.state.collectAsState()
+    val introduced by Messaging.introduced.collectAsState()
+    val names by Messaging.names.collectAsState()
     val context = LocalContext.current
+
+    // While this code is on screen, a person who scans it is added to the contacts here too (one scan is enough).
+    DisposableEffect(Unit) {
+        Messaging.setPairingScreen(true)
+        onDispose { Messaging.setPairingScreen(false) }
+    }
     var copied by remember { mutableStateOf(false) }
     val card = ui.cardText
     val cardTitle = stringResource(R.string.mycard_title)
@@ -46,6 +57,12 @@ fun MyCardScreen(onBack: () -> Unit) {
     Column {
         ScreenTopBar(title = stringResource(R.string.mycard_title), onBack = onBack)
         ScreenColumn {
+            introduced?.let { hex ->
+                InfoCard(title = stringResource(R.string.mycard_introduced_title), tone = Tone.Success) {
+                    val who = names[hex] ?: stringResource(R.string.name_unknown_node, Names.shortId(hex))
+                    Text(stringResource(R.string.mycard_introduced_body, who), style = MaterialTheme.typography.bodyMedium)
+                }
+            }
             if (card == null) {
                 InfoCard(title = stringResource(R.string.mycard_title), tone = Tone.Warning) {
                     Text(stringResource(R.string.mycard_unavailable), style = MaterialTheme.typography.bodyMedium)
@@ -53,6 +70,7 @@ fun MyCardScreen(onBack: () -> Unit) {
             } else {
                 InfoCard(title = stringResource(R.string.mycard_title)) {
                     Text(stringResource(R.string.mycard_body), style = MaterialTheme.typography.bodyMedium)
+                    Text(stringResource(R.string.mycard_pairing_hint), style = MaterialTheme.typography.bodyMedium)
                     QrCodeView(
                         text = card,
                         description = stringResource(R.string.mycard_qr_desc),

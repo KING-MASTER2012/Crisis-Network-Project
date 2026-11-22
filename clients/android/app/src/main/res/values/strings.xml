@@ -199,6 +199,9 @@
     <string name="mycard_unavailable">Your card is not available yet. Join the mesh once and it appears here.</string>
     <string name="mycard_copy">Copy card as text</string>
     <string name="mycard_copied">Copied.</string>
+    <string name="mycard_pairing_hint">Keep this screen open while the other person scans. They are added to your contacts automatically, so one scan is enough.</string>
+    <string name="mycard_introduced_title">Contact added</string>
+    <string name="mycard_introduced_body">%1$s scanned your code and is now in your contacts. You can write to each other.</string>
     <string name="mycard_share">Share card as text</string>
     <string name="scan_title">Scan a card</string>
     <string name="scan_hint">Point the camera at the QR code on the other phone.</string>
@@ -222,7 +225,7 @@
     <string name="add_confirm">Add contact</string>
     <string name="add_cancel">Cancel</string>
     <string name="add_finish">Done</string>
-    <string name="add_done">The contact was added.</string>
+    <string name="add_done">The contact was added. Your card was sent to them as well, so they can write back without scanning.</string>
     <string name="add_queued">The card is saved. The contact is added as soon as you join the mesh.</string>
     <string name="add_own">This is your own card.</string>
     <string name="add_invalid">This is not a valid card.</string>
