@@ -280,6 +280,13 @@ jobs:
       - name: Generate the Xcode project
         working-directory: clients/apple
         run: xcodegen generate
+      # Phase I9: the icons are made from one master logo (scripts/make-icons.py); this fails when one is missing, has the
+      # wrong size or the iOS icon has an alpha channel (App Store Connect refuses it).
+      - name: Check the app icons
+        run: |
+          python3 -m venv "$RUNNER_TEMP/icons"
+          "$RUNNER_TEMP/icons/bin/pip" install --quiet pillow
+          "$RUNNER_TEMP/icons/bin/python" scripts/make-icons.py --check
       - name: Build the macOS app
         run: |
           xcodebuild -project clients/apple/CrisisNetwork.xcodeproj -scheme CrisisNetwork-macOS \

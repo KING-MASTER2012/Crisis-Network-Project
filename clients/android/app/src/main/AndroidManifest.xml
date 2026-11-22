@@ -19,16 +19,18 @@
     <uses-feature android:name="android.hardware.camera.autofocus" android:required="false" />
 
     <application
-        android:allowBackup="false"
-        android:dataExtractionRules="@xml/data_extraction_rules"
-        android:usesCleartextTraffic="false"
-        android:label="@string/app_name"
-        android:supportsRtl="true"
-        android:theme="@style/Theme.CrisisNetwork">
+            android:allowBackup="false"
+            android:dataExtractionRules="@xml/data_extraction_rules"
+            android:usesCleartextTraffic="false"
+            android:icon="@mipmap/ic_launcher"
+            android:roundIcon="@mipmap/ic_launcher_round"
+            android:label="@string/app_name"
+            android:supportsRtl="true"
+            android:theme="@style/Theme.CrisisNetwork">
 
         <activity
-            android:name=".MainActivity"
-            android:exported="true">
+                android:name=".MainActivity"
+                android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
@@ -37,14 +39,14 @@
 
         <!-- Phase A2/A3 test bench (development tool); replaced by the real screens in A4/A5. -->
         <activity
-            android:name=".BleLinkTestActivity"
-            android:exported="false" />
+                android:name=".BleLinkTestActivity"
+                android:exported="false" />
 
         <!-- Keeps the node and the Bluetooth transport running in the background. -->
         <service
-            android:name=".MeshService"
-            android:exported="false"
-            android:foregroundServiceType="connectedDevice" />
+                android:name=".MeshService"
+                android:exported="false"
+                android:foregroundServiceType="connectedDevice" />
 
     </application>
 

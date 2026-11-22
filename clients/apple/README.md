@@ -538,6 +538,50 @@ The app record in App Store Connect (with the bundle identifier of `Config/Base.
 upload; the build number is the number of the workflow run, the version is the tag (`apple-v1.2.3` is 1.2.3). Builds wait at
 "Missing Compliance" until the export questions are answered once: `EXPORT_COMPLIANCE.md`.
 
+### App icons
+
+The icons of both platforms come from **one master logo**, `assets/branding/logo-master-1024.png` (the logo on a transparent background, 1024 px),
+through `python3 scripts/make-icons.py` (needs Pillow; `--check` only checks, CI runs it). To change the logo, replace the master and run the script.
+What it makes, and why the sets from icon generators are not used as they are:
+
+* **iOS** (`App/Shared/Resources/Assets.xcassets/AppIcon.appiconset`): one 1024 px icon, from which Xcode makes every size, on an opaque white
+  background. A generated icon with a transparent background is refused by App Store Connect (an iOS icon may not have an alpha channel), and the system
+  rounds the corners itself.
+* **macOS** (same set): ten sizes from 16 to 1024 px, the logo on a white rounded tile with the margin and shadow of Apple's template.
+* **Android** (`clients/android/app/src/main/res`): an adaptive icon (white background, the logo inside the 66 dp that every launcher shape shows), a monochrome
+  layer for themed icons (Android 13), the legacy PNGs for Android 7 and older, and `ic_launcher-playstore.png` (512 px) for the Play Store listing.
+  The generated template had the logo reaching the edge of the layer, which a round launcher cuts, and a green grid as the background.
+
+The iOS and macOS targets take the set with `ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon` in `project.yml`; Xcode adds the icon keys to `Info.plist`.
+Dark and tinted iOS 18 variants of the icon are not made (the system then uses the normal icon); they can be added to the same set later.
+
+### Setting up the Apple secrets (they need the paid membership first)
+
+Android needed a keystore you made yourself. **Apple has no such file**: a certificate has to be issued by Apple to a member of the Apple Developer
+Program (99 USD a year), so nothing in this section can be done before the membership. The `apple-*` release workflow runs without any of it
+(unsigned and ad-hoc files); the secrets only add the notarized disk image and the TestFlight upload. A Mac is **not** required:
+
+1. **App Store Connect API key** (for TestFlight and for notarization): App Store Connect > Users and Access > Integrations > App Store Connect API > "+",
+   role "App Manager" or "Admin". Download the `AuthKey_XXXXXXXXXX.p8` (it can be downloaded once). Note its **Key ID** and the **Issuer ID** at the top of
+   the page. Secrets: `ASC_KEY_ID`, `ASC_ISSUER_ID`, and `ASC_KEY_P8_BASE64` = `base64 -w0 AuthKey_XXXXXXXXXX.p8` (Git Bash or WSL on Windows).
+2. **Team ID**: developer.apple.com > Account > Membership details (10 characters). Secret: `APPLE_TEAM_ID`.
+3. **Developer ID Application certificate** (for the notarized Mac disk image; only the Account Holder can create it). With OpenSSL, no Mac:
+   ```sh
+   openssl genrsa -out devid.key 2048
+   openssl req -new -key devid.key -out devid.csr -subj "/emailAddress=YOUR@MAIL/CN=YOUR NAME/C=TR"
+   # developer.apple.com > Certificates > "+" > "Developer ID Application" (G2 Sub-CA) > upload devid.csr > download the .cer
+   openssl x509 -inform DER -in developerID_application.cer -out devid.pem
+   openssl pkcs12 -export -legacy -inkey devid.key -in devid.pem -out devid.p12   # -legacy: the macOS "security import" in the workflow
+                                                                                   # cannot read the newer default encryption of OpenSSL 3
+   base64 -w0 devid.p12
+   ```
+   Secrets: `MAC_DEVELOPER_ID_P12_BASE64` (that output) and `MAC_DEVELOPER_ID_P12_PASSWORD` (the password you gave `openssl pkcs12`). Keep `devid.key` and
+   `devid.p12` out of the repository (they are the identity of the publisher).
+4. **App record**: App Store Connect > Apps > "+" > New App, with the bundle identifier of `Config/Base.xcconfig` (register it first under Certificates, Identifiers &
+   Profiles > Identifiers; no capability needs to be switched on for the app). iOS signing needs nothing else: Xcode creates the distribution certificate and the
+   profile itself through the API key (`-allowProvisioningUpdates`).
+5. Push a tag `apple-v0.1.0-rc1` and watch the "Notarized disk image" and "Archive and upload to TestFlight" steps.
+
 ### Privacy manifest and App Privacy
 
 `App/Shared/Resources/PrivacyInfo.xcprivacy` (iOS and macOS): **no tracking, no collected data**, and a reason for each

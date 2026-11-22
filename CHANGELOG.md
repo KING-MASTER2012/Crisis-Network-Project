@@ -1,3 +1,26 @@
+# Changes: app icons (phase I9, part 2)
+
+**New**
+
+* `assets/branding/logo-master-1024.png`: the master logo (transparent background), from the logo ZIP.
+* `scripts/make-icons.py`: makes every icon from the master (`--check` only checks; CI runs it in the `apple` job).
+* `clients/apple/App/Shared/Resources/Assets.xcassets/AppIcon.appiconset`: iOS (one 1024 px icon, opaque white, no alpha) and macOS (ten sizes, white
+  rounded tile) icons. Android: adaptive icon (white background, logo inside the safe zone), monochrome layer, legacy and round PNGs,
+  `ic_launcher_background.xml` (a colour), `ic_launcher-playstore.png`.
+
+**Changed**
+
+* `AndroidManifest.xml`: `android:icon` and `android:roundIcon`. `project.yml`: `ASSETCATALOG_COMPILER_APPICON_NAME` for both app targets.
+* `clients/apple/README.md`: "App icons" and "Setting up the Apple secrets" (what each secret is, how to get it without a Mac).
+
+**Decisions**
+
+* The icon sets that the logo ZIP contained were not used as they are: the iOS 1024 px icon had a transparent background (App Store Connect refuses an alpha
+  channel), the Android foreground reached the edge of the layer (round launchers cut it) over a green template grid, and the macOS icons had no tile.
+  The watchOS and Messages-sticker sets are not used by the app and are not included.
+
+---
+
 # Changes: phase I9, release, privacy and accessibility on Apple (and release assets for Android)
 
 **New**
