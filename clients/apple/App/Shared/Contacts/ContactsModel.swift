@@ -45,8 +45,15 @@ final class ContactsModel: ObservableObject {
         pending: PendingCards(DefaultsKeyValueStore(key: "contacts.pendingCards")),
         backend: { BleLinkTestModel.shared.activeRuntime },
         ownNodeIdHex: { UiPreferences.shared.nodeIdHex },
-        saveCardText: { UiPreferences.shared.saveCardText($0) }
+        saveCardText: { UiPreferences.shared.saveCardText($0) },
+        sendIntroduction: { peer in
+            guard let runtime = BleLinkTestModel.shared.activeRuntime else { return }
+            _ = try? await runtime.publishDirect(to: peer, plaintext: Introduction.encode(runtime.contactCard))
+        }
     )
+
+    /// How long after leaving the "my QR code" screen a scan of that code still adds the scanner (late delivery over the mesh).
+    static let pairingGraceSeconds: TimeInterval = 10 * 60
 
     /// How many contacts are read at most.
     static let contactLimit: UInt32 = 1_000
@@ -60,11 +67,20 @@ final class ContactsModel: ObservableObject {
     /// Nicknames by node id in hexadecimal.
     @Published private(set) var names: [String: String]
 
+    /// The node id (hexadecimal) of the person who just added this device by scanning its code, or `nil`.
+    @Published private(set) var introduced: String?
+
     private let nicknames: NicknameStore
     private let pending: PendingCards
     private let backendProvider: @MainActor () -> (any ContactsBackend)?
     private let ownNodeIdHex: @MainActor () -> String?
     private let saveCardText: @MainActor (String) -> Void
+    private let sendIntroduction: @MainActor (Data) async -> Void
+    private let now: @MainActor () -> Date
+
+    // The person's own QR code is on screen, or was a moment ago: introductions are accepted (see ``setPairingScreen(open:)``).
+    private var pairingOpen = false
+    private var pairingUntil = Date.distantPast
     private var observation: AnyCancellable?
     private var refreshTask: Task<Void, Never>?
     private var refreshAgain = false
@@ -74,13 +90,17 @@ final class ContactsModel: ObservableObject {
         pending: PendingCards,
         backend: @escaping @MainActor () -> (any ContactsBackend)?,
         ownNodeIdHex: @escaping @MainActor () -> String? = { nil },
-        saveCardText: @escaping @MainActor (String) -> Void = { _ in }
+        saveCardText: @escaping @MainActor (String) -> Void = { _ in },
+        sendIntroduction: @escaping @MainActor (Data) async -> Void = { _ in },
+        now: @escaping @MainActor () -> Date = { Date() }
     ) {
         self.nicknames = nicknames
         self.pending = pending
         backendProvider = backend
         self.ownNodeIdHex = ownNodeIdHex
         self.saveCardText = saveCardText
+        self.sendIntroduction = sendIntroduction
+        self.now = now
         names = nicknames.loadAll()
     }
 
@@ -150,8 +170,9 @@ final class ContactsModel: ObservableObject {
                 continue
             }
             do {
-                _ = try await backend.addContact(card: card)
+                let details = try await backend.addContact(card: card)
                 pending.remove(text)
+                await sendIntroduction(details.nodeId)
             } catch {
                 // A card the core refuses is dropped; any other failure is tried again next time.
                 if CoreFailure(error) == .invalidContactCard { pending.remove(text) }
@@ -182,10 +203,42 @@ final class ContactsModel: ObservableObject {
         do {
             _ = try await backend.addContact(card: card)
             await refresh()
+            await sendIntroduction(details.nodeId)
             return .added(hex: hex)
         } catch {
             return CoreFailure(error) == .invalidContactCard ? .invalid : .failed(detail: "\(error)")
         }
+    }
+
+    // MARK: Introductions: one scan is enough
+
+    /// The screen with this device's own QR code opened (`open`) or closed. While it is open, and for a while after, a
+    /// person who scanned the code is added back automatically (``receive(introductionFrom:body:)``); otherwise strangers
+    /// could add themselves to the contacts by sending introductions.
+    func setPairingScreen(open: Bool) {
+        pairingOpen = open
+        if open {
+            introduced = nil
+        } else {
+            pairingUntil = now().addingTimeInterval(Self.pairingGraceSeconds)
+        }
+    }
+
+    private var acceptingIntroductions: Bool { pairingOpen || now() < pairingUntil }
+
+    /// A private message arrived. When it is an introduction and the pairing window is open, the sender's card is added
+    /// to the contacts (unless it is known already). Anything else is left alone.
+    func receive(introductionFrom sender: Data, body: Data) async {
+        guard acceptingIntroductions,
+              let card = Introduction.parse(body, owner: sender),
+              let backend = backendProvider()
+        else { return }
+        let known = (try? await backend.contacts(limit: Self.contactLimit))?
+            .contains { $0.nodeId == sender && $0.card != nil } ?? false
+        if known { return }
+        guard (try? await backend.addContact(card: card)) != nil else { return }
+        introduced = Hex.encode(sender)
+        await refresh()
     }
 
     /// Changes the trust level of a contact. Needs the node, so it fails (`false`) while the mesh is off.

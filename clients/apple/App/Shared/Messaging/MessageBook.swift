@@ -154,14 +154,17 @@ struct ConversationWindow {
         min(max(entries.count + 8, Self.pageSize), Self.maxSize)
     }
 
-    /// Replaces the entries by a freshly read page over the newest messages.
-    mutating func replace(with page: ConversationPageInfo) {
+    /// Replaces the entries by a freshly read page over the newest messages. A message for which `isHidden` is `true`
+    /// (an introduction, see ``Introduction``) is never the one that the "new messages" line sits above.
+    mutating func replace(with page: ConversationPageInfo, hiding isHidden: (HistoryItem) -> Bool = { _ in false }) {
         entries = page.entries
         olderBefore = page.olderBeforeSeq
         readUpTo = page.readUpToSeq
         if !loaded {
             loaded = true
-            firstUnreadSeq = page.entries.first { $0.direction == .incoming && $0.seq > page.readUpToSeq }?.seq
+            firstUnreadSeq = page.entries.first {
+                $0.direction == .incoming && $0.seq > page.readUpToSeq && !isHidden($0)
+            }?.seq
         }
     }
 

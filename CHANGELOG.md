@@ -1,3 +1,23 @@
+# Changes: Apple, one scan is enough to become contacts
+
+The same rule as on Android (the two clients understand each other): when a contact is added, the device sends the person its own card as a private
+message; the receiving device adds it and never shows the message.
+
+**New**
+
+* `Contacts/Introduction.swift`: encoding and recognising an introduction (a card as text, from its own sender).
+* `IntroductionTests.swift`: recognition, the pairing window, a card that belongs to someone else.
+
+**Changed**
+
+* `ContactsModel.swift`: sends the introduction after `addContact` (and after cards queued while the mesh was off); accepts introductions only while the
+  "My QR code" screen is open and for 10 minutes after; `introduced` tells the screen who was added.
+* `MessagingModel.swift` and `MessageBook.swift`: introductions are hidden from chats, previews and the "new messages" line, and marked read.
+* `BleLinkTestModel.swift`, `MessageNotifier.swift`: received messages go to the contacts model; an introduction makes no notification.
+* `MyCardView.swift`: opens and closes the pairing window and says who was added. `Localizable.xcstrings`: the new texts (en, tr).
+
+---
+
 # Changes: Android fix, one scan is enough to become contacts
 
 **New**

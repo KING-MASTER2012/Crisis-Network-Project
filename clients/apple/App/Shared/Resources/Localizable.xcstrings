@@ -70,13 +70,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "The contact was added."
+            "value": "The contact was added. Your card was sent to them as well, so they can write back without scanning."
           }
         },
         "tr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Kişi eklendi."
+            "value": "Kişi eklendi. Kartınız da ona gönderildi, böylece tarama yapmadan size yazabilir."
           }
         }
       }
@@ -2117,6 +2117,54 @@
           "stringUnit": {
             "state": "translated",
             "value": "QR kodunu resim olarak kopyala"
+          }
+        }
+      }
+    },
+    "mycard_introduced_body %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ scanned your code and is now in your contacts. You can write to each other."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ kodunuzu taradı ve kişilerinize eklendi. Artık birbirinize yazabilirsiniz."
+          }
+        }
+      }
+    },
+    "mycard_introduced_title": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Contact added"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kişi eklendi"
+          }
+        }
+      }
+    },
+    "mycard_pairing_hint": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keep this screen open while the other person scans. They are added to your contacts automatically, so one scan is enough."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Karşınızdaki tararken bu ekranı açık tutun. Kişilerinize otomatik eklenir, yani tek tarama yeter."
           }
         }
       }

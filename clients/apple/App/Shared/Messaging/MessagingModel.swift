@@ -76,7 +76,11 @@ final class RefreshCoalescer {
 /// * The node is only open while the mesh runs, so messages can only be read and sent then (`ready`).
 @MainActor
 final class MessagingModel: ObservableObject {
-    static let shared = MessagingModel(backend: { BleLinkTestModel.shared.activeRuntime }, badge: { AppBadge.set($0) })
+    static let shared = MessagingModel(
+        backend: { BleLinkTestModel.shared.activeRuntime },
+        badge: { AppBadge.set($0) },
+        ownNodeId: { BleLinkTestModel.shared.activeRuntime?.nodeId }
+    )
 
     /// How many conversations the list holds at most.
     static let chatLimit: UInt32 = 500
@@ -105,14 +109,28 @@ final class MessagingModel: ObservableObject {
     /// Told the total of unread messages whenever it is read (the badge of the app icon).
     private let badge: @MainActor (Int) -> Void
 
+    /// This device's node id: the card inside an introduction that this device sent is its own.
+    private let ownNodeId: @MainActor () -> Data?
+
     init(
         backend: @escaping @MainActor () -> (any MessagingBackend)?,
         limits: Limits = .fromCore(),
-        badge: @escaping @MainActor (Int) -> Void = { _ in }
+        badge: @escaping @MainActor (Int) -> Void = { _ in },
+        ownNodeId: @escaping @MainActor () -> Data? = { nil }
     ) {
         backendProvider = backend
         self.limits = limits
         self.badge = badge
+        self.ownNodeId = ownNodeId
+    }
+
+    /// `true` for an introduction (see ``Introduction``): a protocol message that carries a contact card and is never
+    /// shown as a message. For a received one the card must belong to the sender, for a sent one to this device.
+    func isIntroduction(_ item: HistoryItem) -> Bool {
+        guard item.kind == .direct, let body = item.body, Introduction.looksLike(body) else { return false }
+        let owner = item.direction == .outgoing ? ownNodeId() : item.counterpart
+        guard let owner else { return false }
+        return Introduction.parse(body, owner: owner) != nil
     }
 
     // MARK: Observing the node
@@ -202,8 +220,20 @@ final class MessagingModel: ObservableObject {
                 }
             }
             // After the windows: reading them may have changed the counters.
-            let infos = try await backend.conversations(limit: Self.chatLimit)
-            chats = infos.compactMap(MessageBook.chatRow)
+            var infos = try await backend.conversations(limit: Self.chatLimit)
+            // An introduction is not a message: do not leave it counted as unread (only when nothing else is unread there).
+            var markedIntroduction = false
+            for info in infos {
+                guard info.unread == 1, case .direct = info.conversation, let last = info.last, isIntroduction(last) else { continue }
+                _ = try await backend.markConversationRead(conversation: info.conversation, upToSeq: nil)
+                markedIntroduction = true
+            }
+            if markedIntroduction { infos = try await backend.conversations(limit: Self.chatLimit) }
+            // A conversation whose newest message is an introduction has nothing to show yet.
+            chats = infos.compactMap { info -> ChatRow? in
+                if let last = info.last, isIntroduction(last) { return nil }
+                return MessageBook.chatRow(from: info)
+            }
             let counts = try await backend.unreadCounts()
             unread = Unread(
                 chats: MessageBook.saturatedInt(counts.direct),
@@ -222,7 +252,7 @@ final class MessagingModel: ObservableObject {
             beforeSeq: nil,
             limit: UInt32(window.refreshSize)
         )
-        window.replace(with: page)
+        window.replace(with: page, hiding: { isIntroduction($0) })
         if window.hasUnread {
             let marker = try await backend.markConversationRead(conversation: window.ref, upToSeq: nil)
             window.didMarkRead(upTo: marker)
@@ -232,7 +262,7 @@ final class MessagingModel: ObservableObject {
     private func chatState(of window: ConversationWindow) -> ChatState {
         ChatState(
             peerHex: window.peerHex,
-            messages: window.entries.map(MessageBook.row),
+            messages: window.entries.filter { !isIntroduction($0) }.map(MessageBook.row),
             hasOlder: window.olderBefore != nil,
             loaded: window.loaded,
             firstUnreadSeq: window.firstUnreadSeq

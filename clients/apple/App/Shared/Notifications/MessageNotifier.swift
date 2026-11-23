@@ -77,6 +77,8 @@ final class MessageNotifier {
     /// Called for every notification of the node. Shows a message that arrived while the app is not on screen.
     func handle(_ notification: CoreNotification) {
         guard case let .messageReceived(_, sender, kind, body) = notification else { return }
+        // An introduction (a contact card sent by the person who scanned our code) is not a message to announce.
+        if kind == .direct, Introduction.parse(body, owner: sender) != nil { return }
         // While the app is on screen the badges and the open screen show the message.
         guard !BleLinkTestModel.shared.isForeground else { return }
         Task { await post(kind: kind, sender: sender, body: body) }

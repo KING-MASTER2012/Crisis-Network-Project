@@ -378,6 +378,10 @@ final class BleLinkTestModel: ObservableObject {
     private func handle(_ notification: CoreNotification) {
         dataVersion &+= 1
         MessageNotifier.shared.handle(notification)
+        if case let .messageReceived(_, sender, kind, introBody) = notification, kind == .direct {
+            // A card sent by a person who scanned our code: add it (only while our own code is on screen).
+            Task { await ContactsModel.shared.receive(introductionFrom: sender, body: introBody) }
+        }
         guard case let .messageReceived(_, _, _, body) = notification else { return }
         let now = ProcessInfo.processInfo.systemUptime
         counters.messages += 1

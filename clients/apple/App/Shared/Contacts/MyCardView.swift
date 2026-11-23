@@ -33,14 +33,21 @@ struct QrCodeView: View {
 /// can write to you, which is why people meet to exchange it.
 struct MyCardView: View {
     @ObservedObject private var prefs = UiPreferences.shared
+    @ObservedObject private var contacts = ContactsModel.shared
     @State private var copied = false
     @State private var pictureNote: LocalizedStringKey?
 
     var body: some View {
         ScreenColumn {
+            if let hex = contacts.introduced {
+                InfoCard(title: "mycard_introduced_title", tone: .success) {
+                    Text("mycard_introduced_body \(contacts.displayName(hex: hex, language: prefs.language))")
+                }
+            }
             if let card = prefs.cardText {
                 InfoCard(title: "mycard_title") {
                     Text("mycard_body")
+                    Text("mycard_pairing_hint")
                     QrCodeView(text: card, label: "mycard_qr_desc")
                     if let number = prefs.safetyNumber {
                         Text("add_safety_label").font(TypeScale.label)
@@ -68,6 +75,9 @@ struct MyCardView: View {
         }
         .navigationTitle("mycard_title")
         .inlineNavigationTitle()
+        // While this code is on screen, a person who scans it is added to the contacts here too (one scan is enough).
+        .onAppear { contacts.setPairingScreen(open: true) }
+        .onDisappear { contacts.setPairingScreen(open: false) }
     }
 
     #if os(macOS)
