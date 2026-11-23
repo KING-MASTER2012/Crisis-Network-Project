@@ -39,6 +39,17 @@ cargo test --workspace
 cargo clippy --workspace --all-targets -- -D warnings
 ```
 
+Undefined behaviour is checked with Miri on the crates that are pure Rust (`proto`, `appcodec`,
+`crypto`); the others call the C code of SQLite, which Miri cannot run:
+
+```text
+scripts/miri.sh                      # Linux, macOS
+powershell scripts/miri.ps1          # Windows
+```
+
+The scripts switch Miri's isolation off (`MIRIFLAGS=-Zmiri-disable-isolation`), because
+`proptest` reads the current directory and Miri refuses that by default.
+
 The CI checks use all features:
 
 ```text

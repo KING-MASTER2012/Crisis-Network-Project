@@ -1,3 +1,27 @@
+# Changes: fix the macOS build
+
+* `ContactsModel.swift`: the build failed with "default argument cannot be both main actor-isolated and actor-isolated" (`ContactsModel.shared`).
+  The two new parameters of the initialiser (`sendIntroduction`, `now`) are now optional (`nil` by default) instead of having closures as default
+  arguments. Callers and tests are unchanged.
+
+---
+
+# Changes: Miri scripts
+
+`cargo +nightly miri test --workspace` stopped with "`GetCurrentDirectoryW` not available when isolation is enabled". That is not an error of the code
+(and has nothing to do with OpenSSL): `proptest` asks for the current directory to find its regression files, and Miri refuses that call while its isolation
+is on. Besides, `storage` and the crates above it run the C code of SQLite, which Miri cannot execute, so the whole workspace cannot run under Miri.
+
+**New**
+
+* `scripts/miri.sh` and `scripts/miri.ps1`: run Miri on `proto`, `appcodec` and `crypto` with `MIRIFLAGS=-Zmiri-disable-isolation`.
+
+**Changed**
+
+* `README.md`: how to run them.
+
+---
+
 # Changes: Apple, one scan is enough to become contacts
 
 The same rule as on Android (the two clients understand each other): when a contact is added, the device sends the person its own card as a private

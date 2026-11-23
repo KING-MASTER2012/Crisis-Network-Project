@@ -91,16 +91,18 @@ final class ContactsModel: ObservableObject {
         backend: @escaping @MainActor () -> (any ContactsBackend)?,
         ownNodeIdHex: @escaping @MainActor () -> String? = { nil },
         saveCardText: @escaping @MainActor (String) -> Void = { _ in },
-        sendIntroduction: @escaping @MainActor (Data) async -> Void = { _ in },
-        now: @escaping @MainActor () -> Date = { Date() }
+        sendIntroduction: (@MainActor (Data) async -> Void)? = nil,
+        now: (@MainActor () -> Date)? = nil
     ) {
         self.nicknames = nicknames
         self.pending = pending
         backendProvider = backend
         self.ownNodeIdHex = ownNodeIdHex
         self.saveCardText = saveCardText
-        self.sendIntroduction = sendIntroduction
-        self.now = now
+        // Optional parameters instead of default closures: a default argument that is an `async` or `@MainActor`
+        // closure is rejected by the compiler ("default argument cannot be both main actor-isolated and actor-isolated").
+        self.sendIntroduction = sendIntroduction ?? { _ in }
+        self.now = now ?? { Date() }
         names = nicknames.loadAll()
     }
 
