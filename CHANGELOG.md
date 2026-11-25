@@ -1,8 +1,8 @@
 # Changes: fix the macOS build
 
 * `ContactsModel.swift`: the build failed with "default argument cannot be both main actor-isolated and actor-isolated" (`ContactsModel.shared`).
-  The two new parameters of the initialiser (`sendIntroduction`, `now`) are now optional (`nil` by default) instead of having closures as default
-  arguments. Callers and tests are unchanged.
+  `sendIntroduction` and `now` are no longer parameters of the initialiser at all: they are properties (`now` has a default, `sendIntroduction` is
+  set by `ContactsModel.shared` to a static function that sends through the running node). `IntroductionTests.swift` sets `now` on the model.
 
 ---
 

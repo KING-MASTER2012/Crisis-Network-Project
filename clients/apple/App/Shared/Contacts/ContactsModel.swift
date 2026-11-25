@@ -40,17 +40,23 @@ enum AddResult: Equatable, Sendable {
 ///   changed then (`ready`). A card added while it is off is **kept** and added as soon as the node runs.
 @MainActor
 final class ContactsModel: ObservableObject {
-    static let shared = ContactsModel(
-        nicknames: NicknameStore(DefaultsKeyValueStore(key: "contacts.nicknames")),
-        pending: PendingCards(DefaultsKeyValueStore(key: "contacts.pendingCards")),
-        backend: { BleLinkTestModel.shared.activeRuntime },
-        ownNodeIdHex: { UiPreferences.shared.nodeIdHex },
-        saveCardText: { UiPreferences.shared.saveCardText($0) },
-        sendIntroduction: { peer in
-            guard let runtime = BleLinkTestModel.shared.activeRuntime else { return }
-            _ = try? await runtime.publishDirect(to: peer, plaintext: Introduction.encode(runtime.contactCard))
-        }
-    )
+    static let shared: ContactsModel = {
+        let model = ContactsModel(
+            nicknames: NicknameStore(DefaultsKeyValueStore(key: "contacts.nicknames")),
+            pending: PendingCards(DefaultsKeyValueStore(key: "contacts.pendingCards")),
+            backend: { BleLinkTestModel.shared.activeRuntime },
+            ownNodeIdHex: { UiPreferences.shared.nodeIdHex },
+            saveCardText: { UiPreferences.shared.saveCardText($0) }
+        )
+        model.sendIntroduction = ContactsModel.sendThroughRuntime
+        return model
+    }()
+
+    /// Sends this device's own card to `peer` as an introduction (see ``Introduction``) through the running node.
+    private static func sendThroughRuntime(to peer: Data) async {
+        guard let runtime = BleLinkTestModel.shared.activeRuntime else { return }
+        _ = try? await runtime.publishDirect(to: peer, plaintext: Introduction.encode(runtime.contactCard))
+    }
 
     /// How long after leaving the "my QR code" screen a scan of that code still adds the scanner (late delivery over the mesh).
     static let pairingGraceSeconds: TimeInterval = 10 * 60
@@ -75,8 +81,13 @@ final class ContactsModel: ObservableObject {
     private let backendProvider: @MainActor () -> (any ContactsBackend)?
     private let ownNodeIdHex: @MainActor () -> String?
     private let saveCardText: @MainActor (String) -> Void
-    private let sendIntroduction: @MainActor (Data) async -> Void
-    private let now: @MainActor () -> Date
+    /// How an introduction is sent. `nil` (the tests, a model without a node) sends nothing. Set after `init`, and not
+    /// passed to it, because an initialiser parameter that is an `async` or `@MainActor` closure (with a default
+    /// value) is rejected by the compiler ("default argument cannot be both main actor-isolated and actor-isolated").
+    var sendIntroduction: (@MainActor (Data) async -> Void)?
+
+    /// The clock of the pairing window; the tests replace it.
+    var now: @MainActor () -> Date = { Date() }
 
     // The person's own QR code is on screen, or was a moment ago: introductions are accepted (see ``setPairingScreen(open:)``).
     private var pairingOpen = false
@@ -90,19 +101,13 @@ final class ContactsModel: ObservableObject {
         pending: PendingCards,
         backend: @escaping @MainActor () -> (any ContactsBackend)?,
         ownNodeIdHex: @escaping @MainActor () -> String? = { nil },
-        saveCardText: @escaping @MainActor (String) -> Void = { _ in },
-        sendIntroduction: (@MainActor (Data) async -> Void)? = nil,
-        now: (@MainActor () -> Date)? = nil
+        saveCardText: @escaping @MainActor (String) -> Void = { _ in }
     ) {
         self.nicknames = nicknames
         self.pending = pending
         backendProvider = backend
         self.ownNodeIdHex = ownNodeIdHex
         self.saveCardText = saveCardText
-        // Optional parameters instead of default closures: a default argument that is an `async` or `@MainActor`
-        // closure is rejected by the compiler ("default argument cannot be both main actor-isolated and actor-isolated").
-        self.sendIntroduction = sendIntroduction ?? { _ in }
-        self.now = now ?? { Date() }
         names = nicknames.loadAll()
     }
 
@@ -174,7 +179,7 @@ final class ContactsModel: ObservableObject {
             do {
                 let details = try await backend.addContact(card: card)
                 pending.remove(text)
-                await sendIntroduction(details.nodeId)
+                await sendIntroduction?(details.nodeId)
             } catch {
                 // A card the core refuses is dropped; any other failure is tried again next time.
                 if CoreFailure(error) == .invalidContactCard { pending.remove(text) }
@@ -205,7 +210,7 @@ final class ContactsModel: ObservableObject {
         do {
             _ = try await backend.addContact(card: card)
             await refresh()
-            await sendIntroduction(details.nodeId)
+            await sendIntroduction?(details.nodeId)
             return .added(hex: hex)
         } catch {
             return CoreFailure(error) == .invalidContactCard ? .invalid : .failed(detail: "\(error)")

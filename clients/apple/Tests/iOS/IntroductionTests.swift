@@ -9,14 +9,15 @@ final class IntroductionTests: XCTestCase {
     }
 
     @MainActor
-    private func makeModel(_ node: CrisisNode, now: @escaping @MainActor () -> Date = { Date() }) -> ContactsModel {
+    private func makeModel(_ node: CrisisNode, now: (@MainActor () -> Date)? = nil) -> ContactsModel {
         let backend = ContactsTests.NodeBackend(node)
-        return ContactsModel(
+        let model = ContactsModel(
             nicknames: NicknameStore(MemoryKeyValueStore()),
             pending: PendingCards(MemoryKeyValueStore()),
-            backend: { backend },
-            now: now
+            backend: { backend }
         )
+        if let now { model.now = now }
+        return model
     }
 
     private func knows(_ owner: CrisisNode, _ other: CrisisNode) throws -> Bool {
